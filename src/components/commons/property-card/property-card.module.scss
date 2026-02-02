@@ -1,0 +1,114 @@
+.card {
+    display: flex;
+    gap: 20px;
+    padding: 20px 0;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.imageWrapper {
+    position: relative;
+    width: 320px;
+    min-height: 200px;
+    border-radius: 12px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.content {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.topRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.type {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.heart {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: #9ca3af;
+    padding: 0;
+
+    &:hover {
+        color: #ef4444;
+    }
+}
+
+.heartActive {
+    color: #ef4444;
+}
+
+.name {
+    font-size: 18px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 4px 0 8px;
+}
+
+.details {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0 0 4px;
+}
+
+.amenities {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.bottomRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 12px;
+}
+
+.rating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+}
+
+.ratingScore {
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.ratingDot {
+    color: #9ca3af;
+}
+
+.reviewCount {
+    color: #4f46e5;
+    text-decoration: underline;
+}
+
+.price {
+    display: flex;
+    align-items: baseline;
+    gap: 2px;
+}
+
+.priceAmount {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+}
+
+.priceUnit {
+    font-size: 13px;
+    color: #6b7280;
+}

@@ -1,0 +1,191 @@
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 32px 24px 0;
+}
+
+/* Exclusive Deals Section */
+.dealsSection {
+    margin-bottom: 32px;
+}
+
+.dealsHeading {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 16px;
+}
+
+.dealsBanner {
+    position: relative;
+    border-radius: 16px;
+    overflow: hidden;
+    height: 200px;
+    display: flex;
+    align-items: center;
+}
+
+.bannerImage {
+    position: absolute;
+    inset: 0;
+    z-index: 0;
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: linear-gradient(90deg, rgba(30, 30, 60, 0.85) 0%, rgba(30, 30, 60, 0.3) 100%);
+    }
+}
+
+.bannerContent {
+    position: relative;
+    z-index: 1;
+    padding: 32px 40px;
+    color: #fff;
+}
+
+.bannerIcon {
+    margin-bottom: 8px;
+}
+
+.bannerLabel {
+    font-size: 14px;
+    margin: 0 0 4px;
+    line-height: 1.4;
+}
+
+.bannerDiscount {
+    font-size: 48px;
+    font-weight: 800;
+    margin: 0;
+    line-height: 1;
+}
+
+.bannerTerms {
+    font-size: 11px;
+    color: rgba(255, 255, 255, 0.7);
+    margin: 4px 0 0;
+}
+
+.bannerBrand {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    z-index: 1;
+    color: #fff;
+    font-size: 16px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+/* Results Header */
+.resultsHeader {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 24px;
+}
+
+.resultsLeft {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.resultsTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0;
+}
+
+.resultsActions {
+    display: flex;
+    gap: 16px;
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: none;
+    border: none;
+    font-size: 13px;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+        color: #1a1a2e;
+    }
+}
+
+.sortBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #1a1a2e;
+    cursor: pointer;
+    white-space: nowrap;
+
+    &:hover {
+        border-color: #d1d5db;
+    }
+}
+
+/* Main Layout */
+.main {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+}
+
+/* Sidebar */
+.sidebar {
+    width: 280px;
+    flex-shrink: 0;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.filtersLabel {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+    margin: 0 0 16px;
+}
+
+.filterSection {
+    border-bottom: 1px solid #e5e7eb;
+    padding-bottom: 16px;
+    margin-bottom: 0;
+}
+
+.filterHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+}
+
+.filterTitle {
+    font-size: 15px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+/* Listings */
+.listings {
+    flex: 1;
+    min-width: 0;
+}

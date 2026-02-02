@@ -1,0 +1,30 @@
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.input {
+    padding: 12px 14px;
+    font-size: 14px;
+    color: #1a1a2e;
+    border: 1px solid #c4c4c4;
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.2s;
+
+    &::placeholder {
+        color: #999;
+    }
+
+    &:focus {
+        border-color: #2a9d8f;
+    }
+}
