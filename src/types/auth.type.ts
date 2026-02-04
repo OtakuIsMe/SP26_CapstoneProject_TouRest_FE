@@ -8,3 +8,20 @@ export type LoginResponse = {
     refreshToken: string;
     expiresIn: number;
 }
+
+export type RegisterRequest = {
+    username: string;
+    email: string;
+    password: string;
+    phoneNumber?: string;
+};
+
+export type RegisterResponse = {
+    userId: string;
+    message: string;
+};
+
+export type RefreshTokenResponse = {
+    accessToken: string;
+    expiresIn: number;
+};
