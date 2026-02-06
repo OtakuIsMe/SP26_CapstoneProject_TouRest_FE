@@ -1,5 +1,3 @@
-"use client";
-
 import { useState } from "react";
 import Link from "next/link";
 import FormField from "@/components/commons/form-field/form-field";

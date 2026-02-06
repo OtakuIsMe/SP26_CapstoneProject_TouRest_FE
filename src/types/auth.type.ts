@@ -5,7 +5,6 @@ export type LoginRequest = {
 
 export type LoginResponse = {
     accessToken: string;
-    refreshToken: string;
     expiresIn: number;
 }
 
@@ -13,7 +12,7 @@ export type RegisterRequest = {
     username: string;
     email: string;
     password: string;
-    phoneNumber?: string;
+    phone?: string;
 };
 
 export type RegisterResponse = {

@@ -1,12 +1,35 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FormField from "@/components/commons/form-field/form-field";
+import { authService } from "@/libs/services/auth.service";
 import styles from "./page.module.scss";
 
 export default function SignInPage() {
+    const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        try {
+            const res = await authService.login({ email, password });
+            localStorage.setItem("accessToken", res.data.accessToken);
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || "Login failed. Please try again.";
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <>
@@ -15,8 +38,17 @@ export default function SignInPage() {
                 Don&apos;t have an account? <Link href="/signup">Sign up</Link>
             </p>
 
-            <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
-                <FormField label="Email" type="email" placeholder="Email" />
+            <form className={styles.form} onSubmit={handleSubmit}>
+                {error && <p className={styles.error}>{error}</p>}
+
+                <FormField
+                    label="Email"
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
 
                 {/* Password */}
                 <div className={styles.passwordField}>
@@ -26,6 +58,9 @@ export default function SignInPage() {
                             type={showPassword ? "text" : "password"}
                             className={styles.passwordInput}
                             placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
                         />
                         <button
                             type="button"
@@ -47,7 +82,9 @@ export default function SignInPage() {
                     </div>
                 </div>
 
-                <button type="submit" className={styles.submitBtn}>Sign In</button>
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                    {loading ? "Signing in..." : "Sign In"}
+                </button>
 
                 <div className={styles.divider}><span>or</span></div>
 

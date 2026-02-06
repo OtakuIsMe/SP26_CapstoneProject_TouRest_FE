@@ -8,13 +8,15 @@ import {
 import axiosClient from "../http/axios-client";
 
 export const authService = {
-    login(data: LoginRequest) {
-        return axiosClient.post<LoginResponse>("/auth/login", data);
-    },
-    register(data: RegisterRequest) {
-        return axiosClient.post<RegisterResponse>("/auth/register", data);
-    },
-    refreshToken() {
-        return axiosClient.get<RefreshTokenResponse>("/auth/refresh");
-    }
-}
+    login: (data: LoginRequest): Promise<ApiResponse<LoginResponse>> =>
+        axiosClient.post("/auth/login", data),
+
+    register: (data: RegisterRequest): Promise<ApiResponse<RegisterResponse>> =>
+        axiosClient.post("/auth/register", data),
+
+    refreshToken: (): Promise<ApiResponse<RefreshTokenResponse>> =>
+        axiosClient.get("/auth/refresh"),
+
+    logout: (): Promise<ApiResponse<null>> =>
+        axiosClient.post("/auth/logout"),
+};

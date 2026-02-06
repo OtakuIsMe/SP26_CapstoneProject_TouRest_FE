@@ -17,6 +17,16 @@
     }
 }
 
+.error {
+    color: #dc2626;
+    font-size: 14px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin: 0;
+}
+
 .form {
     display: flex;
     flex-direction: column;

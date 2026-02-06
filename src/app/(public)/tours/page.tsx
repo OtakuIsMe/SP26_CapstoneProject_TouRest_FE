@@ -1,5 +1,3 @@
-"use client";
-
 import Image from "next/image";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";

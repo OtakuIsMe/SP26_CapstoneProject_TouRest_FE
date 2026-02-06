@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { authService } from "@/libs/services/auth.service";
 import styles from "./header.module.scss";
 
 const navItems = [
@@ -19,6 +20,36 @@ interface HeaderProps {
 
 export default function Header({ variant = "transparent" }: HeaderProps) {
   const pathname = usePathname();
+  const router = useRouter();
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    setLoggedIn(!!localStorage.getItem("accessToken"));
+  }, []);
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  async function handleLogout() {
+    try {
+      await authService.logout();
+    } catch {
+      // ignore — still clear local state
+    }
+    localStorage.removeItem("accessToken");
+    setLoggedIn(false);
+    setMenuOpen(false);
+    router.push("/signin");
+  }
 
   return (
     <header className={`${styles.header} ${variant === "solid" ? styles.headerSolid : ""}`}>
@@ -54,9 +85,29 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
           EN
         </button>
 
-        <div className={styles.avatar}>
-          <img src="/avatar.png" alt="User" />
-        </div>
+        {loggedIn ? (
+          <div className={styles.avatarWrapper} ref={menuRef}>
+            <button
+              className={styles.avatar}
+              onClick={() => setMenuOpen(!menuOpen)}
+              type="button"
+            >
+              <img src="/avatar.png" alt="User" />
+            </button>
+            {menuOpen && (
+              <div className={styles.dropdown}>
+                <button className={styles.dropdownItem} onClick={handleLogout} type="button">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                  Logout
+                </button>
+              </div>
+            )}
+          </div>
+        ) : (
+          <Link href="/signin" className={styles.signInBtn}>Sign In</Link>
+        )}
       </div>
     </header>
   );
