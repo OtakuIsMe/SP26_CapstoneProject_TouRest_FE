@@ -1,0 +1,743 @@
+// ── Tokens ────────────────────────────────────────────────────────────────
+$primary: #4f46e5;
+$teal: #2a9d8f;
+$dark: #1a1a2e;
+$gray: #6b7280;
+$light-gray: #e5e7eb;
+$bg: #f9fafb;
+$white: #ffffff;
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+
+// ── Page shell ────────────────────────────────────────────────────────────
+.page {
+    background: $bg;
+    min-height: 100vh;
+    padding-bottom: 80px;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 24px 24px 0;
+}
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: $gray;
+    margin-bottom: 20px;
+
+    a {
+        color: $gray;
+        text-decoration: none;
+
+        &:hover {
+            color: $primary;
+        }
+    }
+
+    span:last-child {
+        color: $dark;
+        font-weight: 500;
+    }
+}
+
+// ── Two-column layout ─────────────────────────────────────────────────────
+.layout {
+    display: flex;
+    gap: 28px;
+    align-items: flex-start;
+}
+
+.left {
+    flex: 1;
+    min-width: 0;
+}
+
+// ── Title & Meta ──────────────────────────────────────────────────────────
+.title {
+    font-size: 28px;
+    font-weight: 800;
+    color: $dark;
+    margin: 0 0 12px;
+    line-height: 1.25;
+}
+
+.metaRow {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+
+.metaItem {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 13px;
+    color: $gray;
+
+    svg {
+        color: $primary;
+        flex-shrink: 0;
+    }
+}
+
+.metaDot {
+    color: $light-gray;
+}
+
+.tag {
+    font-size: 12px;
+    font-weight: 600;
+    color: $primary;
+    background: rgba($primary, 0.08);
+    border-radius: 20px;
+    padding: 2px 10px;
+}
+
+// ── Gallery ───────────────────────────────────────────────────────────────
+.gallery {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    border-radius: $radius-lg;
+    overflow: hidden;
+    margin-bottom: 24px;
+    height: 380px;
+}
+
+.galleryMain {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+
+    &:hover img {
+        transform: scale(1.04);
+    }
+
+    img {
+        transition: transform 0.35s ease;
+    }
+}
+
+.galleryGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 8px;
+}
+
+.galleryThumb {
+    position: relative;
+    cursor: pointer;
+    overflow: hidden;
+
+    &:hover img {
+        transform: scale(1.06);
+    }
+
+    img {
+        transition: transform 0.35s ease;
+    }
+}
+
+.galleryMore {
+    position: absolute;
+    inset: 0;
+    background: rgba($dark, 0.55);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: $white;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: rgba($dark, 0.7);
+    }
+
+    svg {
+        fill: $white;
+    }
+}
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+.tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 2px solid $light-gray;
+    margin-bottom: 28px;
+}
+
+.tabBtn {
+    padding: 12px 20px;
+    font-size: 14px;
+    font-weight: 600;
+    color: $gray;
+    background: none;
+    border: none;
+    border-bottom: 2px solid transparent;
+    margin-bottom: -2px;
+    cursor: pointer;
+    transition: color 0.2s, border-color 0.2s;
+    white-space: nowrap;
+
+    &:hover {
+        color: $dark;
+    }
+}
+
+.tabBtnActive {
+    color: $primary;
+    border-bottom-color: $primary;
+}
+
+// ── Tab content container ─────────────────────────────────────────────────
+.tabContent {
+    animation: fadeIn 0.25s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.sectionTitle {
+    font-size: 20px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0 0 16px;
+}
+
+// ── Overview — Description ────────────────────────────────────────────────
+.description {
+    font-size: 14px;
+    line-height: 1.8;
+    color: $gray;
+    white-space: pre-line;
+    max-height: 90px;
+    overflow: hidden;
+    transition: max-height 0.4s ease;
+}
+
+.descriptionExpanded {
+    max-height: 600px;
+}
+
+.readMore {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $primary;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover {
+        text-decoration: underline;
+    }
+}
+
+// ── Overview — Unmissable Places ──────────────────────────────────────────
+.places {
+    margin-top: 36px;
+}
+
+.placesLayout {
+    display: flex;
+    gap: 24px;
+}
+
+.placesSidebar {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    width: 180px;
+    flex-shrink: 0;
+}
+
+.placesCat {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $gray;
+    background: none;
+    border: none;
+    border-radius: $radius-sm;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover {
+        background: $light-gray;
+        color: $dark;
+    }
+}
+
+.placesCatActive {
+    background: rgba($primary, 0.1);
+    color: $primary;
+    font-weight: 600;
+}
+
+.placesCards {
+    display: flex;
+    gap: 16px;
+    flex: 1;
+    min-width: 0;
+    overflow-x: auto;
+    padding-bottom: 4px;
+
+    &::-webkit-scrollbar {
+        height: 4px;
+    }
+
+    &::-webkit-scrollbar-track {
+        background: $light-gray;
+        border-radius: 4px;
+    }
+
+    &::-webkit-scrollbar-thumb {
+        background: #c4c4c4;
+        border-radius: 4px;
+    }
+}
+
+.placeCard {
+    flex-shrink: 0;
+    width: 200px;
+    background: $white;
+    border-radius: $radius-md;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.07);
+    transition: box-shadow 0.2s, transform 0.2s;
+
+    &:hover {
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
+        transform: translateY(-2px);
+    }
+}
+
+.placeCardImg {
+    position: relative;
+    height: 130px;
+    overflow: hidden;
+}
+
+.placeCardBody {
+    padding: 12px;
+}
+
+.placeType {
+    font-size: 11px;
+    font-weight: 600;
+    color: $teal;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.placeName {
+    font-size: 13px;
+    font-weight: 700;
+    color: $dark;
+    margin: 4px 0 6px;
+    line-height: 1.35;
+}
+
+.placeRating {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 12px;
+    font-weight: 600;
+    color: $gray;
+}
+
+// ── What's Included ───────────────────────────────────────────────────────
+.includedGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.includedItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: $dark;
+    padding: 10px 14px;
+    background: rgba(#16a34a, 0.06);
+    border-radius: $radius-sm;
+    border-left: 3px solid #16a34a;
+}
+
+.includedItemNo {
+    background: rgba(#dc2626, 0.05);
+    border-left-color: #dc2626;
+    color: $gray;
+}
+
+.includedIcon {
+    font-size: 15px;
+    flex-shrink: 0;
+}
+
+// ── Tour Details — Itinerary ──────────────────────────────────────────────
+.itinerary {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    position: relative;
+
+    &::before {
+        content: "";
+        position: absolute;
+        left: 28px;
+        top: 20px;
+        bottom: 20px;
+        width: 2px;
+        background: $light-gray;
+    }
+}
+
+.dayCard {
+    display: flex;
+    gap: 20px;
+    align-items: flex-start;
+    padding: 20px 0;
+    position: relative;
+}
+
+.dayBadge {
+    flex-shrink: 0;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: $primary;
+    color: $white;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    line-height: 1.2;
+    position: relative;
+    z-index: 1;
+    box-shadow: 0 0 0 4px $bg;
+}
+
+.dayInfo {
+    flex: 1;
+    padding-top: 8px;
+}
+
+.dayTitle {
+    font-size: 15px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0 0 6px;
+}
+
+.dayDesc {
+    font-size: 13px;
+    color: $gray;
+    line-height: 1.7;
+    margin: 0;
+}
+
+// ── Customization ─────────────────────────────────────────────────────────
+.customNote {
+    font-size: 14px;
+    color: $gray;
+    line-height: 1.8;
+    margin-bottom: 24px;
+}
+
+.contactBtn {
+    background: $teal;
+    color: $white;
+    border: none;
+    border-radius: $radius-sm;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: darken($teal, 8%);
+    }
+}
+
+// ── Sidebar — Booking card ────────────────────────────────────────────────
+.sidebar {
+    width: 340px;
+    flex-shrink: 0;
+    position: sticky;
+    top: 24px;
+}
+
+.bookingCard {
+    background: $white;
+    border-radius: $radius-lg;
+    padding: 24px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.1);
+    border: 1px solid $light-gray;
+}
+
+.discountBadge {
+    display: inline-block;
+    background: #dc2626;
+    color: $white;
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 1px;
+    padding: 4px 12px;
+    border-radius: 20px;
+    margin-bottom: 14px;
+    text-transform: uppercase;
+}
+
+.bookingName {
+    font-size: 16px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0 0 12px;
+    line-height: 1.3;
+}
+
+.bookingRating {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    margin-bottom: 18px;
+}
+
+.ratingValue {
+    font-size: 14px;
+    font-weight: 700;
+    color: $dark;
+    margin-left: 4px;
+}
+
+.ratingCount {
+    font-size: 12px;
+    color: $gray;
+    margin-left: 2px;
+}
+
+.bookingDates {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: $bg;
+    border-radius: $radius-sm;
+    padding: 12px 14px;
+    margin-bottom: 14px;
+    border: 1px solid $light-gray;
+}
+
+.dateBox {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.dateLabel {
+    font-size: 11px;
+    color: $gray;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.dateValue {
+    font-size: 14px;
+    font-weight: 700;
+    color: $dark;
+}
+
+.dateArrow {
+    color: $gray;
+    font-size: 18px;
+}
+
+.bookingLength {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: $gray;
+    margin-bottom: 18px;
+
+    svg {
+        fill: $primary;
+        flex-shrink: 0;
+    }
+
+    strong {
+        color: $dark;
+    }
+}
+
+.bookingPrice {
+    display: flex;
+    align-items: baseline;
+    gap: 10px;
+    margin-bottom: 8px;
+}
+
+.priceNew {
+    font-size: 28px;
+    font-weight: 800;
+    color: $dark;
+}
+
+.priceOld {
+    font-size: 16px;
+    color: #bbb;
+    text-decoration: line-through;
+}
+
+.tripCode {
+    font-size: 12px;
+    color: $gray;
+    margin-bottom: 20px;
+
+    strong {
+        color: $dark;
+        font-family: monospace;
+        font-size: 13px;
+    }
+}
+
+.bookBtn {
+    width: 100%;
+    background: $primary;
+    color: $white;
+    border: none;
+    border-radius: $radius-sm;
+    padding: 14px;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s;
+    margin-bottom: 20px;
+
+    &:hover {
+        background: darken($primary, 8%);
+    }
+
+    &:active {
+        transform: scale(0.98);
+    }
+}
+
+.bookingFeatures {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    border-top: 1px solid $light-gray;
+    padding-top: 16px;
+}
+
+.featureItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    color: $gray;
+    font-weight: 500;
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.lightboxImg {
+    position: relative;
+    width: 90vw;
+    height: 80vh;
+}
+
+.lightboxClose {
+    position: absolute;
+    top: 20px;
+    right: 24px;
+    background: rgba($white, 0.15);
+    border: none;
+    color: $white;
+    font-size: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    transition: background 0.2s;
+
+    &:hover {
+        background: rgba($white, 0.3);
+    }
+}
+
+.lightboxNav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba($white, 0.15);
+    border: none;
+    color: $white;
+    font-size: 36px;
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 10;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+
+    &:hover {
+        background: rgba($white, 0.3);
+    }
+}
+
+.lightboxPrev {
+    left: 20px;
+}
+
+.lightboxNext {
+    right: 20px;
+}
