@@ -135,18 +135,21 @@
 }
 
 .signInBtn {
+  display: inline-block;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   color: #fff;
-  background: rgba(255, 255, 255, 0.15);
-  border: 1px solid rgba(255, 255, 255, 0.3);
+  text-decoration: none;
+  background: transparent;
+  border: 1.5px solid rgba(255, 255, 255, 0.7);
   border-radius: 20px;
-  padding: 8px 20px;
+  padding: 8px 22px;
   cursor: pointer;
-  transition: background 0.2s;
+  transition: background 0.2s, color 0.2s;
 
   &:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
   }
 }
 
@@ -191,12 +194,13 @@
   }
 
   .signInBtn {
-    color: #fff;
-    background: #1a1a2e;
-    border-color: #1a1a2e;
+    color: #1a1a2e;
+    background: #fff;
+    border: 1px solid #1a1a2e;
 
     &:hover {
-      background: #2d2d44;
+      background: #f0f0f0;
+      color: #1a1a2e;
     }
   }
 }

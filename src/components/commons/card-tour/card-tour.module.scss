@@ -1,6 +1,9 @@
 .card {
+    display: block;
     flex: 1;
     border-radius: 16px;
+    text-decoration: none;
+    color: inherit;
     overflow: hidden;
     background: #fff;
     box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);

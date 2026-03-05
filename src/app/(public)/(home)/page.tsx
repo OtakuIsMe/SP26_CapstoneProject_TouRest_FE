@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Header from "@/components/layouts/header/header";
 import Button from "@/components/commons/button/button";
@@ -11,6 +12,7 @@ import styles from "./page.module.scss";
 const tabs = ["Stays", "Flights", "Cars", "Packages", "Cruises", "Things to do"];
 
 export default function HomePage() {
+    const router = useRouter();
     const [activeTab, setActiveTab] = useState("Stays");
 
     return (
@@ -118,7 +120,7 @@ export default function HomePage() {
                         </div>
 
                         {/* Search Button */}
-                        <button className={styles.searchBtn}>
+                        <button className={styles.searchBtn} onClick={() => router.push("/tours")}>
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                                 <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
@@ -140,7 +142,7 @@ export default function HomePage() {
                     <div className={styles.promoInfo}>
                         <p className={styles.promoDesc}>
                             Big Promo Alert! Are you ready for the ultimate adventure at an unbeatable
-                            price? TripAxis is thrilled to announce our latest Big Promo, offering you
+                            price? TouRest is thrilled to announce our latest Big Promo, offering you
                             incredible deals on your dream vacations!
                         </p>
                         <Button
@@ -184,6 +186,7 @@ export default function HomePage() {
                 </div>
                 <div className={styles.discoverList}>
                     <CardTour
+                        id={1}
                         image="/images/landing/explore_1.avif"
                         name="Ridquest Orlando Resort"
                         location="Bali"
@@ -193,6 +196,7 @@ export default function HomePage() {
                         originalPrice={500}
                     />
                     <CardTour
+                        id={2}
                         image="/images/landing/explore_2.webp"
                         name="Serene Bali Retreat"
                         location="Bali"
@@ -202,6 +206,7 @@ export default function HomePage() {
                         originalPrice={500}
                     />
                     <CardTour
+                        id={3}
                         image="/images/landing/explore_3.jpg"
                         name="Horseshoe Las Vegas"
                         location="Las Vegas"

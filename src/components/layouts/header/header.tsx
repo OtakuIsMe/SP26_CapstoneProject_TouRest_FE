@@ -77,14 +77,6 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
       </nav>
 
       <div className={styles.actions}>
-        <button className={styles.language}>
-          <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.5" />
-            <path d="M2 12h20M12 2c2.5 3 4 6.5 4 10s-1.5 7-4 10c-2.5-3-4-6.5-4-10s1.5-7 4-10z" stroke="currentColor" strokeWidth="1.5" />
-          </svg>
-          EN
-        </button>
-
         {loggedIn ? (
           <div className={styles.avatarWrapper} ref={menuRef}>
             <button
