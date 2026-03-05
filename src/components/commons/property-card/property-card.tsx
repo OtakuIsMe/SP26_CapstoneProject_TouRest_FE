@@ -1,10 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import Image from "next/image";
 import styles from "./property-card.module.scss";
 
 interface PropertyCardProps {
+    id?: string | number;
     image: string;
     type: string;
     name: string;
@@ -20,6 +22,7 @@ interface PropertyCardProps {
 }
 
 export default function PropertyCard({
+    id,
     image,
     type,
     name,
@@ -36,7 +39,7 @@ export default function PropertyCard({
     const [liked, setLiked] = useState(false);
 
     return (
-        <div className={styles.card}>
+        <Link href={id ? `/tours/${id}` : "/tours"} className={styles.card}>
             <div className={styles.imageWrapper}>
                 <Image src={image} alt={name} fill sizes="320px" style={{ objectFit: "cover" }} />
             </div>
@@ -45,7 +48,7 @@ export default function PropertyCard({
                     <span className={styles.type}>{type}</span>
                     <button
                         className={`${styles.heart} ${liked ? styles.heartActive : ""}`}
-                        onClick={() => setLiked(!liked)}
+                        onClick={(e) => { e.preventDefault(); setLiked(!liked); }}
                         type="button"
                         aria-label="Save"
                     >
@@ -76,6 +79,6 @@ export default function PropertyCard({
                     </div>
                 </div>
             </div>
-        </div>
+        </Link>
     );
 }

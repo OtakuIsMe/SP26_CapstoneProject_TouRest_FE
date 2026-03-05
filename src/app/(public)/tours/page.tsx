@@ -51,58 +51,10 @@ const propertyRatingFilter = [
 ];
 
 const properties = [
-    {
-        image: "/images/landing/explore_1.avif",
-        type: "Entire home in Warsaw",
-        name: "Warsaw Valley",
-        guests: 6,
-        homeType: "Entire Home",
-        beds: 5,
-        baths: 3,
-        amenities: ["Wifi", "Kitchen", "Free Parking"],
-        rating: 5.0,
-        reviews: 7,
-        price: 325,
-    },
-    {
-        image: "/images/landing/explore_2.webp",
-        type: "Entire home in Warsaw",
-        name: "Warsaw Valley",
-        guests: 6,
-        homeType: "Entire Home",
-        beds: 5,
-        baths: 3,
-        amenities: ["Wifi", "Kitchen", "Free Parking"],
-        rating: 5.0,
-        reviews: 7,
-        price: 325,
-    },
-    {
-        image: "/images/landing/explore_3.jpg",
-        type: "Entire home in Warsaw",
-        name: "Warsaw Valley",
-        guests: 6,
-        homeType: "Entire Home",
-        beds: 5,
-        baths: 3,
-        amenities: ["Wifi", "Kitchen", "Free Parking"],
-        rating: 5.0,
-        reviews: 7,
-        price: 325,
-    },
-    {
-        image: "/images/landing/explore_4.avif",
-        type: "Entire home in Warsaw",
-        name: "Warsaw Valley",
-        guests: 6,
-        homeType: "Entire Home",
-        beds: 5,
-        baths: 3,
-        amenities: ["Wifi", "Kitchen", "Free Parking"],
-        rating: 5.0,
-        reviews: 7,
-        price: 325,
-    },
+    { id: 1, image: "/images/landing/explore_1.avif", type: "Entire home in Warsaw", name: "Warsaw Valley", guests: 6, homeType: "Entire Home", beds: 5, baths: 3, amenities: ["Wifi", "Kitchen", "Free Parking"], rating: 5.0, reviews: 7, price: 325 },
+    { id: 2, image: "/images/landing/explore_2.webp", type: "Entire home in Warsaw", name: "Warsaw Valley", guests: 6, homeType: "Entire Home", beds: 5, baths: 3, amenities: ["Wifi", "Kitchen", "Free Parking"], rating: 5.0, reviews: 7, price: 325 },
+    { id: 3, image: "/images/landing/explore_3.jpg", type: "Entire home in Warsaw", name: "Warsaw Valley", guests: 6, homeType: "Entire Home", beds: 5, baths: 3, amenities: ["Wifi", "Kitchen", "Free Parking"], rating: 5.0, reviews: 7, price: 325 },
+    { id: 4, image: "/images/landing/explore_4.avif", type: "Entire home in Warsaw", name: "Warsaw Valley", guests: 6, homeType: "Entire Home", beds: 5, baths: 3, amenities: ["Wifi", "Kitchen", "Free Parking"], rating: 5.0, reviews: 7, price: 325 },
 ];
 
 export default function ToursPage() {
@@ -132,7 +84,7 @@ export default function ToursPage() {
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M3 17l6-6 4 4 8-8" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
-                            TripAxis
+                            TouRest
                         </div>
                         <div className={styles.bannerImage}>
                             <Image src="/images/landing/banner.jpg" alt="Flight deals" fill sizes="100vw" style={{ objectFit: "cover" }} />

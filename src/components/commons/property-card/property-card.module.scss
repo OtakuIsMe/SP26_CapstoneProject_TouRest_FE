@@ -3,6 +3,17 @@
     gap: 20px;
     padding: 20px 0;
     border-bottom: 1px solid #e5e7eb;
+    text-decoration: none;
+    color: inherit;
+    border-radius: 12px;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.2s;
+    cursor: pointer;
+
+    &:hover {
+        background: #f9fafb;
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.07);
+        transform: translateY(-2px);
+    }
 }
 
 .imageWrapper {
@@ -12,6 +23,14 @@
     border-radius: 12px;
     overflow: hidden;
     flex-shrink: 0;
+
+    img {
+        transition: transform 0.4s ease !important;
+    }
+}
+
+.card:hover .imageWrapper img {
+    transform: scale(1.06);
 }
 
 .content {

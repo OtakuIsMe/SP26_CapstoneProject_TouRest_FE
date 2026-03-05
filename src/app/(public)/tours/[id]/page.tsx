@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useParams } from "next/navigation";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/layouts/header/header";
@@ -117,6 +118,7 @@ const placeSidebar = [
 // ──────────────────────────────────────────────────────────────────────────
 
 export default function TourDetailPage() {
+    const params = useParams();
     const [activeTab, setActiveTab] = useState<Tab>("Overview");
     const [expanded, setExpanded] = useState(false);
     const [activePlaceCat, setActivePlaceCat] = useState("Top Attractions");
@@ -354,7 +356,7 @@ export default function TourDetailPage() {
                                     Trip Code: <strong>{booking.tripCode}</strong>
                                 </div>
 
-                                <button className={styles.bookBtn}>Book Your Trip Now!</button>
+                                <Link href={`/tours/${params?.id ?? 1}/booking`} className={styles.bookBtn}>Book Your Trip Now!</Link>
 
                                 <div className={styles.bookingFeatures}>
                                     {booking.features.map((f) => (

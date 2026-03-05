@@ -1,7 +1,9 @@
+import Link from "next/link";
 import Image from "next/image";
 import styles from "./card-tour.module.scss";
 
 interface CardTourProps {
+    id?: string | number;
     image: string;
     name: string;
     location: string;
@@ -12,6 +14,7 @@ interface CardTourProps {
 }
 
 export default function CardTour({
+    id,
     image,
     name,
     location,
@@ -21,7 +24,7 @@ export default function CardTour({
     originalPrice,
 }: CardTourProps) {
     return (
-        <div className={styles.card}>
+        <Link href={id ? `/tours/${id}` : "/tours"} className={styles.card}>
             <div className={styles.imageWrapper}>
                 <Image src={image} alt={name} fill sizes="280px" style={{ objectFit: "cover" }} />
             </div>
@@ -53,6 +56,6 @@ export default function CardTour({
                 </div>
                 <p className={styles.taxNote}>Includes taxes & fees</p>
             </div>
-        </div>
+        </Link>
     );
 }

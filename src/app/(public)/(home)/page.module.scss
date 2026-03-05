@@ -229,6 +229,28 @@
     position: relative;
     overflow: hidden;
     border-radius: 4px;
+    cursor: pointer;
+
+    img {
+        transition: transform 0.45s ease !important;
+    }
+
+    &::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background: rgba(0, 0, 0, 0);
+        transition: background 0.45s ease;
+        z-index: 1;
+    }
+
+    &:hover img {
+        transform: scale(1.08);
+    }
+
+    &:hover::after {
+        background: rgba(0, 0, 0, 0.18);
+    }
 }
 
 .promoImg1 {
