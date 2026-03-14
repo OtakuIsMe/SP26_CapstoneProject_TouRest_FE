@@ -1,0 +1,676 @@
+// ── Variables ──────────────────────────────────────────────────────────────
+$teal: #2a9d8f;
+$teal-dark: #238b7e;
+$amber: #f59e0b;
+$dark: #1a1a2e;
+$gray: #6b7280;
+$light-gray: #e5e7eb;
+$bg: #f9fafb;
+$white: #ffffff;
+$radius-sm: 8px;
+$radius-md: 12px;
+$radius-lg: 16px;
+$shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
+$shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1);
+$shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
+
+// Accent helpers — toggled via data-accent attribute on wrapper
+// Each component reads --accent-color CSS var set by parent
+:root {
+  --accent: #{$teal};
+  --accent-dark: #{$teal-dark};
+  --accent-bg: rgba(42, 157, 143, 0.1);
+  --accent-border: rgba(42, 157, 143, 0.25);
+}
+
+// ── Breadcrumb ────────────────────────────────────────────────────────────
+.breadcrumb {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 16px 24px 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: $gray;
+
+  a {
+    color: $teal;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+
+  span:last-child {
+    color: $dark;
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 280px;
+  }
+}
+
+// ── Hero ──────────────────────────────────────────────────────────────────
+.hero {
+  position: relative;
+  height: 460px;
+  margin-top: 12px;
+  overflow: hidden;
+}
+
+.heroCover {
+  position: absolute;
+  inset: 0;
+}
+
+.heroOverlay {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.6) 100%);
+}
+
+.heroContent {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 0 24px 40px;
+}
+
+.heroBadge {
+  display: inline-block;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  padding: 4px 14px;
+  border-radius: 20px;
+  margin-bottom: 12px;
+  color: $dark;
+  background: $amber;
+
+  &.teal {
+    background: $teal;
+    color: $white;
+  }
+}
+
+.heroTitle {
+  font-size: clamp(24px, 4vw, 40px);
+  font-weight: 800;
+  color: $white;
+  line-height: 1.2;
+  margin: 0 0 8px;
+  text-shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+
+.heroTagline {
+  font-size: 16px;
+  color: rgba(255,255,255,0.9);
+  margin: 0 0 18px;
+}
+
+.heroMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 20px;
+  align-items: center;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: rgba(255,255,255,0.9);
+
+  b { color: $white; font-weight: 700; }
+}
+
+.stars { letter-spacing: 2px; }
+
+// ── Layout ────────────────────────────────────────────────────────────────
+.layout {
+  max-width: 1280px;
+  margin: 32px auto 0;
+  padding: 0 24px;
+  display: grid;
+  grid-template-columns: 1fr 360px;
+  gap: 28px;
+  align-items: start;
+
+  @media (max-width: 1024px) { grid-template-columns: 1fr; }
+}
+
+// ── Highlights ────────────────────────────────────────────────────────────
+.highlights {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 12px;
+  margin-bottom: 28px;
+
+  @media (max-width: 768px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.highlightItem {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: $white;
+  border: 1px solid $light-gray;
+  border-radius: $radius-md;
+  padding: 14px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  color: $dark;
+  box-shadow: $shadow-sm;
+}
+
+.highlightIcon { font-size: 22px; }
+
+// ── Tabs ──────────────────────────────────────────────────────────────────
+.tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 2px solid $light-gray;
+  margin-bottom: 28px;
+  overflow-x: auto;
+}
+
+.tabBtn {
+  padding: 10px 20px;
+  font-size: 14px;
+  font-weight: 500;
+  color: $gray;
+  background: transparent;
+  border: none;
+  border-bottom: 2px solid transparent;
+  margin-bottom: -2px;
+  cursor: pointer;
+  border-radius: $radius-sm $radius-sm 0 0;
+  transition: color 0.2s, border-color 0.2s;
+  white-space: nowrap;
+
+  &:hover { color: $teal; }
+}
+
+.tabActive {
+  color: $teal;
+  border-bottom-color: $teal;
+  background: rgba(42, 157, 143, 0.06);
+
+  &.amber {
+    color: $amber;
+    border-bottom-color: $amber;
+    background: rgba(245, 158, 11, 0.06);
+  }
+}
+
+.tabContent { animation: fadeIn 0.2s ease; }
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+// ── Section headings ──────────────────────────────────────────────────────
+.sectionTitle {
+  font-size: 22px;
+  font-weight: 700;
+  color: $dark;
+  margin: 0 0 8px;
+}
+
+.sectionSub {
+  font-size: 14px;
+  color: $gray;
+  margin: 0 0 24px;
+  line-height: 1.6;
+}
+
+// ── Gallery ───────────────────────────────────────────────────────────────
+.galleryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+
+  @media (max-width: 600px) { grid-template-columns: repeat(2, 1fr); }
+}
+
+.galleryThumb {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  border-radius: $radius-md;
+  overflow: hidden;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+
+  img { transition: transform 0.4s; }
+  &:hover img { transform: scale(1.08); }
+  &:hover .galleryOverlay { opacity: 1; }
+}
+
+.galleryOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 28px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────
+.lightbox {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.92);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.lbImageWrap {
+  position: relative;
+  width: 80vw;
+  height: 80vh;
+  max-width: 1100px;
+}
+
+.lbClose {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: $white;
+  font-size: 22px;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+
+  &:hover { background: rgba(255,255,255,0.3); }
+}
+
+.lbPrev,
+.lbNext {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(255,255,255,0.15);
+  border: none;
+  color: $white;
+  font-size: 42px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  cursor: pointer;
+  z-index: 10;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+
+  &:hover { background: rgba(255,255,255,0.3); }
+}
+
+.lbPrev { left: 20px; }
+.lbNext { right: 20px; }
+
+.lbCounter {
+  position: absolute;
+  bottom: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255,255,255,0.75);
+  font-size: 14px;
+  margin: 0;
+}
+
+// ── Reviews ───────────────────────────────────────────────────────────────
+.reviewsHeader {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+  padding-bottom: 20px;
+  border-bottom: 1px solid $light-gray;
+}
+
+.ratingScore {
+  font-size: 56px;
+  font-weight: 800;
+  color: $dark;
+  line-height: 1;
+}
+
+.ratingCount {
+  font-size: 13px;
+  color: $gray;
+  margin: 6px 0 0;
+}
+
+.reviewsList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.reviewCard {
+  background: $white;
+  border: 1px solid $light-gray;
+  border-radius: $radius-md;
+  padding: 20px;
+  box-shadow: $shadow-sm;
+}
+
+.reviewAuthor {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.reviewAvatar {
+  position: relative;
+  width: 46px;
+  height: 46px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.reviewName {
+  font-size: 14px;
+  font-weight: 700;
+  color: $dark;
+  margin: 0 0 2px;
+}
+
+.reviewDate {
+  font-size: 12px;
+  color: $gray;
+  margin: 0;
+}
+
+.reviewRatingWrap { margin-left: auto; }
+
+.reviewText {
+  font-size: 14px;
+  line-height: 1.75;
+  color: #374151;
+  margin: 0 0 12px;
+}
+
+.reviewTag {
+  font-size: 12px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: 20px;
+}
+
+.reviewTagTeal {
+  color: $teal;
+  background: rgba(42, 157, 143, 0.1);
+}
+
+.reviewTagAmber {
+  color: $amber;
+  background: rgba(245, 158, 11, 0.1);
+}
+
+// ── Sidebar ───────────────────────────────────────────────────────────────
+.sidebar {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  position: sticky;
+  top: 80px;
+}
+
+// Side info card
+.sideCard {
+  background: $white;
+  border: 1px solid $light-gray;
+  border-radius: $radius-lg;
+  padding: 24px;
+  box-shadow: $shadow-md;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.sideAvatarCircle {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 50%;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 3px solid $teal;
+  box-shadow: 0 4px 12px rgba(42, 157, 143, 0.25);
+}
+
+.sideAvatarRounded {
+  position: relative;
+  width: 90px;
+  height: 90px;
+  border-radius: $radius-md;
+  overflow: hidden;
+  margin-bottom: 14px;
+  border: 3px solid $amber;
+  box-shadow: 0 4px 14px rgba(245, 158, 11, 0.25);
+}
+
+.sideTitle {
+  font-size: 15px;
+  font-weight: 800;
+  color: $dark;
+  margin: 0 0 6px;
+}
+
+.sideTypeTeal {
+  font-size: 12px;
+  color: $teal;
+  font-weight: 700;
+  background: rgba(42, 157, 143, 0.1);
+  padding: 3px 12px;
+  border-radius: 20px;
+  margin: 0 0 18px;
+  display: inline-block;
+}
+
+.sideTypeAmber {
+  font-size: 12px;
+  color: $amber;
+  font-weight: 700;
+  background: rgba(245, 158, 11, 0.1);
+  padding: 3px 12px;
+  border-radius: 20px;
+  margin: 0 0 18px;
+  display: inline-block;
+}
+
+.sideInfo {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  text-align: left;
+  margin-bottom: 20px;
+}
+
+.sideInfoRow {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 13px;
+  color: #374151;
+  line-height: 1.5;
+
+  span:first-child { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  a {
+    color: $teal;
+    text-decoration: none;
+    &:hover { text-decoration: underline; }
+  }
+}
+
+.primaryBtn {
+  width: 100%;
+  background: $teal;
+  color: $white;
+  border: none;
+  padding: 13px;
+  border-radius: $radius-md;
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  margin-bottom: 10px;
+  transition: background 0.2s;
+
+  &:hover { background: $teal-dark; }
+}
+
+.secondaryBtn {
+  width: 100%;
+  background: transparent;
+  color: $teal;
+  border: 2px solid $teal;
+  padding: 11px;
+  border-radius: $radius-md;
+  font-size: 15px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover { background: rgba(42, 157, 143, 0.08); }
+}
+
+// Stats card
+.statsCard {
+  background: $white;
+  border: 1px solid $light-gray;
+  border-radius: $radius-lg;
+  padding: 20px 24px;
+  box-shadow: $shadow-sm;
+}
+
+.statsTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: $dark;
+  margin: 0 0 16px;
+}
+
+.statsList {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+.statItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.statValueTeal {
+  font-size: 26px;
+  font-weight: 800;
+  color: $teal;
+}
+
+.statValueAmber {
+  font-size: 26px;
+  font-weight: 800;
+  color: $amber;
+}
+
+.statLabel {
+  font-size: 11px;
+  color: $gray;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+// Quick pick
+.quickPick {
+  background: $white;
+  border: 1px solid $light-gray;
+  border-radius: $radius-lg;
+  padding: 20px 24px;
+  box-shadow: $shadow-sm;
+}
+
+.quickPickTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: $dark;
+  margin: 0 0 16px;
+}
+
+.quickPickItem {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid $light-gray;
+  cursor: pointer;
+
+  &:last-child { border-bottom: none; }
+  &:hover .quickPickName { color: $teal; }
+}
+
+.quickPickImg {
+  position: relative;
+  width: 56px;
+  height: 56px;
+  border-radius: $radius-sm;
+  overflow: hidden;
+  flex-shrink: 0;
+}
+
+.quickPickInfo { flex: 1; min-width: 0; }
+
+.quickPickName {
+  font-size: 13px;
+  font-weight: 600;
+  color: $dark;
+  margin: 0 0 2px;
+  transition: color 0.2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.quickPickSub {
+  font-size: 11px;
+  color: $gray;
+  margin: 0 0 2px;
+}
+
+.quickPickPrice {
+  font-size: 13px;
+  font-weight: 700;
+  color: $teal;
+  margin: 0;
+
+  span { font-size: 11px; font-weight: 400; color: $gray; }
+}

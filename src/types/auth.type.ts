@@ -24,3 +24,11 @@ export type RefreshTokenResponse = {
     accessToken: string;
     expiresIn: number;
 };
+
+export type UserResponse = {
+    id: string;
+    username: string;
+    role: "admin" | "agency" | "provider" | "customer";
+    email: string;
+    phone?: string;
+};

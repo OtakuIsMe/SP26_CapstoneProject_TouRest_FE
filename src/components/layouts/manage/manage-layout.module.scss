@@ -1,0 +1,275 @@
+// ─── Layout Shell ─────────────────────────────────────────────────────────────
+.layout {
+    display: flex;
+    min-height: 100vh;
+    background: #f5f6fa;
+}
+
+// ─── Sidebar ──────────────────────────────────────────────────────────────────
+.sidebar {
+    width: 240px;
+    min-height: 100vh;
+    background: #1a1d23;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    position: fixed;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    z-index: 100;
+}
+
+.sidebarLogo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 24px 20px;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    text-decoration: none;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+
+    svg {
+        width: 28px;
+        height: 28px;
+        color: #6c63ff;
+        flex-shrink: 0;
+    }
+}
+
+.sidebarRoleBadge {
+    margin: 14px 20px 6px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    display: inline-block;
+}
+
+.roleAdmin {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+}
+
+.roleAgency {
+    background: rgba(99, 102, 241, 0.15);
+    color: #818cf8;
+}
+
+.roleProvider {
+    background: rgba(34, 197, 94, 0.15);
+    color: #4ade80;
+}
+
+.sidebarNav {
+    flex: 1;
+    padding: 8px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    margin-top: 4px;
+}
+
+.navItem {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: rgba(255, 255, 255, 0.55);
+    text-decoration: none;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        background: rgba(255, 255, 255, 0.07);
+        color: rgba(255, 255, 255, 0.9);
+    }
+
+    svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+}
+
+.navItemActive {
+    background: rgba(108, 99, 255, 0.18);
+    color: #a5b4fc;
+
+    &:hover {
+        background: rgba(108, 99, 255, 0.22);
+        color: #a5b4fc;
+    }
+}
+
+.sidebarFooter {
+    padding: 12px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logoutBtn {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 8px;
+    background: none;
+    border: none;
+    color: rgba(255, 255, 255, 0.45);
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease;
+    text-align: left;
+
+    &:hover {
+        background: rgba(239, 68, 68, 0.12);
+        color: #f87171;
+    }
+
+    svg {
+        width: 18px;
+        height: 18px;
+        flex-shrink: 0;
+    }
+}
+
+// ─── Main Area ────────────────────────────────────────────────────────────────
+.main {
+    flex: 1;
+    margin-left: 240px;
+    display: flex;
+    flex-direction: column;
+    min-height: 100vh;
+}
+
+// ─── Header ───────────────────────────────────────────────────────────────────
+.header {
+    height: 60px;
+    background: #fff;
+    border-bottom: 1px solid #e8eaed;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 24px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.headerLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.headerBreadcrumb {
+    font-size: 13px;
+    color: #9ca3af;
+    font-weight: 400;
+}
+
+.headerSep {
+    font-size: 13px;
+    color: #d1d5db;
+    margin: 0 2px;
+}
+
+.headerTitle {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1a1d23;
+}
+
+.headerRight {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.headerNotif {
+    position: relative;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    background: #f5f6fa;
+    border: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    color: #6b7280;
+    transition: background 0.15s ease, color 0.15s ease;
+
+    &:hover {
+        background: #ebebf5;
+        color: #1a1d23;
+    }
+
+    svg {
+        width: 18px;
+        height: 18px;
+    }
+}
+
+.notifDot {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 1px solid #fff;
+}
+
+.headerAvatar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    transition: background 0.15s ease;
+
+    &:hover {
+        background: #f5f6fa;
+    }
+}
+
+.avatarCircle {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #6c63ff;
+    color: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    flex-shrink: 0;
+}
+
+.avatarName {
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    max-width: 120px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+// ─── Page Content ─────────────────────────────────────────────────────────────
+.content {
+    flex: 1;
+    padding: 28px 24px;
+}

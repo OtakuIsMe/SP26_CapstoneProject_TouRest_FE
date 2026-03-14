@@ -4,6 +4,7 @@ import {
     RefreshTokenResponse,
     RegisterRequest,
     RegisterResponse,
+    UserResponse,
 } from "@/types/auth.type";
 import axiosClient from "../http/axios-client";
 
@@ -19,4 +20,7 @@ export const authService = {
 
     logout: (): Promise<ApiResponse<null>> =>
         axiosClient.post("/auth/logout"),
+
+    getMe: (): Promise<ApiResponse<UserResponse>> =>
+        axiosClient.get("/auth/me"),
 };
