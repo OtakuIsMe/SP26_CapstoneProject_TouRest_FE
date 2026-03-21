@@ -1,0 +1,464 @@
+$blue: #3b82f6;
+$blue-dark: #2563eb;
+$green: #10b981;
+$red: #ef4444;
+$amber: #f59e0b;
+$purple: #8b5cf6;
+$dark: #111827;
+$gray: #6b7280;
+$mid: #9ca3af;
+$light: #e5e7eb;
+$bg: #f5f6fa;
+$white: #ffffff;
+$r: 12px;
+$r-sm: 8px;
+$shadow: 0 1px 3px rgba(0,0,0,0.07), 0 1px 2px rgba(0,0,0,0.05);
+$shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+
+// ── Layout ────────────────────────────────────────────────────────────────────
+.page { display: flex; flex-direction: column; gap: 20px; }
+
+.statsRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    @media (max-width: 900px) { grid-template-columns: repeat(2, 1fr); }
+    @media (max-width: 480px) { grid-template-columns: 1fr; }
+}
+
+.midRow {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    @media (max-width: 1100px) { grid-template-columns: 1fr; }
+}
+
+.midLeft  { display: flex; flex-direction: column; gap: 16px; }
+.midRight { display: flex; flex-direction: column; gap: 16px; }
+
+.bottomRow {
+    display: grid;
+    grid-template-columns: 1fr 320px;
+    gap: 16px;
+    @media (max-width: 1100px) { grid-template-columns: 1fr; }
+}
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+.card {
+    background: $white;
+    border-radius: $r;
+    border: 1px solid $light;
+    box-shadow: $shadow;
+    padding: 18px 20px;
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.cardTitle { font-size: 15px; font-weight: 700; color: $dark; margin: 0; }
+
+.cardMenu {
+    background: none;
+    border: none;
+    color: $mid;
+    font-size: 18px;
+    letter-spacing: 1px;
+    cursor: pointer;
+    padding: 0 4px;
+    &:hover { color: $gray; }
+}
+
+// ── Stat cards ────────────────────────────────────────────────────────────────
+.statCard {
+    background: $white;
+    border-radius: $r;
+    border: 1px solid $light;
+    box-shadow: $shadow;
+    padding: 18px 20px;
+}
+
+.statTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    margin-bottom: 10px;
+}
+
+.statLabel { font-size: 13px; font-weight: 600; color: $gray; margin: 0; }
+
+.statIcon {
+    width: 34px;
+    height: 34px;
+    border-radius: $r-sm;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    svg { width: 17px; height: 17px; }
+}
+
+.statIconBlue   { background: rgba(59,130,246,0.1);  color: $blue;   }
+.statIconGreen  { background: rgba(16,185,129,0.1);  color: $green;  }
+.statIconAmber  { background: rgba(245,158,11,0.1);  color: $amber;  }
+.statIconPurple { background: rgba(139,92,246,0.1);  color: $purple; }
+
+.statValue { font-size: 28px; font-weight: 900; color: $dark; line-height: 1; margin: 0 0 8px; }
+
+.statFooter { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.statBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 2px;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+}
+
+.badgeUp   { background: rgba(16,185,129,0.12); color: $green; }
+.badgeDown { background: rgba(239,68,68,0.1);   color: $red;   }
+.statSub   { font-size: 11.5px; color: $mid; }
+
+// ── Profit chart ──────────────────────────────────────────────────────────────
+.profitBody { display: flex; gap: 24px; align-items: flex-start; }
+
+.profitLeft { flex-shrink: 0; }
+
+.profitValue { font-size: 30px; font-weight: 900; color: $dark; margin: 0 0 6px; }
+
+.profitBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12px;
+    font-weight: 700;
+    color: $green;
+    background: rgba(16,185,129,0.1);
+    padding: 3px 8px;
+    border-radius: 20px;
+    margin-bottom: 6px;
+}
+
+.profitVs { font-size: 12px; color: $mid; margin: 0; }
+
+.chartWrap { flex: 1; height: 110px; position: relative; }
+
+.chartSvg { width: 100%; height: 100%; overflow: visible; }
+
+.chartTooltip {
+    position: absolute;
+    top: 4px;
+    left: 52%;
+    background: $white;
+    border: 1px solid $light;
+    border-radius: $r-sm;
+    padding: 8px 12px;
+    box-shadow: $shadow-md;
+    font-size: 12px;
+    pointer-events: none;
+    white-space: nowrap;
+    z-index: 2;
+}
+
+.tooltipDate { color: $mid; margin: 0 0 4px; }
+.tooltipThis { display: flex; align-items: center; gap: 6px; margin: 0 0 3px; font-weight: 600; color: $dark; font-size: 12px; }
+.tooltipLast { display: flex; align-items: center; gap: 6px; color: $mid; margin: 0; font-size: 12px; }
+.tooltipDot  { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+
+.chartXAxis {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 6px;
+    padding: 0 2px;
+    font-size: 11px;
+    color: $mid;
+}
+
+// Customers breakdown
+.breakdownRows {
+    display: flex;
+    gap: 20px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.breakdownItem {}
+
+.breakdownValue {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 20px;
+    font-weight: 800;
+    color: $dark;
+}
+
+.breakdownDot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+.breakdownLabel { font-size: 11.5px; color: $mid; padding-left: 18px; }
+
+.breakdownBar { height: 5px; border-radius: 99px; overflow: hidden; display: flex; }
+.barSegment { height: 100%; }
+
+// ── Bar chart ─────────────────────────────────────────────────────────────────
+.barChart {
+    display: flex;
+    align-items: flex-end;
+    gap: 8px;
+    height: 130px;
+    padding-bottom: 22px;
+    position: relative;
+}
+
+.barCol {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    height: 100%;
+    gap: 4px;
+}
+
+.bar {
+    width: 100%;
+    max-width: 36px;
+    border-radius: 6px 6px 0 0;
+    background: $light;
+    min-height: 8px;
+}
+
+.barActive { background: $blue; }
+
+.barLabel {
+    font-size: 11px;
+    color: $mid;
+    position: absolute;
+    bottom: 0;
+    font-weight: 500;
+}
+
+.barTopVal {
+    font-size: 11px;
+    font-weight: 700;
+    color: $blue;
+}
+
+// ── Gauge ─────────────────────────────────────────────────────────────────────
+.gaugeWrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+.gaugeSvgWrap { position: relative; width: 170px; height: 96px; }
+.gaugeSvg { width: 170px; height: 96px; }
+
+.gaugeOverlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding-bottom: 4px;
+}
+
+.gaugeNum  { font-size: 28px; font-weight: 900; color: $dark; line-height: 1; }
+.gaugeSub  { font-size: 12px; color: $mid; }
+.gaugeTarget { font-size: 12px; color: $mid; text-align: center; margin: 0; }
+
+.gaugeDetailsBtn {
+    width: 100%;
+    background: $bg;
+    border: none;
+    border-radius: $r-sm;
+    padding: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $blue;
+    cursor: pointer;
+    transition: background 0.14s;
+    &:hover { background: #eef2ff; }
+}
+
+// ── AI Assistant ──────────────────────────────────────────────────────────────
+.aiCard {
+    background: $white;
+    border-radius: $r;
+    border: 1px solid $light;
+    box-shadow: $shadow;
+    padding: 16px 16px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.aiHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.aiTitle { font-size: 15px; font-weight: 700; color: $dark; margin: 0; }
+
+.aiExpandBtn {
+    background: none;
+    border: none;
+    color: $mid;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    font-size: 14px;
+    &:hover { color: $gray; }
+}
+
+.aiBody {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 12px 0;
+}
+
+.aiOrb {
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 35% 35%, #93c5fd, #3b82f6 55%, #1d4ed8);
+    box-shadow: 0 4px 20px rgba(59,130,246,0.38);
+    animation: orbPulse 2.5s ease-in-out infinite;
+}
+
+@keyframes orbPulse {
+    0%, 100% { transform: scale(1);    box-shadow: 0 4px 20px rgba(59,130,246,0.38); }
+    50%       { transform: scale(1.06); box-shadow: 0 6px 28px rgba(59,130,246,0.52); }
+}
+
+.aiInput {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    border: 1px solid $light;
+    border-radius: 99px;
+    padding: 7px 12px;
+    background: $bg;
+    width: 100%;
+}
+
+.aiInputField {
+    flex: 1;
+    border: none;
+    background: none;
+    font-size: 13px;
+    color: $dark;
+    outline: none;
+    &::placeholder { color: $mid; }
+}
+
+.aiVoiceBtn {
+    background: none;
+    border: none;
+    color: $mid;
+    cursor: pointer;
+    font-size: 15px;
+    display: flex;
+    &:hover { color: $blue; }
+}
+
+.aiSendBtn {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: $blue;
+    border: none;
+    color: $white;
+    font-size: 13px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.14s;
+    &:hover { background: $blue-dark; }
+}
+
+// ── Best Selling Table ────────────────────────────────────────────────────────
+.table { width: 100%; border-collapse: collapse; }
+
+.thead th {
+    font-size: 10.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: $mid;
+    padding: 0 10px 10px;
+    text-align: left;
+    border-bottom: 1px solid $light;
+    white-space: nowrap;
+}
+
+.tbody tr { transition: background 0.12s; &:hover { background: $bg; } }
+
+.tbody td {
+    padding: 12px 10px;
+    font-size: 13px;
+    color: $dark;
+    border-bottom: 1px solid $light;
+    vertical-align: middle;
+}
+
+.tbody tr:last-child td { border-bottom: none; }
+
+.tdId { color: $mid; font-size: 12px; font-weight: 500; }
+
+.productCell { display: flex; align-items: center; gap: 10px; }
+
+.productIcon {
+    width: 30px;
+    height: 30px;
+    border-radius: 6px;
+    background: $bg;
+    border: 1px solid $light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    flex-shrink: 0;
+}
+
+.productName {
+    font-size: 13px;
+    font-weight: 500;
+    color: $dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+}
+
+.tdSold { color: $gray; font-size: 12.5px; }
+
+.revenue {
+    font-weight: 700;
+    font-size: 13px;
+    &.green  { color: $green; }
+    &.red    { color: $red;   }
+    &.amber  { color: $amber; }
+}
+
+.tdRating {
+    display: flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $dark;
+}
+
+.star { color: $amber; }
