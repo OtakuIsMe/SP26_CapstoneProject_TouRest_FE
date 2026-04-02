@@ -1,0 +1,394 @@
+$blue: #3b82f6;
+$blue-dark: #2563eb;
+$blue-light: rgba(59,130,246,0.08);
+$red: #ef4444;
+$green: #10b981;
+$amber: #f59e0b;
+$dark: #111827;
+$gray: #6b7280;
+$mid: #9ca3af;
+$light: #e5e7eb;
+$bg: #f5f6fa;
+$white: #ffffff;
+$r: 10px;
+$r-sm: 6px;
+$shadow-sm: 0 1px 3px rgba(0,0,0,0.07);
+
+// ── Wrapper ───────────────────────────────────────────────────────────────────
+.wrapper {
+    background: $white;
+    border-radius: $r;
+    border: 1px solid $light;
+    box-shadow: $shadow-sm;
+    overflow: hidden;
+}
+
+// ── Toolbar ───────────────────────────────────────────────────────────────────
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    border-bottom: 1px solid $light;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.toolbarLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    flex: 1;
+    min-width: 0;
+}
+
+.searchWrap {
+    position: relative;
+    min-width: 220px;
+    flex: 1;
+    max-width: 320px;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 11px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: $mid;
+    font-size: 14px;
+    pointer-events: none;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 7px 11px 7px 34px;
+    border: 1.5px solid $light;
+    border-radius: $r-sm;
+    font-size: 13px;
+    color: $dark;
+    background: $bg;
+    outline: none;
+    transition: border-color 0.15s;
+
+    &::placeholder { color: $mid; }
+    &:focus { border-color: $blue; background: $white; }
+}
+
+.filterSelect {
+    padding: 7px 28px 7px 11px;
+    border: 1.5px solid $light;
+    border-radius: $r-sm;
+    font-size: 13px;
+    color: $dark;
+    background: $bg;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 10px center;
+    transition: border-color 0.15s;
+
+    &:focus { border-color: $blue; }
+}
+
+.toolbarRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.toolbarCount {
+    font-size: 12.5px;
+    color: $mid;
+    white-space: nowrap;
+}
+
+.btnOutline {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 13px;
+    border: 1.5px solid $light;
+    border-radius: $r-sm;
+    font-size: 13px;
+    font-weight: 600;
+    color: $dark;
+    background: $white;
+    cursor: pointer;
+    transition: border-color 0.14s, background 0.14s;
+    white-space: nowrap;
+
+    &:hover { border-color: #9ca3af; background: $bg; }
+}
+
+.btnPrimary {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 7px 14px;
+    border: none;
+    border-radius: $r-sm;
+    font-size: 13px;
+    font-weight: 700;
+    color: $white;
+    background: $blue;
+    cursor: pointer;
+    transition: background 0.14s;
+    white-space: nowrap;
+
+    &:hover { background: $blue-dark; }
+}
+
+// ── Table ─────────────────────────────────────────────────────────────────────
+.tableWrap {
+    overflow-x: auto;
+
+    &::-webkit-scrollbar { height: 4px; }
+    &::-webkit-scrollbar-track { background: transparent; }
+    &::-webkit-scrollbar-thumb { background: $light; border-radius: 99px; }
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    min-width: 600px;
+}
+
+// ── Head ──────────────────────────────────────────────────────────────────────
+.thead { background: $bg; }
+
+.th {
+    padding: 10px 14px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.07em;
+    color: $mid;
+    text-align: left;
+    white-space: nowrap;
+    user-select: none;
+    border-bottom: 1px solid $light;
+}
+
+.thSortable {
+    cursor: pointer;
+    transition: color 0.14s;
+
+    &:hover { color: $dark; }
+}
+
+.thSortActive { color: $blue !important; }
+
+.thInner {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.sortIcon { font-size: 10px; color: $mid; }
+.sortIconActive { color: $blue; }
+
+.thCheck { width: 42px; padding: 10px 0 10px 16px; }
+
+// ── Body ──────────────────────────────────────────────────────────────────────
+.tr {
+    border-bottom: 1px solid $light;
+    transition: background 0.12s;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: rgba(59,130,246,0.03); }
+}
+
+.trSelected { background: $blue-light !important; }
+
+.td {
+    padding: 12px 14px;
+    font-size: 13.5px;
+    color: $dark;
+    vertical-align: middle;
+}
+
+.tdCheck { width: 42px; padding: 12px 0 12px 16px; }
+
+// Checkbox
+.checkbox {
+    width: 16px;
+    height: 16px;
+    border: 2px solid $light;
+    border-radius: 4px;
+    cursor: pointer;
+    accent-color: $blue;
+}
+
+// ── Action column ─────────────────────────────────────────────────────────────
+.actions {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.actionBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 10px;
+    border-radius: $r-sm;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid transparent;
+    transition: background 0.13s, border-color 0.13s, color 0.13s;
+    white-space: nowrap;
+
+    svg { width: 13px; height: 13px; flex-shrink: 0; }
+}
+
+.btnView {
+    color: $blue;
+    background: $blue-light;
+    border-color: rgba(59,130,246,0.2);
+
+    &:hover { background: rgba(59,130,246,0.14); border-color: $blue; }
+}
+
+.btnEdit {
+    color: $gray;
+    background: $bg;
+    border-color: $light;
+
+    &:hover { color: $dark; border-color: #9ca3af; background: #eaecf0; }
+}
+
+.btnDelete {
+    color: $red;
+    background: rgba(239,68,68,0.08);
+    border-color: rgba(239,68,68,0.2);
+
+    &:hover { background: rgba(239,68,68,0.14); border-color: $red; }
+}
+
+// ── Pagination ────────────────────────────────────────────────────────────────
+.pagination {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 18px;
+    border-top: 1px solid $light;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.pageInfo { font-size: 12.5px; color: $mid; }
+
+.pageControls { display: flex; align-items: center; gap: 4px; }
+
+.pageBtn {
+    min-width: 32px;
+    height: 32px;
+    padding: 0 8px;
+    border-radius: $r-sm;
+    border: 1.5px solid $light;
+    background: $white;
+    font-size: 13px;
+    font-weight: 500;
+    color: $gray;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.13s, border-color 0.13s, color 0.13s;
+
+    &:hover:not(:disabled) { border-color: $blue; color: $blue; background: $blue-light; }
+    &:disabled { opacity: 0.35; cursor: not-allowed; }
+}
+
+.pageBtnActive {
+    background: $blue !important;
+    border-color: $blue !important;
+    color: $white !important;
+    font-weight: 700;
+}
+
+.pageSizeSelect {
+    padding: 5px 24px 5px 9px;
+    border: 1.5px solid $light;
+    border-radius: $r-sm;
+    font-size: 12.5px;
+    color: $dark;
+    background: $bg;
+    outline: none;
+    cursor: pointer;
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%239ca3af'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 8px center;
+
+    &:focus { border-color: $blue; }
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 56px 24px;
+    color: $mid;
+    gap: 10px;
+}
+
+.emptyIcon { font-size: 40px; opacity: 0.5; }
+.emptyText { font-size: 14px; font-weight: 500; }
+.emptySub  { font-size: 13px; }
+
+// ── Bulk actions bar ──────────────────────────────────────────────────────────
+.bulkBar {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 18px;
+    background: $blue-light;
+    border-bottom: 1px solid rgba(59,130,246,0.15);
+    animation: slideDown 0.15s ease;
+}
+
+@keyframes slideDown {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.bulkCount {
+    font-size: 13px;
+    font-weight: 700;
+    color: $blue;
+}
+
+.bulkBtn {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 5px 12px;
+    border-radius: $r-sm;
+    font-size: 12.5px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1.5px solid;
+    transition: opacity 0.13s;
+
+    &:hover { opacity: 0.8; }
+}
+
+.bulkBtnDanger {
+    color: $red;
+    background: rgba(239,68,68,0.1);
+    border-color: rgba(239,68,68,0.3);
+}
+
+.bulkBtnNeutral {
+    color: $gray;
+    background: $white;
+    border-color: $light;
+}
