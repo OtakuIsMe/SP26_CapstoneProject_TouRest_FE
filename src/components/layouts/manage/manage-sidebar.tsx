@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { authService } from "@/libs/services/auth.service";
+import { StorageKeys } from "@/constants/storage";
 import styles from "./manage-layout.module.scss";
 
 export type Role = "admin" | "agency" | "provider";
@@ -37,57 +39,57 @@ const isFin = (e: Entry): e is FinGroup => "isFinance" in e;
 const MENU: Record<Role, Entry[]> = {
     admin: [
         { items: [
-            { label: "Dashboard", href: "/dashboard",             icon: <Ico.Dashboard /> },
-            { label: "Orders",    href: "/dashboard/orders",      icon: <Ico.Orders />,    badge: 46 },
-            { label: "Tours",     href: "/dashboard/tours",       icon: <Ico.Tours />,     badge: 12 },
-            { label: "Agencies",  href: "/dashboard/agencies",    icon: <Ico.Agencies />  },
-            { label: "Providers", href: "/dashboard/providers",   icon: <Ico.Providers /> },
-            { label: "Users",     href: "/dashboard/users",       icon: <Ico.Customers /> },
-            { label: "Content",   href: "/dashboard/content",     icon: <Ico.Content />   },
+            { label: "Dashboard", href: "/admin/dashboard", icon: <Ico.Dashboard /> },
+            { label: "Orders",    href: "/admin/orders",    icon: <Ico.Orders />,    badge: 46 },
+            { label: "Tours",     href: "/admin/tours",     icon: <Ico.Tours />,     badge: 12 },
+            { label: "Agencies",  href: "/admin/agencies",  icon: <Ico.Agencies />  },
+            { label: "Providers", href: "/admin/providers", icon: <Ico.Providers /> },
+            { label: "Users",     href: "/admin/users",     icon: <Ico.Customers /> },
+            { label: "Content",   href: "/admin/content",   icon: <Ico.Content />   },
         ]},
         { isFinance: true, sub: [
-            { label: "Invoices",     href: "/dashboard/invoices"     },
-            { label: "Transactions", href: "/dashboard/transactions" },
-            { label: "Reports",      href: "/dashboard/reports"      },
+            { label: "Invoices",     href: "/admin/invoices"     },
+            { label: "Transactions", href: "/admin/transactions" },
+            { label: "Reports",      href: "/admin/reports"      },
         ]},
         { items: [
-            { label: "Analytics", href: "/dashboard/analytics", icon: <Ico.Analytics /> },
-            { label: "Discounts", href: "/dashboard/discounts", icon: <Ico.Discounts /> },
+            { label: "Analytics", href: "/admin/analytics", icon: <Ico.Analytics /> },
+            { label: "Discounts", href: "/admin/discounts", icon: <Ico.Discounts /> },
         ]},
     ],
     agency: [
         { items: [
-            { label: "Dashboard", href: "/dashboard",           icon: <Ico.Dashboard /> },
-            { label: "Bookings",  href: "/dashboard/bookings",  icon: <Ico.Orders />,    badge: 8 },
-            { label: "Tours",     href: "/dashboard/tours",     icon: <Ico.Tours />    },
-            { label: "Customers", href: "/dashboard/customers", icon: <Ico.Customers /> },
-            { label: "Content",   href: "/dashboard/content",   icon: <Ico.Content />   },
+            { label: "Dashboard", href: "/agency/dashboard", icon: <Ico.Dashboard /> },
+            { label: "Bookings",  href: "/agency/bookings",  icon: <Ico.Orders />,    badge: 8 },
+            { label: "Tours",     href: "/agency/tours",     icon: <Ico.Tours />    },
+            { label: "Customers", href: "/agency/customers", icon: <Ico.Customers /> },
+            { label: "Content",   href: "/agency/content",   icon: <Ico.Content />   },
         ]},
         { isFinance: true, sub: [
-            { label: "Invoices",     href: "/dashboard/invoices"     },
-            { label: "Transactions", href: "/dashboard/transactions" },
-            { label: "Reports",      href: "/dashboard/reports"      },
+            { label: "Invoices",     href: "/agency/invoices"     },
+            { label: "Transactions", href: "/agency/transactions" },
+            { label: "Reports",      href: "/agency/reports"      },
         ]},
         { items: [
-            { label: "Analytics", href: "/dashboard/analytics", icon: <Ico.Analytics /> },
-            { label: "Discounts", href: "/dashboard/discounts", icon: <Ico.Discounts /> },
+            { label: "Analytics", href: "/agency/analytics", icon: <Ico.Analytics /> },
+            { label: "Discounts", href: "/agency/discounts", icon: <Ico.Discounts /> },
         ]},
     ],
     provider: [
         { items: [
-            { label: "Dashboard", href: "/dashboard",           icon: <Ico.Dashboard /> },
-            { label: "Bookings",  href: "/dashboard/bookings",  icon: <Ico.Orders />, badge: 5 },
-            { label: "Services",  href: "/dashboard/services",  icon: <Ico.Services /> },
-            { label: "Customers", href: "/dashboard/customers", icon: <Ico.Customers /> },
-            { label: "Jobs",      href: "/dashboard/jobs",      icon: <Ico.Jobs />    },
+            { label: "Dashboard", href: "/provider/dashboard", icon: <Ico.Dashboard /> },
+            { label: "Bookings",  href: "/provider/bookings",  icon: <Ico.Orders />, badge: 5 },
+            { label: "Services",  href: "/provider/services",  icon: <Ico.Services /> },
+            { label: "Customers", href: "/provider/customers", icon: <Ico.Customers /> },
+            { label: "Jobs",      href: "/provider/jobs",      icon: <Ico.Jobs />    },
         ]},
         { isFinance: true, sub: [
-            { label: "Invoices",     href: "/dashboard/invoices"     },
-            { label: "Transactions", href: "/dashboard/transactions" },
-            { label: "Reports",      href: "/dashboard/reports"      },
+            { label: "Invoices",     href: "/provider/invoices"     },
+            { label: "Transactions", href: "/provider/transactions" },
+            { label: "Reports",      href: "/provider/reports"      },
         ]},
         { items: [
-            { label: "Analytics", href: "/dashboard/analytics", icon: <Ico.Analytics /> },
+            { label: "Analytics", href: "/provider/analytics", icon: <Ico.Analytics /> },
         ]},
     ],
 };
@@ -99,14 +101,29 @@ const LOGO_SVG = (
 );
 
 // ─── Component ────────────────────────────────────────────────────────────────
+const BASE: Record<Role, string> = {
+    admin:    "/admin/dashboard",
+    agency:   "/agency/dashboard",
+    provider: "/provider/dashboard",
+};
+
 export default function ManageSidebar({ role }: { role: Role }) {
     const pathname = usePathname();
+    const router = useRouter();
+    const base = BASE[role];
+
+    async function handleLogout() {
+        try { await authService.logout(); } catch { }
+        localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
+        document.cookie = "role=; path=/; max-age=0";
+        router.push("/signin");
+    }
     const [finOpen, setFinOpen] = useState(() =>
         ["/invoices", "/transactions", "/reports"].some(p => pathname.includes(p))
     );
 
     const isActive = (href: string) =>
-        href === "/dashboard" ? pathname === "/dashboard" : pathname.startsWith(href);
+        href === base ? pathname === base : pathname.startsWith(href);
 
     const isFinActive = (sub: { href: string }[]) =>
         sub.some(s => pathname.startsWith(s.href));
@@ -114,7 +131,7 @@ export default function ManageSidebar({ role }: { role: Role }) {
     return (
         <aside className={styles.sidebar}>
             {/* ── Logo ── */}
-            <Link href="/dashboard" className={styles.sidebarLogo}>
+            <Link href={base} className={styles.sidebarLogo}>
                 {LOGO_SVG}
                 <span className={styles.logoTou}>Tou</span>
                 <span className={styles.logoRest}>Rest</span>
@@ -177,7 +194,7 @@ export default function ManageSidebar({ role }: { role: Role }) {
             <div className={styles.sidebarFooter}>
                 <Link href="/dashboard/settings" className={styles.footerItem}><Ico.Settings /> Settings</Link>
                 <Link href="/dashboard/help" className={styles.footerItem}><Ico.Help /> Help & Support</Link>
-                <button className={styles.logoutBtn}><Ico.Logout /> Log out</button>
+                <button className={styles.logoutBtn} onClick={handleLogout}><Ico.Logout /> Log out</button>
             </div>
 
             {/* ── Upgrade card ── */}

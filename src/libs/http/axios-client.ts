@@ -1,8 +1,5 @@
 import axios from "axios";
-import { authService } from "../services/auth.service";
 import { StorageKeys } from "@/constants/storage";
-
-console.log("API Base URL:", process.env.NEXT_PUBLIC_TOUREST_API_URL);
 
 const axiosClient = axios.create({
     baseURL: process.env.NEXT_PUBLIC_TOUREST_API_URL + "/api",
@@ -14,53 +11,54 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
     (config) => {
-        const accessToken = localStorage.getItem(StorageKeys.ACCESS_TOKEN);
-
-        if (accessToken) {
-            config.headers.Authorization = `Bearer ${accessToken}`;
+        if (typeof window !== "undefined") {
+            const accessToken = localStorage.getItem(StorageKeys.ACCESS_TOKEN);
+            if (accessToken) {
+                config.headers.Authorization = `Bearer ${accessToken}`;
+            }
         }
-
         return config;
     },
     (error) => Promise.reject(error)
 );
 
 let lastRefreshTime = 0;
-const REFRESH_COOLDOWN_MS = 60_000; // 1 minute
+const REFRESH_COOLDOWN_MS = 60_000;
 
 axiosClient.interceptors.response.use(
-    (response) => {
-        return response.data;
-    },
+    (response) => response.data,
     async (error) => {
         const originalRequest = error.config;
 
-        const isRefreshEndpoint = originalRequest.url?.includes("/auth/refresh");
+        const isAuthEndpoint = originalRequest.url?.includes("/auth/");
         const now = Date.now();
         const cooldownPassed = now - lastRefreshTime >= REFRESH_COOLDOWN_MS;
 
         if (
             error.response?.status === 401 &&
             !originalRequest._retry &&
-            !isRefreshEndpoint &&
+            !isAuthEndpoint &&
             cooldownPassed
         ) {
             originalRequest._retry = true;
             lastRefreshTime = now;
 
             try {
-                const refreshRes = await authService.refreshToken();
+                const refreshRes = await axiosClient.get("/auth/refresh");
+                const newAccessToken = (refreshRes as any).data.accessToken;
 
-                const newAccessToken = refreshRes.data.accessToken;
-                localStorage.setItem(StorageKeys.ACCESS_TOKEN, newAccessToken);
+                if (typeof window !== "undefined") {
+                    localStorage.setItem(StorageKeys.ACCESS_TOKEN, newAccessToken);
+                }
 
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-
                 return axiosClient(originalRequest);
-            } catch (refreshError) {
-                localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
-                window.location.href = "/signin";
-                return Promise.reject(refreshError);
+            } catch {
+                if (typeof window !== "undefined") {
+                    localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
+                    window.location.href = "/signin";
+                }
+                return Promise.reject(error);
             }
         }
 

@@ -26,11 +26,15 @@ export default function SignInPage() {
             localStorage.setItem(StorageKeys.ACCESS_TOKEN, res.data.accessToken);
 
             const me = await authService.getMe();
-            if (me.data.role === "customer") {
-                router.push("/");
-            } else {
-                router.push("/dashboard");
-            }
+            const role = me.data.role;
+            const roleRedirect: Record<string, string> = {
+                customer: "/",
+                admin: "/admin/dashboard",
+                agency: "/agency/dashboard",
+                provider: "/provider/dashboard",
+            };
+            document.cookie = `role=${role}; path=/`;
+            router.push(roleRedirect[role] ?? "/");
         } catch (err: any) {
             const msg = err?.response?.data?.message || "Login failed. Please try again.";
             setError(msg);

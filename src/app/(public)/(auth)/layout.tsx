@@ -1,11 +1,24 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import styles from "./layout.module.scss";
 
-export default function AuthLayout({
+const roleRedirect: Record<string, string> = {
+    admin:    "/admin/dashboard",
+    agency:   "/agency/dashboard",
+    provider: "/provider/dashboard",
+    customer: "/",
+};
+
+export default async function AuthLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
+    const role = (await cookies()).get("role")?.value;
+    if (role && roleRedirect[role]) {
+        redirect(roleRedirect[role]);
+    }
     return (
         <div className={styles.page}>
             {/* Left - Form area */}

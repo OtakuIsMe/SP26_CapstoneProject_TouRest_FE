@@ -47,6 +47,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
       // ignore — still clear local state
     }
     localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
+    document.cookie = "role=; path=/; max-age=0";
     setLoggedIn(false);
     setMenuOpen(false);
     router.push("/signin");
