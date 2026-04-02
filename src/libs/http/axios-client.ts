@@ -1,7 +1,9 @@
 import axios from "axios";
 import { authService } from "../services/auth.service";
-import { config } from "process";
+import { StorageKeys } from "@/constants/storage";
+
 console.log("API Base URL:", process.env.NEXT_PUBLIC_TOUREST_API_URL);
+
 const axiosClient = axios.create({
     baseURL: process.env.NEXT_PUBLIC_TOUREST_API_URL + "/api",
     withCredentials: true,
@@ -12,7 +14,7 @@ const axiosClient = axios.create({
 
 axiosClient.interceptors.request.use(
     (config) => {
-        const accessToken = localStorage.getItem("accessToken");
+        const accessToken = localStorage.getItem(StorageKeys.ACCESS_TOKEN);
 
         if (accessToken) {
             config.headers.Authorization = `Bearer ${accessToken}`;
@@ -23,6 +25,9 @@ axiosClient.interceptors.request.use(
     (error) => Promise.reject(error)
 );
 
+let lastRefreshTime = 0;
+const REFRESH_COOLDOWN_MS = 60_000; // 1 minute
+
 axiosClient.interceptors.response.use(
     (response) => {
         return response.data;
@@ -30,20 +35,30 @@ axiosClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        const isRefreshEndpoint = originalRequest.url?.includes("/auth/refresh");
+        const now = Date.now();
+        const cooldownPassed = now - lastRefreshTime >= REFRESH_COOLDOWN_MS;
+
+        if (
+            error.response?.status === 401 &&
+            !originalRequest._retry &&
+            !isRefreshEndpoint &&
+            cooldownPassed
+        ) {
             originalRequest._retry = true;
+            lastRefreshTime = now;
 
             try {
                 const refreshRes = await authService.refreshToken();
 
                 const newAccessToken = refreshRes.data.accessToken;
-                localStorage.setItem("accessToken", newAccessToken);
+                localStorage.setItem(StorageKeys.ACCESS_TOKEN, newAccessToken);
 
                 originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
 
                 return axiosClient(originalRequest);
             } catch (refreshError) {
-                localStorage.removeItem("accessToken");
+                localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
                 window.location.href = "/signin";
                 return Promise.reject(refreshError);
             }

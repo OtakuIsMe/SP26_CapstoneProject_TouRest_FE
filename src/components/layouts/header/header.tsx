@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authService } from "@/libs/services/auth.service";
+import { StorageKeys } from "@/constants/storage";
 import styles from "./header.module.scss";
 
 const navItems = [
@@ -26,7 +27,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
   const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    setLoggedIn(!!localStorage.getItem("accessToken"));
+    setLoggedIn(!!localStorage.getItem(StorageKeys.ACCESS_TOKEN));
   }, []);
 
   useEffect(() => {
@@ -45,7 +46,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
     } catch {
       // ignore — still clear local state
     }
-    localStorage.removeItem("accessToken");
+    localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
     setLoggedIn(false);
     setMenuOpen(false);
     router.push("/signin");

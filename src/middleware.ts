@@ -1,13 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import type { UserResponse } from "@/types/auth.type";
+import { CookieKeys } from "@/constants/storage";
 import { authService } from "./libs/services/auth.service";
 
 type Role = UserResponse["role"];
 type DashboardRole = Extract<Role, "admin" | "agency" | "provider">;
 
 const roleMap: Record<DashboardRole, string> = {
-  admin:    "/(admin)/dashboard/",
-  agency:   "/(agency)/dashboard/",
+  admin: "/(admin)/dashboard/",
+  agency: "/(agency)/dashboard/",
   provider: "/(provider)/dashboard/",
 };
 
@@ -32,8 +33,8 @@ export async function middleware(request: NextRequest) {
 
   // role giờ được narrow thành DashboardRole trong block dưới
   if (!role || !isDashboardRole(role)) {
-    const res = NextResponse.redirect(new URL("/login", request.url));
-    res.cookies.delete("access-token");
+    const res = NextResponse.redirect(new URL("/signin", request.url));
+    res.cookies.delete(CookieKeys.ACCESS_TOKEN);
     return res;
   }
 

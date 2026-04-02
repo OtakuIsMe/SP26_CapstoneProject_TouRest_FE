@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FormField from "@/components/commons/form-field/form-field";
 import { authService } from "@/libs/services/auth.service";
+import { StorageKeys } from "@/constants/storage";
 import styles from "./page.module.scss";
 
 export default function SignInPage() {
@@ -22,7 +23,14 @@ export default function SignInPage() {
 
         try {
             const res = await authService.login({ email, password });
-            localStorage.setItem("accessToken", res.data.accessToken);
+            localStorage.setItem(StorageKeys.ACCESS_TOKEN, res.data.accessToken);
+
+            const me = await authService.getMe();
+            if (me.data.role === "customer") {
+                router.push("/");
+            } else {
+                router.push("/dashboard");
+            }
         } catch (err: any) {
             const msg = err?.response?.data?.message || "Login failed. Please try again.";
             setError(msg);
