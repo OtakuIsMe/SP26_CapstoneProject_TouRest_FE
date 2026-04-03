@@ -1,12 +1,37 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import FormField from "@/components/commons/form-field/form-field";
+import { authService } from "@/libs/services/auth.service";
 import styles from "./page.module.scss";
 
 export default function SignUpPage() {
+    const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
+    const [username, setUsername] = useState("");
+    const [email, setEmail] = useState("");
+    const [phone, setPhone] = useState("");
+    const [password, setPassword] = useState("");
+    const [error, setError] = useState("");
+    const [loading, setLoading] = useState(false);
+
+    async function handleSubmit(e: React.FormEvent) {
+        e.preventDefault();
+        setError("");
+        setLoading(true);
+
+        try {
+            await authService.register({ username, email, password, phone: phone || undefined });
+            router.push("/signin");
+        } catch (err: any) {
+            const msg = err?.response?.data?.message || "Registration failed. Please try again.";
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    }
 
     return (
         <>
@@ -15,15 +40,33 @@ export default function SignUpPage() {
                 Already have an account? <Link href="/signin">Sign in</Link>
             </p>
 
-            <form className={styles.form} onSubmit={(e) => e.preventDefault()}>
-                <FormField label="Email" type="email" placeholder="Email" />
+            <form className={styles.form} onSubmit={handleSubmit}>
+                {error && <p className={styles.error}>{error}</p>}
+
+                <FormField
+                    label="Username"
+                    type="text"
+                    placeholder="Username"
+                    value={username}
+                    onChange={(e) => setUsername(e.target.value)}
+                    required
+                />
+
+                <FormField
+                    label="Email"
+                    type="email"
+                    placeholder="Email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                />
 
                 {/* Phone Number */}
                 <div className={styles.phoneField}>
                     <span className={styles.phoneLabel}>Phone Number</span>
                     <div className={styles.phoneRow}>
                         <button type="button" className={styles.phoneCode}>
-                            🇺🇸 +1
+                            🇻🇳 +84
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                             </svg>
@@ -32,6 +75,8 @@ export default function SignUpPage() {
                             type="tel"
                             className={styles.phoneInput}
                             placeholder="Phone number"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
                         />
                     </div>
                 </div>
@@ -44,6 +89,9 @@ export default function SignUpPage() {
                             type={showPassword ? "text" : "password"}
                             className={styles.passwordInput}
                             placeholder="Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            required
                         />
                         <button
                             type="button"
@@ -65,7 +113,9 @@ export default function SignUpPage() {
                     </div>
                 </div>
 
-                <button type="submit" className={styles.submitBtn}>Sign Up</button>
+                <button type="submit" className={styles.submitBtn} disabled={loading}>
+                    {loading ? "Creating account..." : "Sign Up"}
+                </button>
 
                 <div className={styles.divider}><span>or</span></div>
 

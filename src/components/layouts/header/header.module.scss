@@ -127,11 +127,25 @@
   border: none;
   border-radius: 6px;
   cursor: pointer;
+  text-decoration: none;
 
   &:hover {
     background: #f3f4f6;
+    color: #111827;
+  }
+}
+
+.dropdownItemDanger {
+  &:hover {
+    background: #fef2f2;
     color: #dc2626;
   }
+}
+
+.dropdownDivider {
+  height: 1px;
+  background: #e5e7eb;
+  margin: 4px 0;
 }
 
 .signInBtn {
