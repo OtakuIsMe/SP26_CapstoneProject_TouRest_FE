@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef } from "react";
 import styles from "./data-table.module.scss";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -26,6 +26,15 @@ export type FilterDef = {
     options: { label: string; value: string }[];
 };
 
+export type ServerSideOptions = {
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    onPageChange: (page: number) => void;
+    onPageSizeChange: (size: number) => void;
+    onSearchChange?: (search: string) => void;
+};
+
 export type DataTableProps<T extends { id: string | number }> = {
     columns: ColumnDef<T>[];
     data: T[];
@@ -40,6 +49,8 @@ export type DataTableProps<T extends { id: string | number }> = {
     pageSize?: number;
     emptyText?: string;
     onBulkDelete?: (ids: (string | number)[]) => void;
+    serverSide?: ServerSideOptions;
+    loading?: boolean;
 };
 
 // ── Icons ─────────────────────────────────────────────────────────────────────
@@ -104,7 +115,11 @@ export default function DataTable<T extends { id: string | number }>({
     pageSize: initialPageSize = 10,
     emptyText = "Không có dữ liệu",
     onBulkDelete,
+    serverSide,
+    loading = false,
 }: DataTableProps<T>) {
+    const isServer = !!serverSide;
+
     const [search, setSearch]         = useState("");
     const [filterVals, setFilterVals] = useState<Record<string, string>>({});
     const [sortKey, setSortKey]       = useState<string | null>(null);
@@ -113,8 +128,19 @@ export default function DataTable<T extends { id: string | number }>({
     const [pageSize, setPageSize]     = useState(initialPageSize);
     const [selected, setSelected]     = useState<Set<string | number>>(new Set());
 
-    // ── Filter + search ──
+    // Debounce server-side search
+    const searchDebounce = useRef<ReturnType<typeof setTimeout> | null>(null);
+    useEffect(() => {
+        if (!isServer || !serverSide?.onSearchChange) return;
+        if (searchDebounce.current) clearTimeout(searchDebounce.current);
+        searchDebounce.current = setTimeout(() => serverSide.onSearchChange!(search), 400);
+        return () => { if (searchDebounce.current) clearTimeout(searchDebounce.current); };
+    }, [search, isServer]);  // eslint-disable-line react-hooks/exhaustive-deps
+
+    // ── Filter + search (client-side only) ──
     const filtered = useMemo(() => {
+        if (isServer) return data;
+
         let rows = [...data];
 
         if (search.trim() && searchKeys.length) {
@@ -132,24 +158,28 @@ export default function DataTable<T extends { id: string | number }>({
         });
 
         return rows;
-    }, [data, search, searchKeys, filterVals, filters]);
+    }, [data, search, searchKeys, filterVals, filters, isServer]);
 
-    // ── Sort ──
+    // ── Sort (client-side only) ──
     const sorted = useMemo(() => {
-        if (!sortKey) return filtered;
+        if (isServer || !sortKey) return filtered;
         return [...filtered].sort((a, b) => {
             const av = String((a as Record<string, unknown>)[sortKey] ?? "");
             const bv = String((b as Record<string, unknown>)[sortKey] ?? "");
             const cmp = av.localeCompare(bv, undefined, { numeric: true });
             return sortDir === "asc" ? cmp : -cmp;
         });
-    }, [filtered, sortKey, sortDir]);
+    }, [filtered, sortKey, sortDir, isServer]);
 
     // ── Paginate ──
-    const totalPages = Math.max(1, Math.ceil(sorted.length / pageSize));
-    const paged = sorted.slice((page - 1) * pageSize, page * pageSize);
+    const activePage     = isServer ? serverSide!.page     : page;
+    const activePageSize = isServer ? serverSide!.pageSize : pageSize;
+    const totalCount     = isServer ? serverSide!.totalCount : sorted.length;
+    const totalPages     = Math.max(1, Math.ceil(totalCount / activePageSize));
+    const paged          = isServer ? data : sorted.slice((activePage - 1) * activePageSize, activePage * activePageSize);
 
     const handleSort = (key: string) => {
+        if (isServer) return; // sorting handled server-side if needed
         if (sortKey === key) {
             setSortDir(d => d === "asc" ? "desc" : "asc");
         } else {
@@ -159,10 +189,22 @@ export default function DataTable<T extends { id: string | number }>({
         setPage(1);
     };
 
-    const handleSearch = (v: string) => { setSearch(v); setPage(1); };
+    const handleSearch = (v: string) => {
+        setSearch(v);
+        if (!isServer) setPage(1);
+    };
     const handleFilter = (key: string, v: string) => {
         setFilterVals(p => ({ ...p, [key]: v }));
-        setPage(1);
+        if (!isServer) setPage(1);
+    };
+
+    const handlePageChange = (p: number) => {
+        if (isServer) serverSide!.onPageChange(p);
+        else setPage(p);
+    };
+    const handlePageSizeChange = (size: number) => {
+        if (isServer) serverSide!.onPageSizeChange(size);
+        else { setPageSize(size); setPage(1); }
     };
 
     // ── Selection ──
@@ -193,16 +235,16 @@ export default function DataTable<T extends { id: string | number }>({
             for (let i = 1; i <= totalPages; i++) range.push(i);
         } else {
             range.push(1);
-            if (page > 3) range.push("…");
-            for (let i = Math.max(2, page-1); i <= Math.min(totalPages-1, page+1); i++) range.push(i);
-            if (page < totalPages - 2) range.push("…");
+            if (activePage > 3) range.push("…");
+            for (let i = Math.max(2, activePage-1); i <= Math.min(totalPages-1, activePage+1); i++) range.push(i);
+            if (activePage < totalPages - 2) range.push("…");
             range.push(totalPages);
         }
         return range;
     };
 
-    const start = (page - 1) * pageSize + 1;
-    const end   = Math.min(page * pageSize, sorted.length);
+    const start = (activePage - 1) * activePageSize + 1;
+    const end   = Math.min(activePage * activePageSize, totalCount);
 
     const hasActions = actions.length > 0;
 
@@ -239,7 +281,7 @@ export default function DataTable<T extends { id: string | number }>({
                 </div>
 
                 <div className={styles.toolbarRight}>
-                    <span className={styles.toolbarCount}>{sorted.length} kết quả</span>
+                    <span className={styles.toolbarCount}>{totalCount} kết quả</span>
                     {exportable && (
                         <button className={styles.btnOutline}>
                             <ExportIcon /> Export
@@ -312,7 +354,15 @@ export default function DataTable<T extends { id: string | number }>({
                     </thead>
 
                     <tbody>
-                        {paged.length === 0 ? (
+                        {loading ? (
+                            <tr>
+                                <td colSpan={columns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)}>
+                                    <div className={styles.emptyState}>
+                                        <span className={styles.emptyText}>Loading...</span>
+                                    </div>
+                                </td>
+                            </tr>
+                        ) : paged.length === 0 ? (
                             <tr>
                                 <td colSpan={columns.length + (selectable ? 1 : 0) + (hasActions ? 1 : 0)}>
                                     <div className={styles.emptyState}>
@@ -372,16 +422,16 @@ export default function DataTable<T extends { id: string | number }>({
             </div>
 
             {/* ── Pagination ── */}
-            {sorted.length > 0 && (
+            {totalCount > 0 && (
                 <div className={styles.pagination}>
                     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
                         <span className={styles.pageInfo}>
-                            Hiện {start}–{end} / {sorted.length} mục
+                            Hiện {start}–{end} / {totalCount} mục
                         </span>
                         <select
                             className={styles.pageSizeSelect}
-                            value={pageSize}
-                            onChange={e => { setPageSize(Number(e.target.value)); setPage(1); }}
+                            value={activePageSize}
+                            onChange={e => handlePageSizeChange(Number(e.target.value))}
                         >
                             {[10, 20, 50, 100].map(n => (
                                 <option key={n} value={n}>{n} / trang</option>
@@ -392,8 +442,8 @@ export default function DataTable<T extends { id: string | number }>({
                     <div className={styles.pageControls}>
                         <button
                             className={styles.pageBtn}
-                            disabled={page === 1}
-                            onClick={() => setPage(p => p - 1)}
+                            disabled={activePage === 1}
+                            onClick={() => handlePageChange(activePage - 1)}
                         >
                             ‹
                         </button>
@@ -404,8 +454,8 @@ export default function DataTable<T extends { id: string | number }>({
                             ) : (
                                 <button
                                     key={p}
-                                    className={`${styles.pageBtn} ${page === p ? styles.pageBtnActive : ""}`}
-                                    onClick={() => setPage(p as number)}
+                                    className={`${styles.pageBtn} ${activePage === p ? styles.pageBtnActive : ""}`}
+                                    onClick={() => handlePageChange(p as number)}
                                 >
                                     {p}
                                 </button>
@@ -414,8 +464,8 @@ export default function DataTable<T extends { id: string | number }>({
 
                         <button
                             className={styles.pageBtn}
-                            disabled={page === totalPages}
-                            onClick={() => setPage(p => p + 1)}
+                            disabled={activePage === totalPages}
+                            onClick={() => handlePageChange(activePage + 1)}
                         >
                             ›
                         </button>

@@ -520,8 +520,16 @@ $shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
   font-size: 13px;
   color: #374151;
   line-height: 1.5;
+  min-width: 0;
 
   span:first-child { font-size: 15px; flex-shrink: 0; margin-top: 1px; }
+
+  span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    min-width: 0;
+  }
 
   a {
     color: $teal;

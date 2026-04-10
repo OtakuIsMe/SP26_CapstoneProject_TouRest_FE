@@ -76,6 +76,43 @@ export default function Footer() {
                 </div>
             </div>
 
+            <div className={styles.joinBanner}>
+                <div className={styles.joinCard}>
+                    <div className={styles.joinIcon}>
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <div className={styles.joinText}>
+                        <h4>Become a Provider</h4>
+                        <p>List your tour services and reach thousands of travelers.</p>
+                    </div>
+                    <Link href="/become-provider" className={styles.joinBtn}>
+                        Get started
+                    </Link>
+                </div>
+
+                <div className={styles.joinDivider} />
+
+                <div className={styles.joinCard}>
+                    <div className={styles.joinIcon}>
+                        <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                        </svg>
+                    </div>
+                    <div className={styles.joinText}>
+                        <h4>Become an Agency</h4>
+                        <p>Partner with us to create unforgettable travel experiences.</p>
+                    </div>
+                    <Link href="/become-agency" className={styles.joinBtn}>
+                        Get started
+                    </Link>
+                </div>
+            </div>
+
             <div className={styles.footerBottom}>
                 <span className={styles.copyright}>
                     &copy; 2025 TouRest &mdash; All rights reserved.

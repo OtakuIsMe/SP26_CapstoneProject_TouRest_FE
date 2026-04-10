@@ -1,0 +1,364 @@
+.page {
+    background: #f8f9fb;
+    min-height: 100vh;
+}
+
+/* ── Hero ── */
+.hero {
+    background: linear-gradient(160deg, #1a2a45 0%, #0d1828 100%);
+    padding: 72px 160px 64px;
+    text-align: center;
+}
+
+.heroBadge {
+    display: inline-block;
+    padding: 4px 14px;
+    background: rgba(59, 130, 246, 0.25);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+.heroTitle {
+    font-size: 48px;
+    font-weight: 700;
+    color: #fff;
+    margin-bottom: 16px;
+    line-height: 1.2;
+}
+
+.heroSubtitle {
+    font-size: 16px;
+    color: rgba(255, 255, 255, 0.7);
+    max-width: 560px;
+    margin: 0 auto;
+    line-height: 1.7;
+}
+
+/* ── Container ── */
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+}
+
+/* ── Form ── */
+.form {
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.error {
+    padding: 12px 16px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    font-size: 14px;
+    color: #dc2626;
+}
+
+/* ── Section ── */
+.section {
+    background: #fff;
+    border-radius: 16px;
+    padding: 28px 32px;
+    border: 1px solid #e8e8e8;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+.sectionHeader {
+    display: flex;
+    align-items: flex-start;
+    gap: 14px;
+}
+
+.sectionIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    background: #eff6ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    color: #3b82f6;
+
+    svg {
+        width: 20px;
+        height: 20px;
+    }
+}
+
+.sectionTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin-bottom: 2px;
+}
+
+.sectionDesc {
+    font-size: 13px;
+    color: #888;
+}
+
+/* ── Fields Grid ── */
+.fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.fieldFull {
+    grid-column: 1 / -1;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.label {
+    font-size: 13px;
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.required {
+    color: #ef4444;
+}
+
+.input {
+    padding: 11px 14px;
+    font-size: 14px;
+    color: #1a1a2e;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+
+    &::placeholder {
+        color: #aaa;
+    }
+
+    &:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+}
+
+.textarea {
+    padding: 11px 14px;
+    font-size: 14px;
+    color: #1a1a2e;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    outline: none;
+    background: #fff;
+    resize: vertical;
+    font-family: inherit;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    width: 100%;
+    box-sizing: border-box;
+
+    &::placeholder {
+        color: #aaa;
+    }
+
+    &:focus {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+}
+
+/* ── Phone ── */
+.phoneRow {
+    display: flex;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    overflow: hidden;
+    transition: border-color 0.2s, box-shadow 0.2s;
+
+    &:focus-within {
+        border-color: #3b82f6;
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+    }
+}
+
+.phonePrefix {
+    padding: 11px 12px;
+    font-size: 14px;
+    color: #1a1a2e;
+    background: #f9fafb;
+    border-right: 1px solid #d1d5db;
+    white-space: nowrap;
+    user-select: none;
+}
+
+.phoneInput {
+    flex: 1;
+    padding: 11px 14px;
+    font-size: 14px;
+    color: #1a1a2e;
+    border: none;
+    outline: none;
+    background: #fff;
+
+    &::placeholder {
+        color: #aaa;
+    }
+}
+
+/* ── Image Grid ── */
+.imageGrid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 12px;
+}
+
+.imageThumb {
+    position: relative;
+    aspect-ratio: 1;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1px solid #e8e8e8;
+
+    img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    &:hover .imageRemove {
+        opacity: 1;
+    }
+}
+
+.imageRemove {
+    position: absolute;
+    top: 6px;
+    right: 6px;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: rgba(0, 0, 0, 0.55);
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    opacity: 0;
+    transition: opacity 0.2s;
+
+    svg {
+        width: 14px;
+        height: 14px;
+    }
+}
+
+.imageAdd {
+    aspect-ratio: 1;
+    border: 2px dashed #d1d5db;
+    border-radius: 10px;
+    background: #f9fafb;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    color: #888;
+    font-size: 12px;
+    font-weight: 500;
+    transition: border-color 0.2s, color 0.2s, background 0.2s;
+
+    svg {
+        width: 22px;
+        height: 22px;
+    }
+
+    &:hover {
+        border-color: #3b82f6;
+        color: #3b82f6;
+        background: #eff6ff;
+    }
+}
+
+.fileInputHidden {
+    display: none;
+}
+
+/* ── Actions ── */
+.actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding-top: 8px;
+}
+
+.cancelBtn {
+    padding: 13px 28px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #555;
+    background: #fff;
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover {
+        background: #f5f5f5;
+    }
+}
+
+.submitBtn {
+    padding: 13px 36px;
+    font-size: 15px;
+    font-weight: 600;
+    color: #fff;
+    background: #1a2a45;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: opacity 0.2s;
+
+    &:hover:not(:disabled) {
+        opacity: 0.85;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+}
+
+.terms {
+    text-align: center;
+    font-size: 12px;
+    color: #aaa;
+
+    a {
+        color: #555;
+        text-decoration: underline;
+
+        &:hover {
+            color: #1a1a2e;
+        }
+    }
+}

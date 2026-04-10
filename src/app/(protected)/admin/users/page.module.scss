@@ -1,0 +1,104 @@
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+}
+
+.header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.btnAdd {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 36px;
+    padding: 0 14px;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.15s;
+    white-space: nowrap;
+
+    &:hover { background: #2563eb; }
+}
+
+.title {
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 4px 0 0;
+}
+
+// ── Name cell ─────────────────────────────────────────────────────────────────
+.nameCell {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar {
+    width: 34px;
+    height: 34px;
+    border-radius: 50%;
+    background: #eff6ff;
+    color: #3b82f6;
+    font-size: 13px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.nameMeta {
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+}
+
+.nameText {
+    font-size: 13px;
+    font-weight: 500;
+    color: #111827;
+}
+
+.fullName {
+    font-size: 12px;
+    color: #9ca3af;
+}
+
+// ── Badge ─────────────────────────────────────────────────────────────────────
+.badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+// Status
+.statusActive   { background: #d1fae5; color: #065f46; }
+.statusInactive { background: #f3f4f6; color: #6b7280; }
+.statusLocked   { background: #fee2e2; color: #991b1b; }
+
+// Role
+.roleAdmin    { background: #ede9fe; color: #5b21b6; }
+.roleCustomer { background: #dbeafe; color: #1e40af; }
+.roleAgency   { background: #fef9c3; color: #92400e; }
+.roleProvider { background: #d1fae5; color: #065f46; }

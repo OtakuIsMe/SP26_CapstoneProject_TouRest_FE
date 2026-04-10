@@ -31,4 +31,9 @@ export type UserResponse = {
     role: "admin" | "agency" | "provider" | "customer";
     email: string;
     phone?: string;
+    fullName?: string;
+    dateOfBirth?: string;
+    cityId?: string;
+    districtId?: string;
+    addressDetail?: string;
 };

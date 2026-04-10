@@ -45,6 +45,8 @@ axiosClient.interceptors.response.use(
 
             try {
                 const refreshRes = await axiosClient.get("/auth/refresh");
+                // interceptor returns response.data (the JSON body)
+                // shape: { code, message, data: { accessToken, expiresIn } }
                 const newAccessToken = (refreshRes as any).data.accessToken;
 
                 if (typeof window !== "undefined") {
