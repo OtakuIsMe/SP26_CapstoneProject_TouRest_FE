@@ -105,8 +105,48 @@ const booking = {
     ],
 };
 
-const tabs = ["Overview", "What's Included", "Tour Details", "Customization"] as const;
+const tabs = ["Overview", "What's Included", "Tour Details", "Schedule", "Customization"] as const;
 type Tab = (typeof tabs)[number];
+
+// ── Schedule mock data ─────────────────────────────────────────────────────
+type RunStatus = "available" | "almostFull" | "full" | "completed";
+
+interface TourRun {
+    id: string;
+    startDate: string; // "YYYY-MM-DD"
+    endDate:   string;
+    price:     number;
+    originalPrice?: number;
+    slots:     number;
+    booked:    number;
+    status:    RunStatus;
+    guide:     string;
+}
+
+const TOUR_RUNS: TourRun[] = [
+    { id:"r1", startDate:"2026-04-01", endDate:"2026-04-04", price:950,  originalPrice:1100, slots:20, booked:20, status:"full",      guide:"Alex Papadopoulos" },
+    { id:"r2", startDate:"2026-04-10", endDate:"2026-04-13", price:950,  originalPrice:1100, slots:20, booked:18, status:"almostFull", guide:"Maria Konstantinou" },
+    { id:"r3", startDate:"2026-04-20", endDate:"2026-04-23", price:950,                      slots:20, booked:9,  status:"available",  guide:"Nikos Stavros"      },
+    { id:"r4", startDate:"2026-05-05", endDate:"2026-05-08", price:880,                      slots:20, booked:4,  status:"available",  guide:"Elena Georgiou"     },
+    { id:"r5", startDate:"2026-05-18", endDate:"2026-05-21", price:880,                      slots:20, booked:0,  status:"available",  guide:"Alex Papadopoulos" },
+    { id:"r6", startDate:"2026-06-02", endDate:"2026-06-05", price:1050,                     slots:20, booked:0,  status:"available",  guide:"Maria Konstantinou" },
+    { id:"r7", startDate:"2026-06-15", endDate:"2026-06-18", price:1050,                     slots:20, booked:12, status:"available",  guide:"Nikos Stavros"      },
+];
+
+const RUN_STATUS_CFG: Record<RunStatus, { label: string; color: string; bg: string }> = {
+    available:  { label: "Available",    color: "#065f46", bg: "#d1fae5" },
+    almostFull: { label: "Almost Full",  color: "#92400e", bg: "#fef3c7" },
+    full:       { label: "Full",         color: "#991b1b", bg: "#fee2e2" },
+    completed:  { label: "Completed",    color: "#374151", bg: "#f3f4f6" },
+};
+
+function parseRunDate(s: string) { return new Date(s + "T00:00:00"); }
+function fmtDate(s: string) {
+    const d = parseRunDate(s);
+    return d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
+}
+const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+const WDAYS_SHORT = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
 const placeSidebar = [
     "Top Attractions",
@@ -124,6 +164,60 @@ export default function TourDetailPage() {
     const [activePlaceCat, setActivePlaceCat] = useState("Top Attractions");
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [galleryIndex, setGalleryIndex] = useState(0);
+
+    // Schedule tab state
+    const today = new Date();
+    const [schedYear,  setSchedYear]  = useState(today.getFullYear());
+    const [schedMonth, setSchedMonth] = useState(today.getMonth());
+    const [selectedRun, setSelectedRun] = useState<TourRun | null>(null);
+
+    function schedPrev() {
+        if (schedMonth === 0) { setSchedYear(y => y - 1); setSchedMonth(11); }
+        else setSchedMonth(m => m - 1);
+    }
+    function schedNext() {
+        if (schedMonth === 11) { setSchedYear(y => y + 1); setSchedMonth(0); }
+        else setSchedMonth(m => m + 1);
+    }
+
+    // Build calendar cells for schedule month
+    const schedCells = (() => {
+        const firstDay = new Date(schedYear, schedMonth, 1).getDay();
+        const daysInMo = new Date(schedYear, schedMonth + 1, 0).getDate();
+        const prevDays = new Date(schedYear, schedMonth, 0).getDate();
+        const arr: { day: number; thisMonth: boolean; date: Date }[] = [];
+        for (let i = 0; i < firstDay; i++) {
+            const d = prevDays - firstDay + 1 + i;
+            arr.push({ day: d, thisMonth: false, date: new Date(schedYear, schedMonth - 1, d) });
+        }
+        for (let i = 1; i <= daysInMo; i++)
+            arr.push({ day: i, thisMonth: true, date: new Date(schedYear, schedMonth, i) });
+        const rem = 42 - arr.length;
+        for (let i = 1; i <= rem; i++)
+            arr.push({ day: i, thisMonth: false, date: new Date(schedYear, schedMonth + 1, i) });
+        return arr;
+    })();
+
+    function runsOnDate(date: Date): TourRun[] {
+        return TOUR_RUNS.filter(r => {
+            const s = parseRunDate(r.startDate);
+            const e = parseRunDate(r.endDate);
+            return date >= s && date <= e;
+        });
+    }
+
+    function runColorForDate(date: Date): string | null {
+        const runs = runsOnDate(date);
+        if (!runs.length) return null;
+        if (runs.some(r => r.status === "available"))  return "#22c55e";
+        if (runs.some(r => r.status === "almostFull")) return "#f59e0b";
+        return "#ef4444";
+    }
+
+    const visibleRuns = TOUR_RUNS.filter(r => {
+        const s = parseRunDate(r.startDate);
+        return s.getFullYear() === schedYear && s.getMonth() === schedMonth;
+    });
 
     return (
         <>
@@ -295,6 +389,148 @@ export default function TourDetailPage() {
                                                 </div>
                                             </div>
                                         ))}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* ── Schedule ── */}
+                            {activeTab === "Schedule" && (
+                                <div className={styles.tabContent}>
+                                    <h2 className={styles.sectionTitle}>Available Departures</h2>
+                                    <p className={styles.schedSubtitle}>
+                                        This tour runs multiple times throughout the year. Select a departure that fits your plans.
+                                    </p>
+
+                                    <div className={styles.schedLayout}>
+                                        {/* Mini calendar */}
+                                        <div className={styles.schedCal}>
+                                            <div className={styles.schedCalHeader}>
+                                                <button className={styles.schedNavBtn} onClick={schedPrev}>
+                                                    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </button>
+                                                <span className={styles.schedCalMonth}>{MONTHS_FULL[schedMonth]} {schedYear}</span>
+                                                <button className={styles.schedNavBtn} onClick={schedNext}>
+                                                    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                </button>
+                                            </div>
+
+                                            <div className={styles.schedWdays}>
+                                                {WDAYS_SHORT.map(w => <span key={w} className={styles.schedWday}>{w}</span>)}
+                                            </div>
+
+                                            <div className={styles.schedGrid}>
+                                                {schedCells.map((cell, idx) => {
+                                                    const color = cell.thisMonth ? runColorForDate(cell.date) : null;
+                                                    const isToday = cell.date.toDateString() === today.toDateString();
+                                                    const inSelected = selectedRun
+                                                        ? cell.date >= parseRunDate(selectedRun.startDate) && cell.date <= parseRunDate(selectedRun.endDate)
+                                                        : false;
+                                                    return (
+                                                        <div
+                                                            key={idx}
+                                                            className={[
+                                                                styles.schedCell,
+                                                                !cell.thisMonth ? styles.schedCellOther : "",
+                                                                color ? styles.schedCellHasRun : "",
+                                                                isToday ? styles.schedCellToday : "",
+                                                                inSelected ? styles.schedCellSelected : "",
+                                                            ].join(" ")}
+                                                            style={color && cell.thisMonth ? { "--run-color": color } as React.CSSProperties : {}}
+                                                        >
+                                                            {cell.day}
+                                                            {color && cell.thisMonth && (
+                                                                <span className={styles.schedDot} style={{ background: color }} />
+                                                            )}
+                                                        </div>
+                                                    );
+                                                })}
+                                            </div>
+
+                                            {/* Legend */}
+                                            <div className={styles.schedLegend}>
+                                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#22c55e" }}/>Available</span>
+                                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#f59e0b" }}/>Almost Full</span>
+                                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#ef4444" }}/>Full</span>
+                                            </div>
+                                        </div>
+
+                                        {/* Run list */}
+                                        <div className={styles.schedList}>
+                                            {visibleRuns.length === 0 ? (
+                                                <p className={styles.schedEmpty}>No departures this month. Try another month.</p>
+                                            ) : visibleRuns.map(run => {
+                                                const cfg = RUN_STATUS_CFG[run.status];
+                                                const pct = Math.round((run.booked / run.slots) * 100);
+                                                const isSelected = selectedRun?.id === run.id;
+                                                return (
+                                                    <div
+                                                        key={run.id}
+                                                        className={`${styles.runCard} ${isSelected ? styles.runCardSelected : ""}`}
+                                                        onClick={() => setSelectedRun(isSelected ? null : run)}
+                                                    >
+                                                        <div className={styles.runCardTop}>
+                                                            <div className={styles.runDates}>
+                                                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                                <strong>{fmtDate(run.startDate)}</strong>
+                                                                <span>→</span>
+                                                                <strong>{fmtDate(run.endDate)}</strong>
+                                                            </div>
+                                                            <span className={styles.runStatus} style={{ background: cfg.bg, color: cfg.color }}>
+                                                                {cfg.label}
+                                                            </span>
+                                                        </div>
+
+                                                        <div className={styles.runMeta}>
+                                                            <span className={styles.runMetaItem}>
+                                                                <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                                                Guide: {run.guide}
+                                                            </span>
+                                                            <span className={styles.runMetaItem}>
+                                                                <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                                {run.slots - run.booked} / {run.slots} spots left
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Occupancy bar */}
+                                                        <div className={styles.runBar}>
+                                                            <div className={styles.runBarTrack}>
+                                                                <div
+                                                                    className={styles.runBarFill}
+                                                                    style={{ width: `${pct}%`, background: pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#22c55e" }}
+                                                                />
+                                                            </div>
+                                                            <span className={styles.runBarPct}>{pct}%</span>
+                                                        </div>
+
+                                                        <div className={styles.runCardBottom}>
+                                                            <div className={styles.runPrice}>
+                                                                <span className={styles.runPriceNew}>${run.price.toLocaleString()}</span>
+                                                                {run.originalPrice && (
+                                                                    <span className={styles.runPriceOld}>${run.originalPrice.toLocaleString()}</span>
+                                                                )}
+                                                                <span className={styles.runPricePer}>/ person</span>
+                                                            </div>
+                                                            {run.status !== "full" && run.status !== "completed" ? (
+                                                                <Link
+                                                                    href={`/tours/${params?.id ?? 1}/booking?run=${run.id}`}
+                                                                    className={styles.runBookBtn}
+                                                                    onClick={e => e.stopPropagation()}
+                                                                >
+                                                                    Book This Date
+                                                                </Link>
+                                                            ) : (
+                                                                <span className={styles.runFullTag}>Unavailable</span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                );
+                                            })}
+
+                                            {/* All upcoming runs count */}
+                                            <p className={styles.schedAllHint}>
+                                                Showing {visibleRuns.length} departure{visibleRuns.length !== 1 ? "s" : ""} in {MONTHS_FULL[schedMonth]}. Use the arrows to browse other months.
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             )}

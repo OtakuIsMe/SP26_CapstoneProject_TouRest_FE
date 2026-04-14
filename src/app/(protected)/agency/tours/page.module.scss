@@ -1,9 +1,26 @@
+$blue:   #3b82f6;
+$indigo: #4f46e5;
+$green:  #22c55e;
+$orange: #f59e0b;
+$red:    #ef4444;
+$purple: #8b5cf6;
+$dark:   #111827;
+$mid:    #6b7280;
+$light:  #9ca3af;
+$border: #e5e7eb;
+$bg:     #f9fafb;
+$white:  #ffffff;
+$r:      12px;
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 .page {
     display: flex;
     flex-direction: column;
-    gap: 14px;
+    gap: 20px;
     height: 100%;
+    overflow-y: auto;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
 }
 
 // ── Top bar ───────────────────────────────────────────────────────────────────
@@ -12,6 +29,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 12px;
+    flex-shrink: 0;
 }
 
 .topLeft {
@@ -20,500 +38,1172 @@
     gap: 10px;
 }
 
-.topRight {
+.searchBox {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-// Status filter dropdown
-.filterWrap { position: relative; }
-
-.filterBtn {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-    height: 34px;
+    height: 36px;
     padding: 0 12px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    white-space: nowrap;
+    background: $white;
+    border: 1px solid $border;
+    border-radius: 9px;
+    width: 240px;
     transition: border-color 0.15s;
-    &:hover { border-color: #d1d5db; }
+    svg { color: $light; flex-shrink: 0; }
+    input {
+        border: none;
+        outline: none;
+        font-size: 13px;
+        color: $dark;
+        width: 100%;
+        background: transparent;
+        &::placeholder { color: $light; }
+    }
+    &:focus-within { border-color: $blue; }
 }
 
-.filterDropdown {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0,0,0,.1);
-    min-width: 160px;
-    z-index: 50;
-    overflow: hidden;
-    animation: fadeIn 0.12s ease;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(-4px); }
-    to   { opacity: 1; transform: translateY(0); }
-}
-
-.filterOpt {
-    display: block;
-    width: 100%;
-    padding: 9px 14px;
-    text-align: left;
+.filterSelect {
+    height: 36px;
+    padding: 0 10px;
+    border: 1px solid $border;
+    border-radius: 9px;
     font-size: 13px;
-    color: #374151;
-    background: none;
-    border: none;
+    color: $mid;
+    background: $white;
+    outline: none;
     cursor: pointer;
-    transition: background 0.1s;
-    &:hover { background: #f9fafb; }
-}
-
-.filterOptActive { font-weight: 600; color: #3b82f6; }
-
-// Month nav
-.monthNav {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-.arrowBtn {
-    width: 28px;
-    height: 28px;
-    border: 1px solid #e5e7eb;
-    border-radius: 6px;
-    background: #fff;
-    color: #6b7280;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.15s;
-    flex-shrink: 0;
-    &:hover { background: #f3f4f6; color: #111827; }
-}
-
-.monthLabel {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 14px;
-    font-weight: 700;
-    color: #111827;
-    padding: 0 8px;
-    cursor: pointer;
-    svg { color: #6b7280; }
-}
-
-.todayBtn {
-    height: 34px;
-    padding: 0 16px;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    font-size: 13px;
-    font-weight: 500;
-    color: #374151;
-    cursor: pointer;
-    transition: background 0.15s;
-    &:hover { background: #f3f4f6; }
+    &:focus { border-color: $blue; }
 }
 
 .addBtn {
     display: flex;
     align-items: center;
     gap: 6px;
-    height: 34px;
-    padding: 0 14px;
-    background: #3b82f6;
+    height: 36px;
+    padding: 0 16px;
+    background: $indigo;
     border: none;
-    border-radius: 8px;
+    border-radius: 9px;
     font-size: 13px;
     font-weight: 600;
-    color: #fff;
+    color: $white;
     cursor: pointer;
     transition: background 0.15s;
-    &:hover { background: #2563eb; }
+    white-space: nowrap;
+    &:hover { background: #4338ca; }
 }
 
-// ── Popup ─────────────────────────────────────────────────────────────────────
-.popupOverlay {
-    position: fixed;
-    inset: 0;
-    z-index: 300;
-    background: transparent;
+// ── Stats ─────────────────────────────────────────────────────────────────────
+.statsRow {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 14px;
+    flex-shrink: 0;
 }
 
-.popup {
-    position: fixed;
-    background: #fff;
+.statCard {
+    background: $white;
+    border: 1px solid $border;
+    border-radius: $r;
+    padding: 16px 18px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.statIcon {
+    width: 40px;
+    height: 40px;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.statBody { flex: 1; }
+.statLabel { font-size: 11.5px; font-weight: 500; color: $light; margin: 0 0 3px; }
+.statValue { font-size: 22px; font-weight: 700; color: $dark; margin: 0; }
+
+// ── Tour grid ─────────────────────────────────────────────────────────────────
+.tourGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+    flex-shrink: 0;
+    padding-bottom: 8px;
+}
+
+// ── Tour card ─────────────────────────────────────────────────────────────────
+.tourCard {
+    background: $white;
+    border: 1px solid $border;
     border-radius: 14px;
-    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
-    width: 290px;
-    max-height: 480px;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
-    animation: popIn 0.16s ease;
-    z-index: 301;
+    transition: box-shadow 0.18s, transform 0.18s;
+    // border-top color is set via inline style (status accent)
+
+    &:hover {
+        box-shadow: 0 8px 28px rgba(0,0,0,.10);
+        transform: translateY(-2px);
+    }
 }
 
-@keyframes popIn {
-    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+// Head (name + badge + description)
+.tourCardHead {
+    padding: 16px 18px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+}
+
+.tourCardTopRow {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+}
+
+.tourName {
+    font-size: 15px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+    line-height: 1.35;
+    flex: 1;
+}
+
+.statusBadge {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.tourDesc {
+    font-size: 12.5px;
+    color: $light;
+    margin: 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+    line-height: 1.55;
+}
+
+// Meta pills row
+.tourMeta {
+    display: flex;
+    gap: 6px;
+    padding: 10px 18px 12px;
+    border-top: 1px solid #f3f4f6;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.tourMetaItem {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: $mid;
+    font-weight: 600;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 8px;
+    padding: 4px 10px;
+
+    svg { color: $light; flex-shrink: 0; }
+}
+
+// Stop route row
+.tourStops {
+    padding: 0 18px 12px;
+    display: flex;
+    gap: 0;
+    flex-wrap: wrap;
+    align-items: center;
+    row-gap: 6px;
+}
+
+.stopChipWrapper {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.stopChipNum {
+    width: 18px;
+    height: 18px;
+    background: $indigo;
+    color: $white;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stopChipName {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #4f46e5;
+    background: #eef2ff;
+    border: 1px solid #c7d2fe;
+    border-radius: 6px;
+    padding: 2px 9px;
+    white-space: nowrap;
+}
+
+.stopArrow {
+    display: flex;
+    align-items: center;
+    color: #c7d2fe;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+// Actions footer
+.tourCardActions {
+    margin-top: auto;
+    display: flex;
+    gap: 8px;
+    padding: 11px 18px;
+    border-top: 1px solid #f3f4f6;
+    background: $bg;
+    align-items: center;
+}
+
+.actionBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 30px;
+    padding: 0 13px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid $border;
+    background: $white;
+    color: $mid;
+    transition: all 0.12s;
+
+    &:hover {
+        background: $white;
+        color: $dark;
+        border-color: #9ca3af;
+        box-shadow: 0 1px 5px rgba(0,0,0,.08);
+    }
+}
+
+.actionBtnPrimary {
+    background: $indigo;
+    color: $white;
+    border-color: $indigo;
+    &:hover { background: #4338ca; border-color: #4338ca; color: $white; }
+}
+
+.actionBtnGreen {
+    background: #f0fdf4;
+    color: #15803d;
+    border-color: #bbf7d0;
+    margin-left: auto;
+
+    &:hover { background: #dcfce7; border-color: #86efac; }
+}
+
+// scheduleCount kept for any legacy usage — effectively unused now
+.scheduleCount {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: $light;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+// ── Overlay / Modal shell ─────────────────────────────────────────────────────
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: ovIn 0.18s ease;
+}
+
+@keyframes ovIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+// ── Schedule modal ────────────────────────────────────────────────────────────
+.schedModal {
+    background: $white;
+    border-radius: 16px;
+    width: 440px;
+    box-shadow: 0 24px 64px rgba(0,0,0,.22);
+    animation: modalIn 0.2s ease;
+    overflow: hidden;
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(-10px) scale(0.97); }
     to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 
-.popupHeader {
+.modalHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 12px 14px 10px;
-    border-bottom: 1px solid #f3f4f6;
-    flex-shrink: 0;
-}
-
-.popupDay {
-    width: 30px;
-    height: 30px;
-    background: #3b82f6;
-    color: #fff;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-}
-
-.popupClose {
-    width: 28px;
-    height: 28px;
-    border: 1px solid #e5e7eb;
-    border-radius: 7px;
-    background: #fff;
-    color: #6b7280;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    transition: background 0.15s, color 0.15s;
-    &:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
-}
-
-.popupList {
-    overflow-y: auto;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    &::-webkit-scrollbar { width: 3px; }
-    &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
-}
-
-// ── Body ──────────────────────────────────────────────────────────────────────
-.body {
-    display: grid;
-    grid-template-columns: 1fr 270px;
-    gap: 0;
-    background: #fff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    overflow: hidden;
-    flex: 1;
-    min-height: 0;
-}
-
-// ══ Calendar ══════════════════════════════════════════════════════════════════
-.calWrap {
-    display: flex;
-    flex-direction: column;
-    border-right: 1px solid #e5e7eb;
-    overflow: hidden;
-    min-height: 0;
-}
-
-// Weekday headers
-.weekRow {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    border-bottom: 1px solid #e5e7eb;
-    position: sticky;
-    top: 0;
-    background: #fff;
-    z-index: 10;
-}
-
-.weekHead {
-    padding: 12px 8px;
-    text-align: center;
-    font-size: 11px;
-    font-weight: 700;
-    color: #9ca3af;
-    letter-spacing: 0.06em;
-}
-
-.weekHeadToday { color: #3b82f6; }
-
-.todayPill {
-    display: inline-block;
-    padding: 3px 10px;
-    background: #3b82f6;
-    color: #fff;
-    border-radius: 20px;
-    font-size: 10.5px;
-    font-weight: 700;
-    letter-spacing: 0.06em;
-}
-
-// Grid
-.grid {
-    display: grid;
-    grid-template-columns: repeat(7, 1fr);
-    grid-template-rows: repeat(6, 1fr);
-    flex: 1;
-    min-height: 0;
-    overflow: hidden;
-}
-
-.cell {
-    border-right: 1px solid #f3f4f6;
-    border-bottom: 1px solid #f3f4f6;
-    padding: 5px 6px 6px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    min-height: 0;
-    overflow: hidden;
-    background: #fff;
-    &:nth-child(7n) { border-right: none; }
-}
-
-.cellOther {
-    background: #fafafa;
-    .dayNum  { color: #d1d5db; }
-    .addNew  { color: #e5e7eb; }
-}
-
-.cellTodayCol { background: #f0f9ff; }
-
-.cellHead {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 2px;
-}
-
-.addNew {
-    font-size: 10.5px;
-    font-weight: 500;
-    color: #9ca3af;
-    cursor: pointer;
-    transition: color 0.15s;
-    white-space: nowrap;
-    &:hover { color: #3b82f6; }
-}
-
-.dayNum {
-    font-size: 12.5px;
-    font-weight: 500;
-    color: #6b7280;
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.dayNumToday {
-    background: #3b82f6;
-    color: #fff !important;
-    font-weight: 700;
-}
-
-.events {
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.viewMore {
-    background: none;
-    border: none;
-    font-size: 10.5px;
-    font-weight: 600;
-    color: #6b7280;
-    cursor: pointer;
-    padding: 2px 4px;
-    text-align: left;
-    transition: color 0.15s;
-    align-self: flex-start;
-    &:hover { color: #3b82f6; }
-}
-
-// ══ Tour card (inline) ════════════════════════════════════════════════════════
-.tourCard {
-    border-radius: 6px;
-    padding: 4px 7px 5px;
-    display: flex;
-    flex-direction: column;
-    gap: 1px;
-    cursor: pointer;
-    border-left: 3px solid transparent;
-    transition: opacity 0.15s;
-    &:hover { opacity: 0.85; }
-}
-
-.tourCardTime {
-    font-size: 10px;
-    font-weight: 500;
-    opacity: 0.75;
-    display: flex;
-    align-items: center;
-    gap: 3px;
-}
-
-.tourCardName {
-    font-size: 11.5px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    line-height: 1.3;
-}
-
-.tourCardMeta {
-    font-size: 10px;
-    opacity: 0.7;
-}
-
-// ══ Right panel ═══════════════════════════════════════════════════════════════
-.rightPanel {
-    display: flex;
-    flex-direction: column;
-    background: #fff;
-}
-
-.rpHeader {
-    padding: 16px 16px 12px;
+    padding: 18px 22px 14px;
     border-bottom: 1px solid #f3f4f6;
 }
 
-.rpTitle {
-    font-size: 14px;
+.modalTitle {
+    font-size: 16px;
     font-weight: 700;
-    color: #111827;
-    margin: 0 0 2px;
-}
-
-.rpSubtitle {
-    font-size: 11.5px;
-    color: #9ca3af;
+    color: $dark;
     margin: 0;
 }
 
-.rpList {
+.modalSubtitle {
+    font-size: 12px;
+    color: $light;
+    margin: 3px 0 0;
+}
+
+.modalCloseBtn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid $border;
+    border-radius: 8px;
+    background: $white;
+    color: $mid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #fee2e2; color: $red; border-color: #fecaca; }
+}
+
+.modalBody {
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $dark;
+}
+
+.required { color: $red; }
+
+.input, .textarea, .select {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    font-size: 13px;
+    color: $dark;
+    background: $white;
+    outline: none;
+    transition: border-color 0.15s;
+    &:focus { border-color: $blue; }
+    &::placeholder { color: $light; }
+}
+
+.textarea {
+    height: auto;
+    padding: 10px 12px;
+    resize: vertical;
+    min-height: 72px;
+}
+
+.select { cursor: pointer; appearance: none; }
+
+.fieldRow {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+}
+
+.hint { font-size: 11.5px; color: $light; }
+.errorMsg { font-size: 11.5px; color: $red; }
+.inputError { border-color: $red !important; }
+
+.modalFooter {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 14px 22px 18px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.btnCancel {
+    height: 36px;
+    padding: 0 18px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    background: $white;
+    font-size: 13px;
+    font-weight: 600;
+    color: $mid;
+    cursor: pointer;
+    transition: background 0.12s;
+    &:hover { background: $bg; }
+}
+
+.btnSubmit {
+    height: 36px;
+    padding: 0 20px;
+    background: $indigo;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s;
+    &:hover { background: #4338ca; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.spinner {
+    width: 14px;
+    height: 14px;
+    border: 2px solid rgba(255,255,255,.3);
+    border-top-color: $white;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Wizard modal ──────────────────────────────────────────────────────────────
+.wizardModal {
+    background: $white;
+    border-radius: 18px;
+    width: 900px;
+    max-width: 100%;
+    max-height: 88vh;
+    box-shadow: 0 28px 80px rgba(0,0,0,.24);
+    animation: modalIn 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+// Step progress bar
+.wizardSteps {
+    display: flex;
+    align-items: center;
+    padding: 18px 28px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    gap: 0;
+    flex-shrink: 0;
+}
+
+.wizardStep {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex: 1;
+}
+
+.wizardStep:last-child { flex: none; }
+
+.stepCircle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    border: 2px solid $border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+    font-weight: 700;
+    color: $light;
+    flex-shrink: 0;
+    transition: all 0.2s;
+    background: $white;
+}
+
+.stepCircleActive {
+    border-color: $indigo;
+    background: $indigo;
+    color: $white;
+}
+
+.stepCircleDone {
+    border-color: $green;
+    background: $green;
+    color: $white;
+}
+
+.stepLabel {
+    font-size: 12px;
+    font-weight: 600;
+    color: $light;
+    white-space: nowrap;
+}
+
+.stepLabelActive { color: $indigo; }
+.stepLabelDone   { color: $green; }
+
+.stepLine {
+    flex: 1;
+    height: 2px;
+    background: $border;
+    margin: 0 8px;
+    transition: background 0.2s;
+}
+.stepLineDone { background: $green; }
+
+// Wizard content
+.wizardBody {
     flex: 1;
     overflow-y: auto;
-    padding: 10px 12px;
+    padding: 24px 28px;
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    &::-webkit-scrollbar { width: 3px; }
-    &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+    gap: 20px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
 }
 
-.rpEmpty {
-    font-size: 13px;
-    color: #9ca3af;
-    text-align: center;
-    padding: 24px 0;
-}
-
-.rpCard {
-    background: #fff;
-    border: 1px solid #f3f4f6;
-    border-left: 3px solid transparent;
-    border-radius: 8px;
-    padding: 9px 10px 9px 11px;
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    box-shadow: 0 1px 3px rgba(0,0,0,.04);
-    cursor: pointer;
-    transition: box-shadow 0.15s;
-    &:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
-}
-
-.rpCardTop {
+.wizardFooter {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 14px 28px 18px;
+    border-top: 1px solid #f3f4f6;
+    flex-shrink: 0;
 }
 
-.rpCardDate {
-    font-size: 10.5px;
-    font-weight: 600;
-    color: #6b7280;
+.wizardFooterRight {
     display: flex;
     align-items: center;
-    gap: 3px;
+    gap: 10px;
 }
 
-.rpCardName {
-    font-size: 12.5px;
+.btnBack {
+    height: 36px;
+    padding: 0 18px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    background: $white;
+    font-size: 13px;
+    font-weight: 600;
+    color: $mid;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.12s;
+    &:hover { background: $bg; }
+}
+
+.btnNext {
+    height: 36px;
+    padding: 0 22px;
+    background: $indigo;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+    &:hover { background: #4338ca; }
+}
+
+.stepTitle {
+    font-size: 16px;
     font-weight: 700;
-    color: #111827;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    color: $dark;
+    margin: 0 0 4px;
 }
 
-.rpCardMeta {
-    font-size: 10.5px;
-    color: #9ca3af;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+.stepSubtitle {
+    font-size: 13px;
+    color: $light;
+    margin: 0 0 16px;
 }
 
-.rpBadge {
-    display: inline-block;
-    align-self: flex-start;
-    padding: 2px 8px;
-    border-radius: 20px;
-    font-size: 10px;
+// ── Stop cards ────────────────────────────────────────────────────────────────
+.stopList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.stopCard {
+    background: $bg;
+    border: 1.5px solid $border;
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+}
+
+.stopCardHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.stopOrderBadge {
+    width: 26px;
+    height: 26px;
+    background: $indigo;
+    color: $white;
+    border-radius: 50%;
+    font-size: 12px;
     font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
 }
 
-.addTourBtn {
+.stopCardTitle {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: $dark;
+    flex: 1;
+}
+
+.stopDeleteBtn {
+    width: 26px;
+    height: 26px;
+    border: 1px solid $border;
+    border-radius: 7px;
+    background: $white;
+    color: $light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.12s, color 0.12s;
+    &:hover { background: #fee2e2; color: $red; border-color: #fecaca; }
+}
+
+.stopFields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.addStopBtn {
     display: flex;
     align-items: center;
     justify-content: center;
     gap: 7px;
-    margin: 12px;
-    height: 38px;
-    background: #3b82f6;
-    border: none;
+    height: 40px;
+    border: 2px dashed $border;
     border-radius: 10px;
+    background: $bg;
     font-size: 13px;
     font-weight: 600;
-    color: #fff;
+    color: $light;
     cursor: pointer;
-    transition: background 0.15s;
-    flex-shrink: 0;
-    &:hover { background: #2563eb; }
+    transition: border-color 0.15s, color 0.15s;
+    &:hover { border-color: $indigo; color: $indigo; }
 }
+
+// ── Activity rows per stop ────────────────────────────────────────────────────
+.activitiesSection {
+    background: $white;
+    border: 1px solid $border;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.activitiesHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 16px;
+    background: $bg;
+    border-bottom: 1px solid $border;
+}
+
+.activitiesStopName {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    color: $dark;
+}
+
+.stopNumBadge {
+    width: 22px;
+    height: 22px;
+    background: $indigo;
+    color: $white;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.addActivityBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 12px;
+    background: $white;
+    border: 1px solid $indigo;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: $indigo;
+    cursor: pointer;
+    transition: background 0.12s;
+    &:hover { background: #eef2ff; }
+}
+
+.activityList {
+    display: flex;
+    flex-direction: column;
+}
+
+.activityRow {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    &:last-child { border-bottom: none; }
+}
+
+.activityOrder {
+    width: 20px;
+    height: 20px;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 50%;
+    font-size: 10.5px;
+    font-weight: 700;
+    color: $mid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activityIcon {
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.activityInfo { flex: 1; min-width: 0; }
+
+.activityName {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.activityMeta {
+    font-size: 11px;
+    color: $light;
+    display: flex;
+    gap: 8px;
+    margin-top: 1px;
+}
+
+.activityPrice {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $dark;
+    white-space: nowrap;
+}
+
+.activityDeleteBtn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    background: none;
+    color: $light;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 5px;
+    transition: background 0.12s, color 0.12s;
+    &:hover { background: #fee2e2; color: $red; }
+}
+
+.emptyActivities {
+    padding: 16px;
+    font-size: 12.5px;
+    color: $light;
+    text-align: center;
+}
+
+// ── Add activity sub-modal ────────────────────────────────────────────────────
+.activityModal {
+    background: $white;
+    border-radius: 16px;
+    width: 500px;
+    max-height: 85vh;
+    box-shadow: 0 24px 64px rgba(0,0,0,.22);
+    animation: modalIn 0.18s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.activityTypeTabs {
+    display: flex;
+    gap: 8px;
+    padding: 4px;
+    background: $bg;
+    border-radius: 10px;
+    margin-bottom: 4px;
+}
+
+.activityTypeTab {
+    flex: 1;
+    height: 34px;
+    border: none;
+    border-radius: 8px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $mid;
+    background: transparent;
+    cursor: pointer;
+    transition: background 0.14s, color 0.14s;
+    &:hover { background: rgba(0,0,0,.04); color: $dark; }
+}
+
+.activityTypeTabActive {
+    background: $white;
+    color: $indigo;
+    box-shadow: 0 1px 4px rgba(0,0,0,.1);
+}
+
+.serviceGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    max-height: 200px;
+    overflow-y: auto;
+
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
+}
+
+.serviceOption {
+    border: 1.5px solid $border;
+    border-radius: 10px;
+    padding: 10px 12px;
+    cursor: pointer;
+    transition: border-color 0.12s, background 0.12s;
+    &:hover { border-color: #a5b4fc; background: #f8f7ff; }
+}
+
+.serviceOptionSelected {
+    border-color: $indigo;
+    background: #eef2ff;
+}
+
+.serviceOptName {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $dark;
+    margin: 0 0 2px;
+}
+
+.serviceOptMeta {
+    font-size: 11px;
+    color: $light;
+}
+
+// ── Wizard body variant for map step (no scroll, tight padding) ───────────────
+.wizardBodyFull {
+    flex: 1;
+    overflow: hidden;
+    padding: 16px 20px;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+// ── Map itinerary step layout ─────────────────────────────────────────────────
+.mapItineraryStep {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    gap: 10px;
+    min-height: 0;
+}
+
+.mapItineraryContent {
+    display: grid;
+    grid-template-columns: 1fr 268px;
+    grid-template-rows: 1fr;
+    gap: 14px;
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+// ── Stops scroll panel (right column) ────────────────────────────────────────
+.stopsScrollPanel {
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-right: 2px;
+
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
+}
+
+.emptyStopsHint {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 6px;
+    padding: 28px 16px;
+    border: 2px dashed $border;
+    border-radius: 12px;
+    min-height: 140px;
+
+    svg { color: #d1d5db; }
+    p { margin: 0; font-size: 12px; color: $light; line-height: 1.45; }
+    p:first-of-type { font-weight: 600; color: $mid; font-size: 13px; }
+}
+
+// ── Stop panel card ───────────────────────────────────────────────────────────
+.stopPanelCard {
+    background: $white;
+    border: 1.5px solid $border;
+    border-radius: 10px;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+
+.stopPanelHead {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 9px 11px;
+    background: $bg;
+    border-bottom: 1px solid $border;
+}
+
+.stopPanelInfo {
+    flex: 1;
+    min-width: 0;
+}
+
+.stopPanelName {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stopPanelAddr {
+    font-size: 10.5px;
+    color: $light;
+    margin: 1px 0 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stopPanelActivities {
+    display: flex;
+    flex-direction: column;
+}
+
+.stopPanelActivity {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 11px;
+    border-bottom: 1px solid #f3f4f6;
+
+    &:last-child { border-bottom: none; }
+}
+
+.stopPanelActivityName {
+    flex: 1;
+    font-size: 11.5px;
+    color: $mid;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.stopPanelActivityTime {
+    font-size: 10px;
+    color: $light;
+    white-space: nowrap;
+    flex-shrink: 0;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 4px;
+    padding: 0 5px;
+    line-height: 18px;
+}
+
+.stopPanelActivityDelete {
+    width: 18px;
+    height: 18px;
+    border: none;
+    background: none;
+    color: $light;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 4px;
+    flex-shrink: 0;
+    padding: 0;
+
+    &:hover { background: #fee2e2; color: $red; }
+}
+
+.stopPanelAddActBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 5px;
+    width: 100%;
+    height: 30px;
+    border: none;
+    border-top: 1px solid $border;
+    background: $white;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: $indigo;
+    cursor: pointer;
+    transition: background 0.12s;
+
+    &:hover { background: #eef2ff; }
+}
+
+// ── Pending stop dialog ───────────────────────────────────────────────────────
+.pendingStopModal {
+    background: $white;
+    border-radius: 16px;
+    width: 420px;
+    max-width: calc(100vw - 48px);
+    box-shadow: 0 24px 64px rgba(0,0,0,.28);
+    animation: modalIn 0.18s ease;
+    overflow: hidden;
+}
+
+// ── Review step ───────────────────────────────────────────────────────────────
+.reviewSection {
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 12px;
+    padding: 16px 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.reviewSectionTitle {
+    font-size: 13px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+}
+
+.reviewRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    font-size: 13px;
+}
+
+.reviewKey { color: $mid; }
+.reviewVal { font-weight: 600; color: $dark; }
+
+.reviewStop {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 8px 0;
+    border-bottom: 1px solid $border;
+    &:last-child { border-bottom: none; }
+}
+
+.reviewStopNum {
+    width: 22px;
+    height: 22px;
+    background: $indigo;
+    color: $white;
+    border-radius: 50%;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.reviewStopInfo { flex: 1; }
+.reviewStopName { font-size: 13px; font-weight: 700; color: $dark; }
+.reviewStopAddr { font-size: 11.5px; color: $light; margin: 2px 0 6px; }
+.reviewActivity { font-size: 12px; color: $mid; display: flex; align-items: center; gap: 6px; }

@@ -1,0 +1,117 @@
+.wrapper {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    // Fill whatever height the parent grid cell gives us
+    height: 100%;
+    min-height: 0;
+    align-self: stretch;
+}
+
+.searchBar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    height: 36px;
+    padding: 0 12px;
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 9px;
+    flex-shrink: 0;
+    transition: border-color 0.15s;
+
+    &:focus-within {
+        border-color: #4f46e5;
+    }
+}
+
+.searchInput {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: 13px;
+    color: #111827;
+    background: transparent;
+
+    &::placeholder {
+        color: #9ca3af;
+    }
+}
+
+.searchBtn {
+    height: 26px;
+    padding: 0 12px;
+    background: #4f46e5;
+    border: none;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #ffffff;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+
+    &:hover:not(:disabled) {
+        background: #4338ca;
+    }
+
+    &:disabled {
+        opacity: 0.6;
+        cursor: default;
+    }
+}
+
+.mapContainer {
+    flex: 1;
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+    border: 1.5px solid #e5e7eb;
+    // Hard minimum so Leaflet always renders even if flex math goes wrong
+    min-height: 320px;
+}
+
+.map {
+    width: 100%;
+    height: 100%;
+}
+
+.loadingOverlay {
+    position: absolute;
+    inset: 0;
+    background: #f9fafb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid #e5e7eb;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+.hint {
+    font-size: 11.5px;
+    color: #9ca3af;
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    margin: 0;
+    flex-shrink: 0;
+
+    svg {
+        flex-shrink: 0;
+    }
+}

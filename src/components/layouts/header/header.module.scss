@@ -167,6 +167,188 @@
   }
 }
 
+// ── Notification bell ─────────────────────────────────────────────────────────
+.notifWrap {
+  position: relative;
+}
+
+.notifBtn {
+  position: relative;
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  border: 1.5px solid rgba(255, 255, 255, 0.5);
+  background: rgba(255, 255, 255, 0.15);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: background 0.2s;
+
+  &:hover { background: rgba(255, 255, 255, 0.25); }
+}
+
+.notifBadge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 17px;
+  height: 17px;
+  background: #ef4444;
+  color: #fff;
+  border-radius: 20px;
+  font-size: 9.5px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 3px;
+  border: 2px solid transparent;
+  line-height: 1;
+}
+
+.notifDropdown {
+  position: absolute;
+  top: calc(100% + 12px);
+  right: 0;
+  width: 340px;
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 14px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.16);
+  z-index: 500;
+  overflow: hidden;
+  animation: notifSlide 0.15s ease;
+}
+
+@keyframes notifSlide {
+  from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.notifDropHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px 10px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.notifDropTitle {
+  font-size: 14px;
+  font-weight: 700;
+  color: #111827;
+}
+
+.notifMarkAll {
+  font-size: 12px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+
+  &:hover { text-decoration: underline; }
+}
+
+.notifList {
+  max-height: 320px;
+  overflow-y: auto;
+
+  &::-webkit-scrollbar { width: 3px; }
+  &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+}
+
+.notifItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 16px;
+  cursor: pointer;
+  transition: background 0.1s;
+  border-bottom: 1px solid #f9fafb;
+
+  &:last-child { border-bottom: none; }
+  &:hover { background: #f9fafb; }
+}
+
+.notifItemUnread {
+  background: #f8faff;
+  &:hover { background: #eff4ff; }
+}
+
+.notifIcon {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 1px;
+}
+
+.notifBody { flex: 1; min-width: 0; }
+
+.notifTitle {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: #111827;
+  margin: 0 0 2px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notifDesc {
+  font-size: 11.5px;
+  color: #6b7280;
+  margin: 0 0 4px;
+  line-height: 1.4;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.notifTime {
+  font-size: 10.5px;
+  color: #9ca3af;
+  font-weight: 500;
+}
+
+.notifDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3b82f6;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+.notifFooter {
+  padding: 10px 16px;
+  border-top: 1px solid #f3f4f6;
+  text-align: center;
+}
+
+.notifViewAll {
+  font-size: 13px;
+  font-weight: 600;
+  color: #3b82f6;
+  background: none;
+  border: none;
+  cursor: pointer;
+  width: 100%;
+  padding: 6px;
+  border-radius: 8px;
+  transition: background 0.1s;
+
+  &:hover { background: #eff6ff; }
+}
+
 /* Solid variant for non-hero pages */
 .headerSolid {
   position: relative;
@@ -205,6 +387,14 @@
 
   .avatar {
     border-color: #e5e7eb;
+  }
+
+  .notifBtn {
+    border-color: #e5e7eb;
+    background: #f9fafb;
+    color: #6b7280;
+
+    &:hover { background: #f3f4f6; color: #111827; }
   }
 
   .signInBtn {
