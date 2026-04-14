@@ -1,0 +1,519 @@
+// ── Page ──────────────────────────────────────────────────────────────────────
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    height: 100%;
+}
+
+// ── Top bar ───────────────────────────────────────────────────────────────────
+.topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.topLeft {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.topRight {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+// Status filter dropdown
+.filterWrap { position: relative; }
+
+.filterBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 12px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: border-color 0.15s;
+    &:hover { border-color: #d1d5db; }
+}
+
+.filterDropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.1);
+    min-width: 160px;
+    z-index: 50;
+    overflow: hidden;
+    animation: fadeIn 0.12s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-4px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+.filterOpt {
+    display: block;
+    width: 100%;
+    padding: 9px 14px;
+    text-align: left;
+    font-size: 13px;
+    color: #374151;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background 0.1s;
+    &:hover { background: #f9fafb; }
+}
+
+.filterOptActive { font-weight: 600; color: #3b82f6; }
+
+// Month nav
+.monthNav {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.arrowBtn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    background: #fff;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    &:hover { background: #f3f4f6; color: #111827; }
+}
+
+.monthLabel {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    padding: 0 8px;
+    cursor: pointer;
+    svg { color: #6b7280; }
+}
+
+.todayBtn {
+    height: 34px;
+    padding: 0 16px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #f3f4f6; }
+}
+
+.addBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    height: 34px;
+    padding: 0 14px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #2563eb; }
+}
+
+// ── Popup ─────────────────────────────────────────────────────────────────────
+.popupOverlay {
+    position: fixed;
+    inset: 0;
+    z-index: 300;
+    background: transparent;
+}
+
+.popup {
+    position: fixed;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+    width: 290px;
+    max-height: 480px;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    animation: popIn 0.16s ease;
+    z-index: 301;
+}
+
+@keyframes popIn {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.popupHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+}
+
+.popupDay {
+    width: 30px;
+    height: 30px;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.popupClose {
+    width: 28px;
+    height: 28px;
+    border: 1px solid #e5e7eb;
+    border-radius: 7px;
+    background: #fff;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+    &:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
+}
+
+.popupList {
+    overflow-y: auto;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+}
+
+// ── Body ──────────────────────────────────────────────────────────────────────
+.body {
+    display: grid;
+    grid-template-columns: 1fr 270px;
+    gap: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    overflow: hidden;
+    flex: 1;
+    min-height: 0;
+}
+
+// ══ Calendar ══════════════════════════════════════════════════════════════════
+.calWrap {
+    display: flex;
+    flex-direction: column;
+    border-right: 1px solid #e5e7eb;
+    overflow: hidden;
+    min-height: 0;
+}
+
+// Weekday headers
+.weekRow {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    border-bottom: 1px solid #e5e7eb;
+    position: sticky;
+    top: 0;
+    background: #fff;
+    z-index: 10;
+}
+
+.weekHead {
+    padding: 12px 8px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    letter-spacing: 0.06em;
+}
+
+.weekHeadToday { color: #3b82f6; }
+
+.todayPill {
+    display: inline-block;
+    padding: 3px 10px;
+    background: #3b82f6;
+    color: #fff;
+    border-radius: 20px;
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+}
+
+// Grid
+.grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    grid-template-rows: repeat(6, 1fr);
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+}
+
+.cell {
+    border-right: 1px solid #f3f4f6;
+    border-bottom: 1px solid #f3f4f6;
+    padding: 5px 6px 6px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-height: 0;
+    overflow: hidden;
+    background: #fff;
+    &:nth-child(7n) { border-right: none; }
+}
+
+.cellOther {
+    background: #fafafa;
+    .dayNum  { color: #d1d5db; }
+    .addNew  { color: #e5e7eb; }
+}
+
+.cellTodayCol { background: #f0f9ff; }
+
+.cellHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 2px;
+}
+
+.addNew {
+    font-size: 10.5px;
+    font-weight: 500;
+    color: #9ca3af;
+    cursor: pointer;
+    transition: color 0.15s;
+    white-space: nowrap;
+    &:hover { color: #3b82f6; }
+}
+
+.dayNum {
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #6b7280;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dayNumToday {
+    background: #3b82f6;
+    color: #fff !important;
+    font-weight: 700;
+}
+
+.events {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+}
+
+.viewMore {
+    background: none;
+    border: none;
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    padding: 2px 4px;
+    text-align: left;
+    transition: color 0.15s;
+    align-self: flex-start;
+    &:hover { color: #3b82f6; }
+}
+
+// ══ Tour card (inline) ════════════════════════════════════════════════════════
+.tourCard {
+    border-radius: 6px;
+    padding: 4px 7px 5px;
+    display: flex;
+    flex-direction: column;
+    gap: 1px;
+    cursor: pointer;
+    border-left: 3px solid transparent;
+    transition: opacity 0.15s;
+    &:hover { opacity: 0.85; }
+}
+
+.tourCardTime {
+    font-size: 10px;
+    font-weight: 500;
+    opacity: 0.75;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.tourCardName {
+    font-size: 11.5px;
+    font-weight: 700;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.3;
+}
+
+.tourCardMeta {
+    font-size: 10px;
+    opacity: 0.7;
+}
+
+// ══ Right panel ═══════════════════════════════════════════════════════════════
+.rightPanel {
+    display: flex;
+    flex-direction: column;
+    background: #fff;
+}
+
+.rpHeader {
+    padding: 16px 16px 12px;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.rpTitle {
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 2px;
+}
+
+.rpSubtitle {
+    font-size: 11.5px;
+    color: #9ca3af;
+    margin: 0;
+}
+
+.rpList {
+    flex: 1;
+    overflow-y: auto;
+    padding: 10px 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    &::-webkit-scrollbar { width: 3px; }
+    &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+}
+
+.rpEmpty {
+    font-size: 13px;
+    color: #9ca3af;
+    text-align: center;
+    padding: 24px 0;
+}
+
+.rpCard {
+    background: #fff;
+    border: 1px solid #f3f4f6;
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    padding: 9px 10px 9px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    box-shadow: 0 1px 3px rgba(0,0,0,.04);
+    cursor: pointer;
+    transition: box-shadow 0.15s;
+    &:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+}
+
+.rpCardTop {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.rpCardDate {
+    font-size: 10.5px;
+    font-weight: 600;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    gap: 3px;
+}
+
+.rpCardName {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #111827;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rpCardMeta {
+    font-size: 10.5px;
+    color: #9ca3af;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.rpBadge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+.addTourBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin: 12px;
+    height: 38px;
+    background: #3b82f6;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #fff;
+    cursor: pointer;
+    transition: background 0.15s;
+    flex-shrink: 0;
+    &:hover { background: #2563eb; }
+}

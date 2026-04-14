@@ -1,0 +1,626 @@
+$blue:  #3b82f6;
+$blue2: #2563eb;
+$green: #059669;
+$red:   #ef4444;
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+    min-height: 100%;
+}
+
+// ── Top bar ───────────────────────────────────────────────────────────────────
+.topBar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.backBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    text-decoration: none;
+    padding: 6px 10px;
+    border-radius: 8px;
+    transition: background 0.15s, color 0.15s;
+
+    &:hover { background: #f3f4f6; color: #111827; }
+}
+
+.topActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.btnCancel {
+    height: 36px;
+    padding: 0 16px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    transition: background 0.15s;
+
+    &:hover { background: #f9fafb; }
+}
+
+.btnCreate {
+    height: 36px;
+    padding: 0 16px;
+    background: $blue;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #fff;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    transition: background 0.15s;
+
+    &:hover:not(:disabled) { background: $blue2; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.spinner {
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+// ── Two-column layout ─────────────────────────────────────────────────────────
+.layout {
+    display: grid;
+    grid-template-columns: 380px 1fr;
+    gap: 20px;
+    align-items: start;
+
+    @media (max-width: 900px) { grid-template-columns: 1fr; }
+}
+
+.left  { display: flex; flex-direction: column; gap: 16px; }
+.right { display: flex; flex-direction: column; gap: 16px; }
+
+// ── Card ──────────────────────────────────────────────────────────────────────
+.card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.cardTitle {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+
+    svg { color: $blue; flex-shrink: 0; }
+}
+
+// ── Fields ────────────────────────────────────────────────────────────────────
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.req { color: $red; }
+
+.hint {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.input {
+    height: 38px;
+    padding: 0 12px;
+    font-size: 13px;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    outline: none;
+    background: #fff;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &::placeholder { color: #9ca3af; }
+    &:focus {
+        border-color: $blue;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+}
+
+.inputErr {
+    border-color: $red !important;
+    &:focus { box-shadow: 0 0 0 3px rgba(239,68,68,.12) !important; }
+}
+
+.errMsg {
+    font-size: 11.5px;
+    color: $red;
+}
+
+.submitErr {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 10px 13px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 13px;
+    color: #b91c1c;
+}
+
+// ── Code field ────────────────────────────────────────────────────────────────
+.codeLabelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.resetCode {
+    font-size: 11px;
+    font-weight: 500;
+    color: $blue;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    &:hover { text-decoration: underline; }
+}
+
+.codeWrap {
+    display: flex;
+    align-items: center;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: border-color 0.15s, box-shadow 0.15s;
+    &:focus-within {
+        border-color: $blue;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.12);
+    }
+}
+
+.codePrefix {
+    padding: 0 10px;
+    height: 38px;
+    background: #f9fafb;
+    border-right: 1px solid #e5e7eb;
+    font-size: 14px;
+    font-weight: 600;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.codeInput {
+    border: none !important;
+    border-radius: 0 !important;
+    box-shadow: none !important;
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #1e40af;
+
+    &:focus { box-shadow: none !important; }
+}
+
+// ── Status radio ──────────────────────────────────────────────────────────────
+.statusRow {
+    display: flex;
+    gap: 8px;
+}
+
+.statusOpt {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 8px 14px;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6b7280;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover { border-color: #d1d5db; background: #f9fafb; }
+}
+
+.statusOptActive {
+    border-color: $blue;
+    background: #eff6ff;
+    color: #1d4ed8;
+}
+
+.hiddenRadio { display: none; }
+
+.statusDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.dotGreen { background: $green; }
+.dotGray  { background: #9ca3af; }
+
+// ── Pricing compare ───────────────────────────────────────────────────────────
+.pricingCompare {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.priceCol {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 14px 12px;
+    gap: 2px;
+    text-align: center;
+}
+
+.priceColLabel {
+    font-size: 11px;
+    font-weight: 600;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.priceColValue {
+    font-size: 15px;
+    font-weight: 700;
+    color: #111827;
+    margin-top: 2px;
+}
+
+.priceGreen { color: $green; }
+
+.priceColSub {
+    font-size: 11px;
+    color: #9ca3af;
+}
+
+.priceDivider {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0 4px;
+    flex-shrink: 0;
+}
+
+.discountBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    padding: 4px 9px;
+    background: #d1fae5;
+    color: #065f46;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.priceInputWrap {
+    position: relative;
+}
+
+.priceSuffix {
+    position: absolute;
+    right: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    pointer-events: none;
+}
+
+.pricePreview {
+    font-size: 12px;
+    font-weight: 600;
+    color: $green;
+    margin-top: -2px;
+}
+
+// ── Service selector ──────────────────────────────────────────────────────────
+.svcHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+}
+
+.svcSubtitle {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: 3px 0 0;
+}
+
+.svcSelectedCount {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 10px;
+    padding: 6px 14px;
+    min-width: 56px;
+    flex-shrink: 0;
+}
+
+.svcCountNum {
+    font-size: 22px;
+    font-weight: 700;
+    color: $blue;
+    line-height: 1;
+}
+
+.svcCountLabel {
+    font-size: 10px;
+    color: #60a5fa;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.svcError {
+    padding: 8px 12px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: #b91c1c;
+}
+
+// Search
+.svcSearch {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.svcSearchIcon {
+    position: absolute;
+    left: 10px;
+    color: #9ca3af;
+    pointer-events: none;
+}
+
+.svcSearchInput {
+    width: 100%;
+    height: 36px;
+    padding: 0 12px 0 32px;
+    font-size: 13px;
+    color: #111827;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    outline: none;
+    box-sizing: border-box;
+    background: #f9fafb;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &::placeholder { color: #9ca3af; }
+    &:focus {
+        background: #fff;
+        border-color: $blue;
+        box-shadow: 0 0 0 3px rgba(59,130,246,.1);
+    }
+}
+
+// List
+.svcList {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    max-height: 440px;
+    overflow-y: auto;
+    padding-right: 2px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-track { background: #f3f4f6; border-radius: 4px; }
+    &::-webkit-scrollbar-thumb { background: #d1d5db; border-radius: 4px; }
+}
+
+.svcLoading, .svcEmpty {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 40px 0;
+    font-size: 13px;
+    color: #9ca3af;
+}
+
+.svcSpinner {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #e5e7eb;
+    border-top-color: $blue;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+}
+
+// Service item
+.svcItem {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    padding: 12px 14px;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    user-select: none;
+
+    &:hover { border-color: #93c5fd; background: #f8fbff; }
+}
+
+.svcItemSelected {
+    border-color: $blue;
+    background: #eff6ff;
+
+    &:hover { border-color: $blue2; background: #dbeafe; }
+}
+
+.svcCheckbox { display: none; }
+
+.svcCheckMark {
+    width: 18px;
+    height: 18px;
+    border: 2px solid #d1d5db;
+    border-radius: 5px;
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color 0.15s, background 0.15s;
+    margin-top: 1px;
+
+    .svcItemSelected & {
+        border-color: $blue;
+        background: $blue;
+        color: #fff;
+    }
+}
+
+.svcInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.svcName {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.svcDesc {
+    font-size: 11.5px;
+    color: #9ca3af;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.svcMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+}
+
+.svcDuration {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    font-size: 11px;
+    color: #6b7280;
+}
+
+.svcStatus {
+    font-size: 11px;
+    font-weight: 500;
+    padding: 1px 7px;
+    border-radius: 10px;
+}
+
+.svcStatusActive { background: #d1fae5; color: #065f46; }
+.svcStatusOff    { background: #f3f4f6; color: #6b7280; }
+
+.svcPrice {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+    flex-shrink: 0;
+}
+
+.svcPriceMain {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+}
+
+.svcPriceOld {
+    font-size: 11px;
+    color: #9ca3af;
+    text-decoration: line-through;
+}
+
+// Summary footer
+.svcSummary {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 10px 14px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 8px;
+    font-size: 12.5px;
+    color: #065f46;
+}
+
+.svcSummaryLeft {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.svcSummaryDot { color: #6ee7b7; }
+
+.svcSummaryTotal {
+    font-weight: 700;
+    font-size: 14px;
+    color: $green;
+}

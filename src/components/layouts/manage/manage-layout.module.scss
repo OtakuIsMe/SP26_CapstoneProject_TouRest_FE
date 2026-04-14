@@ -412,6 +412,10 @@ $r: 8px;
     border: 1.5px solid $white;
 }
 
+.avatarWrap {
+    position: relative;
+}
+
 .headerAvatar {
     display: flex;
     align-items: center;
@@ -421,7 +425,93 @@ $r: 8px;
     border-radius: $r;
     border: 1px solid $light-gray;
     transition: background 0.14s;
+    user-select: none;
     &:hover { background: $bg; }
+}
+
+.avatarDropdown {
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    background: $white;
+    border: 1px solid $light-gray;
+    border-radius: 12px;
+    box-shadow: 0 12px 32px rgba(0,0,0,.12);
+    min-width: 210px;
+    z-index: 500;
+    overflow: hidden;
+    animation: avatarPop 0.14s ease;
+}
+
+@keyframes avatarPop {
+    from { opacity: 0; transform: translateY(-6px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.avatarDropHeader {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 14px 14px 12px;
+}
+
+.avatarCircleLg {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: $blue;
+    color: $white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.avatarDropName {
+    font-size: 13px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+}
+
+.avatarDropRole {
+    font-size: 11px;
+    color: #9ca3af;
+    text-transform: capitalize;
+    margin: 2px 0 0;
+}
+
+.avatarDropDivider {
+    height: 1px;
+    background: $light-gray;
+    margin: 2px 0;
+}
+
+.avatarDropItem {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    width: 100%;
+    padding: 9px 14px;
+    font-size: 13px;
+    font-weight: 500;
+    color: $dark;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+
+    svg { color: #9ca3af; flex-shrink: 0; }
+    &:hover { background: $bg; }
+}
+
+.avatarDropLogout {
+    color: #ef4444;
+    svg { color: #ef4444; }
+    &:hover { background: #fef2f2; }
 }
 
 .avatarCircle {

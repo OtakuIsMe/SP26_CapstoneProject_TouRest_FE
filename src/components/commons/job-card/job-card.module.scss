@@ -1,0 +1,142 @@
+.card {
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-left: 3px solid transparent;
+    border-radius: 8px;
+    padding: 9px 10px 9px 11px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.06);
+    cursor: pointer;
+    transition: box-shadow 0.15s, transform 0.15s;
+    width: 100%;
+    box-sizing: border-box;
+
+    &:hover {
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        transform: translateY(-1px);
+
+        .menuBtn { opacity: 1; }
+    }
+}
+
+// ── Top row ───────────────────────────────────────────────────────────────────
+.top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+}
+
+.time {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 500;
+    color: #9ca3af;
+    white-space: nowrap;
+
+    svg { flex-shrink: 0; color: #9ca3af; }
+}
+
+// ── 3-dot menu ────────────────────────────────────────────────────────────────
+.menuWrap {
+    position: relative;
+    flex-shrink: 0;
+}
+
+.menuBtn {
+    width: 22px;
+    height: 22px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: none;
+    border: none;
+    border-radius: 5px;
+    color: #9ca3af;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.15s, background 0.15s, color 0.15s;
+
+    &:hover {
+        background: #f3f4f6;
+        color: #374151;
+    }
+}
+
+.dropdown {
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+    min-width: 148px;
+    z-index: 200;
+    overflow: hidden;
+    animation: pop 0.12s ease;
+}
+
+@keyframes pop {
+    from { opacity: 0; transform: translateY(-4px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    }
+}
+
+.dropItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 9px 13px;
+    font-size: 12.5px;
+    font-weight: 500;
+    color: #374151;
+    background: none;
+    border: none;
+    cursor: pointer;
+    text-align: left;
+    transition: background 0.1s;
+
+    svg { color: #9ca3af; flex-shrink: 0; }
+
+    &:hover { background: #f9fafb; }
+}
+
+.dropDivider {
+    height: 1px;
+    background: #f3f4f6;
+    margin: 2px 0;
+}
+
+.dropItemDanger {
+    color: #ef4444;
+    svg { color: #ef4444; }
+    &:hover { background: #fef2f2; }
+}
+
+// ── Title ─────────────────────────────────────────────────────────────────────
+.title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 1.4;
+}
+
+// ── Badge ─────────────────────────────────────────────────────────────────────
+.badge {
+    display: inline-block;
+    align-self: flex-start;
+    padding: 2px 9px;
+    border-radius: 20px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+}

@@ -4,12 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { providerService, ServiceStatus } from "@/libs/services/provider.service";
 import styles from "./add-service-modal.module.scss";
 
-// Label → enum value map for the select
-const STATUS_OPTIONS: { label: string; value: ServiceStatus }[] = [
-    { label: "Active",       value: ServiceStatus.Active },
-    { label: "Inactive",     value: ServiceStatus.Inactive },
-    { label: "Discontinued", value: ServiceStatus.Discontinued },
-];
+const MAX_TAGS = 30;
 
 interface AddServiceForm {
     name: string;
@@ -17,7 +12,6 @@ interface AddServiceForm {
     price: string;
     basePrice: string;
     durationMinutes: string;
-    status: ServiceStatus;
 }
 
 const INITIAL_FORM: AddServiceForm = {
@@ -26,7 +20,6 @@ const INITIAL_FORM: AddServiceForm = {
     price: "",
     basePrice: "",
     durationMinutes: "",
-    status: ServiceStatus.Active,
 };
 
 interface Props {
@@ -40,8 +33,11 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
     const [errors, setErrors]   = useState<Partial<AddServiceForm>>({});
     const [loading, setLoading] = useState(false);
     const [submitErr, setSubmitErr] = useState("");
+    const [tags, setTags]       = useState<string[]>([]);
+    const [tagInput, setTagInput] = useState("");
     const overlayRef = useRef<HTMLDivElement>(null);
     const firstInputRef = useRef<HTMLInputElement>(null);
+    const tagInputRef = useRef<HTMLInputElement>(null);
 
     // Reset form when opened
     useEffect(() => {
@@ -49,9 +45,38 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
             setForm(INITIAL_FORM);
             setErrors({});
             setSubmitErr("");
+            setTags([]);
+            setTagInput("");
             setTimeout(() => firstInputRef.current?.focus(), 50);
         }
     }, [open]);
+
+    function addTag(raw: string) {
+        const value = raw.trim().toLowerCase();
+        if (!value || tags.includes(value) || tags.length >= MAX_TAGS) return;
+        setTags((prev) => [...prev, value]);
+    }
+
+    function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
+        if (e.key === "Enter" || e.key === ",") {
+            e.preventDefault();
+            addTag(tagInput);
+            setTagInput("");
+        } else if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
+            setTags((prev) => prev.slice(0, -1));
+        }
+    }
+
+    function handleTagBlur() {
+        if (tagInput.trim()) {
+            addTag(tagInput);
+            setTagInput("");
+        }
+    }
+
+    function removeTag(index: number) {
+        setTags((prev) => prev.filter((_, i) => i !== index));
+    }
 
     // Close on Escape
     useEffect(() => {
@@ -102,7 +127,7 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
                 price: Math.round(Number(form.price)),
                 basePrice: form.basePrice ? Math.round(Number(form.basePrice)) : Math.round(Number(form.price)),
                 durationMinutes: parseInt(form.durationMinutes, 10),
-                status: form.status,   // numeric enum value
+                status: ServiceStatus.Active,
             });
             onCreated();
             onClose();
@@ -175,6 +200,47 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
                             />
                         </div>
 
+                        {/* Tags */}
+                        <div className={styles.field}>
+                            <div className={styles.tagLabelRow}>
+                                <label className={styles.label}>Tags</label>
+                                <span className={styles.tagCounter}>
+                                    {tags.length}/{MAX_TAGS}
+                                </span>
+                            </div>
+                            <div
+                                className={styles.tagBox}
+                                onClick={() => tagInputRef.current?.focus()}
+                            >
+                                {tags.map((tag, i) => (
+                                    <span key={i} className={styles.tag}>
+                                        {tag}
+                                        <button
+                                            type="button"
+                                            className={styles.tagRemove}
+                                            onClick={(e) => { e.stopPropagation(); removeTag(i); }}
+                                            aria-label={`Remove ${tag}`}
+                                        >
+                                            ×
+                                        </button>
+                                    </span>
+                                ))}
+                                {tags.length < MAX_TAGS && (
+                                    <input
+                                        ref={tagInputRef}
+                                        className={styles.tagInput}
+                                        type="text"
+                                        placeholder={tags.length === 0 ? "e.g. herbs, vegetables..." : ""}
+                                        value={tagInput}
+                                        onChange={(e) => setTagInput(e.target.value)}
+                                        onKeyDown={handleTagKeyDown}
+                                        onBlur={handleTagBlur}
+                                    />
+                                )}
+                            </div>
+                            <span className={styles.hint}>Press Enter or comma to add · Backspace to remove last</span>
+                        </div>
+
                         {/* Price row */}
                         <div className={styles.row}>
                             <div className={styles.field}>
@@ -215,41 +281,24 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
                             </div>
                         </div>
 
-                        {/* Duration + Status row */}
-                        <div className={styles.row}>
-                            <div className={styles.field}>
-                                <label className={styles.label}>
-                                    Duration (minutes) <span className={styles.required}>*</span>
-                                </label>
-                                <div className={styles.inputAddon}>
-                                    <input
-                                        className={`${styles.input} ${styles.inputWithAddonRight} ${errors.durationMinutes ? styles.inputError : ""}`}
-                                        type="number"
-                                        min="1"
-                                        step="1"
-                                        placeholder="60"
-                                        value={form.durationMinutes}
-                                        onChange={change("durationMinutes")}
-                                    />
-                                    <span className={styles.addonSuffix}>min</span>
-                                </div>
-                                {errors.durationMinutes && <span className={styles.errorMsg}>{errors.durationMinutes}</span>}
+                        {/* Duration */}
+                        <div className={styles.field}>
+                            <label className={styles.label}>
+                                Duration (minutes) <span className={styles.required}>*</span>
+                            </label>
+                            <div className={styles.inputAddon}>
+                                <input
+                                    className={`${styles.input} ${styles.inputWithAddonRight} ${errors.durationMinutes ? styles.inputError : ""}`}
+                                    type="number"
+                                    min="1"
+                                    step="1"
+                                    placeholder="60"
+                                    value={form.durationMinutes}
+                                    onChange={change("durationMinutes")}
+                                />
+                                <span className={styles.addonSuffix}>min</span>
                             </div>
-
-                            <div className={styles.field}>
-                                <label className={styles.label}>Status</label>
-                                <select
-                                    className={styles.select}
-                                    value={form.status}
-                                    onChange={(e) =>
-                                        setForm((f) => ({ ...f, status: Number(e.target.value) as ServiceStatus }))
-                                    }
-                                >
-                                    {STATUS_OPTIONS.map((opt) => (
-                                        <option key={opt.value} value={opt.value}>{opt.label}</option>
-                                    ))}
-                                </select>
-                            </div>
+                            {errors.durationMinutes && <span className={styles.errorMsg}>{errors.durationMinutes}</span>}
                         </div>
 
                         {submitErr && (
