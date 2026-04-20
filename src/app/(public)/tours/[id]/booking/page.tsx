@@ -1,33 +1,46 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { useParams } from "next/navigation";
+import { useParams, useSearchParams, useRouter } from "next/navigation";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
 import styles from "./page.module.scss";
-
-const tourSummary = {
-    title: "Santorini Tour: Unforgettable Journey",
-    image: "/images/landing/explore_1.avif",
-    checkIn: "16.04.2023",
-    checkOut: "20.04.2023",
-    nights: 4,
-    days: 3,
-    price: 950,
-    originalPrice: 1100,
-    tripCode: "G3S1P8",
-};
+import { agencyService } from "@/libs/services/agency.service";
+import { ItineraryDTO } from "@/types/itinerary.type";
 
 const steps = ["Your Info", "Travel Details", "Review & Pay"];
 
+const formatDate = (iso: string) =>
+    new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+
 export default function BookingPage() {
     const params = useParams();
-    const tourId = params.id;
+    const searchParams = useSearchParams();
+    const router = useRouter();
+    const tourId = params.id as string;
+    const scheduleId = searchParams.get("scheduleId");
+
+    const [itinerary, setItinerary] = useState<ItineraryDTO | null>(null);
+
+    useEffect(() => {
+        if (!tourId) return;
+        agencyService.getItineraryById(tourId).then((res) => {
+            if (res.data) setItinerary(res.data);
+        });
+    }, [tourId]);
+
+    const selectedSchedule = itinerary?.schedules.find((s) => s.id === scheduleId) ?? itinerary?.schedules[0] ?? null;
+
+    const tourName = itinerary?.name ?? "Tour";
+    const tourImage = itinerary?.images?.[0]?.url ?? "/images/landing/explore_1.avif";
+    const tourPrice = itinerary?.price ?? 0;
+    const tourDuration = itinerary?.durationDays ?? 0;
+    const checkIn = selectedSchedule ? formatDate(selectedSchedule.startTime) : "—";
+    const checkOut = selectedSchedule ? formatDate(selectedSchedule.endTime) : "—";
 
     const [step, setStep] = useState(0);
-    const [submitted, setSubmitted] = useState(false);
 
     const [form, setForm] = useState({
         firstName: "",
@@ -40,8 +53,6 @@ export default function BookingPage() {
         passportNumber: "",
         travelers: 1,
         specialRequests: "",
-        roomType: "standard",
-        contactMethod: "email",
         agreeTerms: false,
         agreeNewsletter: false,
     });
@@ -85,40 +96,12 @@ export default function BookingPage() {
             return;
         }
         setErrors({});
-        setSubmitted(true);
+        const query = new URLSearchParams();
+        if (scheduleId) query.set("scheduleId", scheduleId);
+        query.set("travelers", String(form.travelers));
+        router.push(`/tours/${tourId}/booking/payment?${query.toString()}`);
     };
 
-    if (submitted) {
-        return (
-            <>
-                <Header variant="solid" />
-                <main className={styles.successPage}>
-                    <div className={styles.successCard}>
-                        <div className={styles.successIcon}>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                                <circle cx="12" cy="12" r="11" fill="#2a9d8f" />
-                                <path d="M7 12.5l3.5 3.5 6.5-7" stroke="#fff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                            </svg>
-                        </div>
-                        <h1 className={styles.successTitle}>Booking Request Sent!</h1>
-                        <p className={styles.successDesc}>
-                            Thank you, <strong>{form.firstName} {form.lastName}</strong>! We have received your booking request for <strong>{tourSummary.title}</strong>.
-                            Our team will contact you at <strong>{form.email}</strong> within 24 hours to confirm your trip.
-                        </p>
-                        <div className={styles.successRef}>
-                            <span>Reference Code</span>
-                            <strong>{tourSummary.tripCode}</strong>
-                        </div>
-                        <div className={styles.successActions}>
-                            <Link href="/tours" className={styles.successBtnPrimary}>Browse More Tours</Link>
-                            <Link href="/" className={styles.successBtnOutline}>Back to Home</Link>
-                        </div>
-                    </div>
-                </main>
-                <Footer />
-            </>
-        );
-    }
 
     return (
         <>
@@ -132,7 +115,7 @@ export default function BookingPage() {
                         <span>/</span>
                         <Link href="/tours">Tours</Link>
                         <span>/</span>
-                        <Link href={`/tours/${tourId}`}>{tourSummary.title}</Link>
+                        <Link href={`/tours/${tourId}`}>{tourName}</Link>
                         <span>/</span>
                         <span>Booking</span>
                     </nav>
@@ -275,27 +258,14 @@ export default function BookingPage() {
                                         Travel Details
                                     </h2>
 
-                                    <div className={styles.formRow}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Number of Travelers <span>*</span></label>
-                                            <div className={styles.counter}>
-                                                <button type="button" className={styles.counterBtn} onClick={() => set("travelers", Math.max(1, form.travelers - 1))}>−</button>
-                                                <span className={styles.counterVal}>{form.travelers}</span>
-                                                <button type="button" className={styles.counterBtn} onClick={() => set("travelers", form.travelers + 1)}>+</button>
-                                            </div>
-                                            {errors.travelers && <span className={styles.errorMsg}>{errors.travelers}</span>}
+                                    <div className={styles.formGroup}>
+                                        <label className={styles.label}>Number of Travelers <span>*</span></label>
+                                        <div className={styles.counter}>
+                                            <button type="button" className={styles.counterBtn} onClick={() => set("travelers", Math.max(1, form.travelers - 1))}>−</button>
+                                            <span className={styles.counterVal}>{form.travelers}</span>
+                                            <button type="button" className={styles.counterBtn} onClick={() => set("travelers", form.travelers + 1)}>+</button>
                                         </div>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Room Preference</label>
-                                            <div className={styles.radioGroup}>
-                                                {["standard", "deluxe", "suite"].map((r) => (
-                                                    <label key={r} className={`${styles.radioCard} ${form.roomType === r ? styles.radioCardActive : ""}`}>
-                                                        <input type="radio" name="roomType" value={r} checked={form.roomType === r} onChange={() => set("roomType", r)} hidden />
-                                                        <span className={styles.radioLabel}>{r.charAt(0).toUpperCase() + r.slice(1)}</span>
-                                                    </label>
-                                                ))}
-                                            </div>
-                                        </div>
+                                        {errors.travelers && <span className={styles.errorMsg}>{errors.travelers}</span>}
                                     </div>
 
                                     <div className={styles.formGroup}>
@@ -307,23 +277,6 @@ export default function BookingPage() {
                                             value={form.specialRequests}
                                             onChange={(e) => set("specialRequests", e.target.value)}
                                         />
-                                    </div>
-
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label}>Preferred Contact Method</label>
-                                        <div className={styles.contactMethodGroup}>
-                                            {[
-                                                { value: "email", label: "Email", icon: "✉" },
-                                                { value: "phone", label: "Phone", icon: "📞" },
-                                                { value: "whatsapp", label: "WhatsApp", icon: "💬" },
-                                            ].map((m) => (
-                                                <label key={m.value} className={`${styles.contactMethodCard} ${form.contactMethod === m.value ? styles.contactMethodActive : ""}`}>
-                                                    <input type="radio" name="contactMethod" value={m.value} checked={form.contactMethod === m.value} onChange={() => set("contactMethod", m.value)} hidden />
-                                                    <span className={styles.contactMethodIcon}>{m.icon}</span>
-                                                    <span>{m.label}</span>
-                                                </label>
-                                            ))}
-                                        </div>
                                     </div>
                                 </div>
                             )}
@@ -353,8 +306,8 @@ export default function BookingPage() {
                                         <h3 className={styles.reviewHeading}>Travel Details</h3>
                                         <div className={styles.reviewGrid}>
                                             <div className={styles.reviewItem}><span>Travelers</span><strong>{form.travelers} person{form.travelers > 1 ? "s" : ""}</strong></div>
-                                            <div className={styles.reviewItem}><span>Room Type</span><strong>{form.roomType.charAt(0).toUpperCase() + form.roomType.slice(1)}</strong></div>
-                                            <div className={styles.reviewItem}><span>Contact via</span><strong>{form.contactMethod.charAt(0).toUpperCase() + form.contactMethod.slice(1)}</strong></div>
+                                            <div className={styles.reviewItem}><span>Check-in</span><strong>{checkIn}</strong></div>
+                                            <div className={styles.reviewItem}><span>Check-out</span><strong>{checkOut}</strong></div>
                                         </div>
                                         {form.specialRequests && (
                                             <div className={styles.reviewNote}>
@@ -416,55 +369,41 @@ export default function BookingPage() {
                                 <h3 className={styles.summaryTitle}>Trip Summary</h3>
 
                                 <div className={styles.summaryImage}>
-                                    <Image src={tourSummary.image} alt={tourSummary.title} fill sizes="320px" style={{ objectFit: "cover" }} />
+                                    <Image src={tourImage} alt={tourName} fill sizes="320px" style={{ objectFit: "cover" }} />
                                 </div>
 
-                                <p className={styles.summaryTourName}>{tourSummary.title}</p>
+                                <p className={styles.summaryTourName}>{tourName}</p>
 
                                 <div className={styles.summaryDates}>
                                     <div className={styles.summaryDateBox}>
                                         <span className={styles.summaryDateLabel}>Check-in</span>
-                                        <span className={styles.summaryDateVal}>{tourSummary.checkIn}</span>
+                                        <span className={styles.summaryDateVal}>{checkIn}</span>
                                     </div>
                                     <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M5 12h14M13 6l6 6-6 6" stroke="#9ca3af" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
                                     <div className={styles.summaryDateBox}>
                                         <span className={styles.summaryDateLabel}>Check-out</span>
-                                        <span className={styles.summaryDateVal}>{tourSummary.checkOut}</span>
+                                        <span className={styles.summaryDateVal}>{checkOut}</span>
                                     </div>
                                 </div>
 
                                 <div className={styles.summaryMeta}>
-                                    <span>{tourSummary.nights} nights</span>
-                                    <span>·</span>
-                                    <span>{tourSummary.days} days</span>
+                                    <span>{tourDuration} ngày</span>
                                     <span>·</span>
                                     <span>{form.travelers} traveler{form.travelers > 1 ? "s" : ""}</span>
                                 </div>
 
                                 <div className={styles.summaryDivider} />
 
-                                <div className={styles.summaryPriceRow}>
-                                    <span>Base price</span>
-                                    <span className={styles.summaryPriceOld}>${tourSummary.originalPrice}</span>
-                                </div>
-                                <div className={styles.summaryPriceRow}>
-                                    <span>Discount</span>
-                                    <span className={styles.summaryDiscount}>−${tourSummary.originalPrice - tourSummary.price}</span>
-                                </div>
                                 {form.travelers > 1 && (
                                     <div className={styles.summaryPriceRow}>
                                         <span>× {form.travelers} travelers</span>
-                                        <span>${(tourSummary.price * form.travelers).toLocaleString()}</span>
+                                        <span>{(tourPrice * form.travelers).toLocaleString("vi-VN")}đ</span>
                                     </div>
                                 )}
                                 <div className={styles.summaryDivider} />
                                 <div className={`${styles.summaryPriceRow} ${styles.summaryTotal}`}>
                                     <strong>Total</strong>
-                                    <strong className={styles.summaryTotalPrice}>${(tourSummary.price * form.travelers).toLocaleString()}.00</strong>
-                                </div>
-
-                                <div className={styles.summaryCode}>
-                                    Trip Code: <strong>{tourSummary.tripCode}</strong>
+                                    <strong className={styles.summaryTotalPrice}>{(tourPrice * form.travelers).toLocaleString("vi-VN")}đ</strong>
                                 </div>
 
                                 <div className={styles.summaryTrust}>

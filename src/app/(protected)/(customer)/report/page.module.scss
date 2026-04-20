@@ -1,0 +1,810 @@
+$indigo:  #4f46e5;
+$dark:    #111827;
+$mid:     #6b7280;
+$light:   #9ca3af;
+$border:  #e5e7eb;
+$bg:      #f9fafb;
+$white:   #ffffff;
+$red:     #ef4444;
+$r:       12px;
+
+// ── Page ──────────────────────────────────────────────────────────────────────
+.page {
+    min-height: 100vh;
+    background: $bg;
+    padding: 32px 0 60px;
+}
+
+.container {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+}
+
+// ── Page header ───────────────────────────────────────────────────────────────
+.pageHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.pageTitle {
+    font-size: 26px;
+    font-weight: 800;
+    color: $dark;
+    margin: 0 0 4px;
+}
+
+.pageSubtitle {
+    font-size: 14px;
+    color: $mid;
+    margin: 0;
+}
+
+.newReportBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    height: 38px;
+    padding: 0 18px;
+    background: $indigo;
+    border: none;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 700;
+    color: $white;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background 0.15s, transform 0.12s;
+
+    &:hover { background: #4338ca; transform: translateY(-1px); }
+    &:active { transform: translateY(0); }
+}
+
+// ── Status legend ─────────────────────────────────────────────────────────────
+.statusLegend {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    padding: 12px 18px;
+    background: $white;
+    border: 1px solid $border;
+    border-radius: $r;
+    flex-wrap: wrap;
+}
+
+.legendItem {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.legendDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.legendLabel {
+    font-size: 12px;
+    font-weight: 700;
+    color: $dark;
+}
+
+.legendDesc {
+    font-size: 11.5px;
+    color: $light;
+}
+
+// ── Empty state ───────────────────────────────────────────────────────────────
+.emptyState {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 70px 20px;
+    text-align: center;
+    color: $light;
+
+    svg { opacity: 0.3; }
+    p   { font-size: 17px; font-weight: 700; color: $mid; margin: 0; }
+    span { font-size: 13px; max-width: 380px; }
+}
+
+// ── Report list ───────────────────────────────────────────────────────────────
+.reportList {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+// ── Report card ───────────────────────────────────────────────────────────────
+.reportCard {
+    background: $white;
+    border: 1px solid $border;
+    border-radius: 14px;
+    overflow: hidden;
+    display: flex;
+    cursor: pointer;
+    transition: box-shadow 0.18s, transform 0.15s;
+
+    &:hover {
+        box-shadow: 0 8px 26px rgba(0,0,0,.09);
+        transform: translateY(-2px);
+    }
+}
+
+.priorityStripe {
+    width: 5px;
+    flex-shrink: 0;
+    border-radius: 14px 0 0 14px;
+}
+
+.reportCardBody {
+    flex: 1;
+    padding: 16px 20px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    min-width: 0;
+}
+
+.reportCardTop {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.reportCode {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: $mid;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 6px;
+    padding: 2px 8px;
+    letter-spacing: 0.3px;
+}
+
+.typeBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+}
+
+.priorityBadge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+}
+
+.statusBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+    margin-left: auto;
+}
+
+.statusDot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+
+.reportTitle {
+    font-size: 14.5px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+    line-height: 1.4;
+}
+
+// Admin reply preview (in card)
+.replyPreview {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    background: #f0f9ff;
+    border-left: 3px solid #38bdf8;
+    border-radius: 0 8px 8px 0;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    color: #0c4a6e;
+    line-height: 1.5;
+    overflow: hidden;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+
+    svg { color: #38bdf8; flex-shrink: 0; margin-top: 1px; }
+}
+
+.reportCardMeta {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.metaChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: $light;
+
+    svg { flex-shrink: 0; }
+}
+
+// Image strip
+.imageStrip {
+    display: flex;
+    width: 180px;
+    flex-shrink: 0;
+    overflow: hidden;
+    border-left: 1px solid $border;
+}
+
+.stripThumb {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+    cursor: zoom-in;
+    min-width: 0;
+
+    img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.2s; }
+    &:hover img { transform: scale(1.06); }
+    & + & { border-left: 1px solid rgba(255,255,255,.25); }
+}
+
+.stripMore {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.55);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $white;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+// ── Overlay ───────────────────────────────────────────────────────────────────
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.50);
+    z-index: 400;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    animation: ovIn 0.18s ease;
+}
+
+@keyframes ovIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+@keyframes modalIn {
+    from { opacity: 0; transform: translateY(-12px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+// ── Modal shared ──────────────────────────────────────────────────────────────
+.modalHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 18px 22px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+}
+
+.modalHeaderLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    flex: 1;
+}
+
+.closeBtn {
+    width: 30px;
+    height: 30px;
+    border: 1px solid $border;
+    border-radius: 8px;
+    background: $white;
+    color: $mid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    &:hover { background: #fee2e2; color: $red; border-color: #fecaca; }
+}
+
+// ── Detail modal ──────────────────────────────────────────────────────────────
+.detailModal {
+    background: $white;
+    border-radius: 18px;
+    width: 620px;
+    max-width: 100%;
+    max-height: 88vh;
+    box-shadow: 0 28px 80px rgba(0,0,0,.22);
+    animation: modalIn 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.detailBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
+}
+
+.detailTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+}
+
+.detailMetaGrid {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 12px 16px;
+}
+
+.detailMetaItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+}
+
+.detailMetaKey {
+    color: $mid;
+    min-width: 90px;
+    flex-shrink: 0;
+    font-weight: 500;
+}
+
+.detailMetaVal {
+    color: $dark;
+    font-weight: 600;
+}
+
+.detailSection {}
+.detailSectionTitle {
+    font-size: 11.5px;
+    font-weight: 700;
+    color: $light;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0 0 8px;
+}
+.detailDesc {
+    font-size: 13.5px;
+    color: $dark;
+    line-height: 1.7;
+    margin: 0;
+}
+
+.detailImageGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+}
+
+.detailImageThumb {
+    position: relative;
+    aspect-ratio: 4/3;
+    border-radius: 8px;
+    overflow: hidden;
+    cursor: zoom-in;
+    border: 1px solid $border;
+
+    img { width: 100%; height: 100%; object-fit: cover; transition: transform 0.2s; }
+    &:hover img { transform: scale(1.06); }
+    &:hover .imageOverlay { opacity: 1; }
+}
+
+.imageOverlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,.32);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.18s;
+}
+
+.adminReplyBox {
+    background: #f0f9ff;
+    border: 1px solid #bae6fd;
+    border-radius: 10px;
+    padding: 14px 16px;
+}
+
+.adminReplyHeader {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: #0c4a6e;
+    margin-bottom: 8px;
+    svg { color: #38bdf8; }
+}
+
+.adminReplyText {
+    font-size: 13.5px;
+    color: #0c4a6e;
+    line-height: 1.65;
+    margin: 0;
+}
+
+// ── Form modal ────────────────────────────────────────────────────────────────
+.formModal {
+    background: $white;
+    border-radius: 18px;
+    width: 680px;
+    max-width: 100%;
+    max-height: 92vh;
+    box-shadow: 0 28px 80px rgba(0,0,0,.24);
+    animation: modalIn 0.2s ease;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.formTitle    { font-size: 16px; font-weight: 700; color: $dark; margin: 0; }
+.formSubtitle { font-size: 12.5px; color: $light; margin: 3px 0 0; }
+
+.formBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 18px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
+}
+
+.formFooter {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 22px 18px;
+    border-top: 1px solid #f3f4f6;
+    flex-shrink: 0;
+}
+
+.formFooterRight {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.attachNote {
+    font-size: 12px;
+    color: $mid;
+}
+
+// ── Fields ────────────────────────────────────────────────────────────────────
+.field { display: flex; flex-direction: column; gap: 7px; }
+.fieldRow { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+.label {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $dark;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.labelNote {
+    font-size: 11.5px;
+    font-weight: 400;
+    color: $light;
+}
+
+.required { color: $red; }
+.fieldHint { font-size: 11.5px; color: $mid; margin: 0; }
+
+.input, .select {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    font-size: 13px;
+    color: $dark;
+    background: $white;
+    outline: none;
+    transition: border-color 0.15s;
+    &:focus { border-color: $indigo; }
+    &::placeholder { color: $light; }
+}
+
+.select { cursor: pointer; }
+
+.textarea {
+    padding: 10px 12px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    font-size: 13px;
+    color: $dark;
+    background: $white;
+    outline: none;
+    resize: vertical;
+    min-height: 90px;
+    font-family: inherit;
+    transition: border-color 0.15s;
+    &:focus { border-color: $indigo; }
+    &::placeholder { color: $light; }
+}
+
+// ── Type selector ─────────────────────────────────────────────────────────────
+.typeGrid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 6px;
+}
+
+.typeOption {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    padding: 10px 6px 8px;
+    border: 1.5px solid $border;
+    border-radius: 10px;
+    background: $white;
+    cursor: pointer;
+    transition: all 0.13s;
+    text-align: center;
+
+    &:hover { border-color: #a5b4fc; background: #f8f7ff; }
+}
+
+.typeOptionActive { font-weight: 700; }
+.typeIcon  { font-size: 20px; line-height: 1; }
+.typeLabel { font-size: 11px; font-weight: 700; color: inherit; }
+.typeDesc  { font-size: 10px; color: $light; line-height: 1.3; }
+
+// ── Priority selector ─────────────────────────────────────────────────────────
+.priorityGroup {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 6px;
+}
+
+.priorityOption {
+    height: 34px;
+    border: 1.5px solid $border;
+    border-radius: 8px;
+    background: $white;
+    font-size: 12px;
+    font-weight: 600;
+    color: $mid;
+    cursor: pointer;
+    transition: all 0.13s;
+    &:hover { border-color: #d1d5db; background: $bg; }
+}
+.priorityOptionActive { font-weight: 700; }
+
+// ── Drop zone ─────────────────────────────────────────────────────────────────
+.dropZone {
+    border: 2px dashed $border;
+    border-radius: 10px;
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    background: $bg;
+    transition: border-color 0.15s, background 0.15s;
+
+    &:hover { border-color: $indigo; background: #f5f3ff; }
+}
+
+.dropZoneActive {
+    border-color: $indigo;
+    border-style: solid;
+    background: #eef2ff;
+}
+
+.dropZoneIcon {
+    width: 46px;
+    height: 46px;
+    border-radius: 10px;
+    background: $white;
+    border: 1px solid $border;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $light;
+    .dropZone:hover & { color: $indigo; border-color: #a5b4fc; }
+    .dropZoneActive & { color: $indigo; border-color: $indigo; }
+}
+
+.dropZoneText {
+    font-size: 13px;
+    font-weight: 600;
+    color: $mid;
+    margin: 0;
+    .dropZoneActive & { color: $indigo; }
+}
+
+.dropZoneHint {
+    font-size: 12px;
+    color: $light;
+    margin: 0;
+    span { color: $indigo; text-decoration: underline dotted; }
+}
+
+// ── Preview grid ──────────────────────────────────────────────────────────────
+.previewGrid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.previewThumb {
+    position: relative;
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    overflow: hidden;
+    border: 1.5px solid $border;
+    flex-shrink: 0;
+
+    img { width: 100%; height: 100%; object-fit: cover; display: block; }
+}
+
+.previewRemove {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,.6);
+    border: none;
+    color: $white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    padding: 0;
+    transition: background 0.12s;
+    &:hover { background: #dc2626; }
+}
+
+.addMoreBtn {
+    width: 80px;
+    height: 80px;
+    border-radius: 8px;
+    border: 2px dashed $border;
+    background: $bg;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    color: $light;
+    font-size: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: border-color 0.14s, color 0.14s, background 0.14s;
+    &:hover { border-color: $indigo; color: $indigo; background: #eef2ff; }
+}
+
+.errorMsg { font-size: 12.5px; color: $red; font-weight: 600; }
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+.btnCancel {
+    height: 36px;
+    padding: 0 18px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    background: $white;
+    font-size: 13px;
+    font-weight: 600;
+    color: $mid;
+    cursor: pointer;
+    &:hover { background: $bg; }
+}
+
+.btnSubmit {
+    height: 36px;
+    padding: 0 20px;
+    background: $indigo;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    color: $white;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s;
+    &:hover { background: #4338ca; }
+}
+
+// ── Lightbox ──────────────────────────────────────────────────────────────────
+.lightbox {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.88);
+    z-index: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: zoom-out;
+    animation: ovIn 0.18s ease;
+
+    img {
+        max-width: 90vw;
+        max-height: 88vh;
+        object-fit: contain;
+        border-radius: 10px;
+        box-shadow: 0 20px 60px rgba(0,0,0,.6);
+        cursor: default;
+    }
+}
+
+.lightboxClose {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: rgba(255,255,255,.18);
+    border: 1px solid rgba(255,255,255,.25);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    &:hover { background: rgba(255,255,255,.3); }
+}

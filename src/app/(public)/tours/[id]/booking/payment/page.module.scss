@@ -1,0 +1,395 @@
+.page {
+    background: #f8f9fb;
+    min-height: 100vh;
+    padding: 32px 0 80px;
+}
+
+.container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 0 24px;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #6b7280;
+    margin-bottom: 20px;
+
+    a {
+        color: #6b7280;
+        text-decoration: none;
+        &:hover { color: #2a9d8f; }
+    }
+
+    span:last-child { color: #111827; font-weight: 500; }
+}
+
+.pageTitle {
+    font-size: 26px;
+    font-weight: 700;
+    color: #111827;
+    margin-bottom: 32px;
+}
+
+.layout {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 28px;
+    align-items: start;
+
+    @media (max-width: 860px) {
+        grid-template-columns: 1fr;
+    }
+}
+
+// ── QR Side ──
+
+.qrSide {}
+
+.qrCard {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    padding: 28px;
+}
+
+.qrCardHeader {
+    margin-bottom: 24px;
+}
+
+.vnpayLogo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    div {
+        display: flex;
+        flex-direction: column;
+    }
+}
+
+.vnpayTitle {
+    font-size: 18px;
+    font-weight: 700;
+    color: #0066cc;
+    line-height: 1.2;
+}
+
+.vnpaySubtitle {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.qrWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 260px;
+    margin-bottom: 20px;
+}
+
+.qrPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #9ca3af;
+    text-align: center;
+
+    p { font-size: 14px; margin: 0; }
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid #e5e7eb;
+    border-top-color: #2a9d8f;
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+}
+
+.qrImageWrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    width: 100%;
+}
+
+.qrImage {
+    border-radius: 12px;
+    border: 6px solid #fff;
+    box-shadow: 0 4px 24px rgba(0,0,0,0.12);
+    display: block;
+}
+
+.timerBar {
+    width: 220px;
+    height: 5px;
+    background: #e5e7eb;
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.timerFill {
+    height: 100%;
+    border-radius: 99px;
+    transition: width 1s linear, background-color 0.4s;
+}
+
+.timerText {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.qrError {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #ef4444;
+    text-align: center;
+
+    p { font-size: 14px; margin: 0; }
+}
+
+.generateBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    background: linear-gradient(135deg, #0066cc, #0052a3);
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.15s;
+
+    &:hover:not(:disabled) {
+        opacity: 0.92;
+        transform: translateY(-1px);
+    }
+
+    &:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+}
+
+.refreshBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 11px;
+    background: transparent;
+    color: #6b7280;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: border-color 0.2s, color 0.2s;
+
+    &:hover {
+        border-color: #2a9d8f;
+        color: #2a9d8f;
+    }
+}
+
+.instructions {
+    margin-top: 24px;
+    padding: 16px;
+    background: #f0faf9;
+    border-radius: 10px;
+    border-left: 3px solid #2a9d8f;
+}
+
+.instructionTitle {
+    font-size: 13px;
+    font-weight: 600;
+    color: #2a9d8f;
+    margin: 0 0 8px;
+}
+
+.instructionList {
+    margin: 0;
+    padding-left: 18px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+
+    li {
+        font-size: 13px;
+        color: #374151;
+        line-height: 1.5;
+    }
+}
+
+.bankLogos {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid #f3f4f6;
+}
+
+.bankBadge {
+    font-size: 11px;
+    font-weight: 500;
+    color: #6b7280;
+    background: #f3f4f6;
+    padding: 4px 10px;
+    border-radius: 99px;
+    border: 1px solid #e5e7eb;
+}
+
+// ── Summary Side ──
+
+.summarySide {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+
+.summaryCard {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    padding: 24px;
+    overflow: hidden;
+}
+
+.summaryTitle {
+    font-size: 16px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 16px;
+}
+
+.summaryImage {
+    position: relative;
+    width: 100%;
+    height: 160px;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-bottom: 14px;
+}
+
+.summaryTourName {
+    font-size: 15px;
+    font-weight: 600;
+    color: #111827;
+    margin: 0 0 14px;
+    line-height: 1.4;
+}
+
+.summaryDates {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin-bottom: 14px;
+}
+
+.summaryDateBox {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.summaryDateLabel {
+    font-size: 11px;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.summaryDateVal {
+    font-size: 14px;
+    font-weight: 600;
+    color: #111827;
+}
+
+.summaryDivider {
+    height: 1px;
+    background: #f3f4f6;
+    margin: 12px 0;
+}
+
+.summaryRow {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 14px;
+    color: #374151;
+    margin-bottom: 6px;
+}
+
+.summaryTotal {
+    font-size: 15px;
+    margin-bottom: 0;
+}
+
+.summaryTotalPrice {
+    color: #2a9d8f;
+    font-size: 18px;
+}
+
+.txnRef {
+    margin-top: 12px;
+    padding: 8px 12px;
+    background: #f3f4f6;
+    border-radius: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    word-break: break-all;
+
+    strong { color: #374151; }
+}
+
+.skeletonBlock {
+    height: 240px;
+    background: linear-gradient(90deg, #f3f4f6 25%, #e9eaec 50%, #f3f4f6 75%);
+    background-size: 200% 100%;
+    border-radius: 8px;
+    animation: shimmer 1.4s infinite;
+
+    @keyframes shimmer {
+        0% { background-position: 200% 0; }
+        100% { background-position: -200% 0; }
+    }
+}
+
+.trustCard {
+    background: #fff;
+    border-radius: 16px;
+    box-shadow: 0 2px 16px rgba(0,0,0,0.07);
+    padding: 20px 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.trustItem {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-size: 13px;
+    color: #374151;
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Header from "@/components/layouts/header/header";
@@ -8,12 +8,21 @@ import Button from "@/components/commons/button/button";
 import CardTour from "@/components/commons/card-tour/card-tour";
 import Footer from "@/components/layouts/footer/footer";
 import styles from "./page.module.scss";
+import { agencyService } from "@/libs/services/agency.service";
+import { ItineraryDTO } from "@/types/itinerary.type";
 
 const tabs = ["Stays", "Flights", "Cars", "Packages", "Cruises", "Things to do"];
 
 export default function HomePage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("Stays");
+    const [featuredTours, setFeaturedTours] = useState<ItineraryDTO[]>([]);
+
+    useEffect(() => {
+        agencyService.getItineraries({ limit: 3 }).then((res) => {
+            if (res.data) setFeaturedTours(res.data.items ?? []);
+        });
+    }, []);
 
     return (
         <main>
@@ -185,36 +194,23 @@ export default function HomePage() {
                     </button>
                 </div>
                 <div className={styles.discoverList}>
-                    <CardTour
-                        id={1}
-                        image="/images/landing/explore_1.avif"
-                        name="Ridquest Orlando Resort"
-                        location="Bali"
-                        rating={4.7}
-                        reviews={1356}
-                        price={420}
-                        originalPrice={500}
-                    />
-                    <CardTour
-                        id={2}
-                        image="/images/landing/explore_2.webp"
-                        name="Serene Bali Retreat"
-                        location="Bali"
-                        rating={4.7}
-                        reviews={1356}
-                        price={420}
-                        originalPrice={500}
-                    />
-                    <CardTour
-                        id={3}
-                        image="/images/landing/explore_3.jpg"
-                        name="Horseshoe Las Vegas"
-                        location="Las Vegas"
-                        rating={4.7}
-                        reviews={1356}
-                        price={800}
-                        originalPrice={900}
-                    />
+                    {featuredTours.length > 0
+                        ? featuredTours.map((tour) => (
+                            <CardTour
+                                key={tour.id}
+                                id={tour.id}
+                                image={tour.images?.[0]?.url ?? "/images/landing/explore_1.avif"}
+                                name={tour.name}
+                                location={tour.agencyId}
+                                rating={0}
+                                reviews={0}
+                                price={tour.price}
+                            />
+                        ))
+                        : [1, 2, 3].map((i) => (
+                            <div key={i} className={styles.cardSkeleton} />
+                        ))
+                    }
                 </div>
             </section>
 

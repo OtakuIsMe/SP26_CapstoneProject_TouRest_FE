@@ -1,7 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { useParams } from "next/navigation";
+import { useEffect, useRef, useState } from "react";
+import { useParams, usePathname } from "next/navigation";
+import { StorageKeys } from "@/constants/storage";
+import { agencyService } from "@/libs/services/agency.service";
+import { ItineraryDTO, ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/layouts/header/header";
@@ -105,8 +108,83 @@ const booking = {
     ],
 };
 
-const tabs = ["Overview", "What's Included", "Tour Details", "Schedule", "Customization"] as const;
+const tabs = ["Overview", "Tour Details", "Schedule", "Reviews"] as const;
 type Tab = (typeof tabs)[number];
+
+// ── Reviews mock data ──────────────────────────────────────────────────────
+interface TourReview {
+    id: string;
+    name: string;
+    avatar?: string;
+    rating: number;
+    title: string;
+    comment: string;
+    images: string[];
+    date: string;
+    helpful: number;
+    bookingCode: string;
+    agencyReply?: string;
+}
+
+const MOCK_REVIEWS: TourReview[] = [
+    {
+        id: "rv1", name: "Nguyễn Minh Anh",
+        avatar: "https://i.pravatar.cc/48?img=1",
+        rating: 5,
+        title: "Absolutely unforgettable experience!",
+        comment: "The tour was perfectly organized. The guide was knowledgeable, funny and attentive. Every detail was taken care of, from transfers to hotel check-in. Highly recommend TouRest to all my friends!",
+        images: ["https://picsum.photos/seed/rv1a/400/300", "https://picsum.photos/seed/rv1b/400/300"],
+        date: "2026-04-10",
+        helpful: 12,
+        bookingCode: "BKG-20240410",
+        agencyReply: "Thank you for choosing TouRest! We're thrilled you had such a wonderful time. Hope to see you on another journey soon!",
+    },
+    {
+        id: "rv2", name: "Thomas Berger",
+        avatar: "https://i.pravatar.cc/48?img=5",
+        rating: 4,
+        title: "Great trip, minor hiccups",
+        comment: "Overall a wonderful experience. The scenery was breathtaking and food was amazing. Transfer was 30 minutes late on day one and the hotel room wasn't cleaned when we arrived, but staff handled it quickly.",
+        images: [],
+        date: "2026-04-08",
+        helpful: 4,
+        bookingCode: "BKG-20240408",
+    },
+    {
+        id: "rv3", name: "Li Wei",
+        avatar: "https://i.pravatar.cc/48?img=9",
+        rating: 5,
+        title: "Worth every penny!",
+        comment: "The caldera boat cruise on day 2 was the highlight of my trip. Snorkeling in the hot springs was surreal. The wine tasting at the vineyard was also fantastic — we bought 4 bottles to take home.",
+        images: ["https://picsum.photos/seed/rv3a/400/300"],
+        date: "2026-03-28",
+        helpful: 9,
+        bookingCode: "BKG-20240328",
+    },
+    {
+        id: "rv4", name: "Sofia Papadaki",
+        avatar: "https://i.pravatar.cc/48?img=20",
+        rating: 3,
+        title: "Good but not as described",
+        comment: "Some activities on the itinerary were no longer available without any prior notice. The view from Oia was beautiful, but the schedule was changed twice which made planning difficult.",
+        images: [],
+        date: "2026-03-15",
+        helpful: 7,
+        bookingCode: "BKG-20240315",
+    },
+    {
+        id: "rv5", name: "James O'Brien",
+        avatar: "https://i.pravatar.cc/48?img=33",
+        rating: 5,
+        title: "Best holiday in years",
+        comment: "My partner and I celebrated our anniversary on this tour. The agency arranged a surprise dinner on the terrace — completely unexpected. Will be booking again next year!",
+        images: ["https://picsum.photos/seed/rv5a/400/300", "https://picsum.photos/seed/rv5b/400/300"],
+        date: "2026-03-10",
+        helpful: 15,
+        bookingCode: "BKG-20240310",
+        agencyReply: "Happy anniversary! It was our pleasure to make the evening special for you both. We look forward to hosting you again!",
+    },
+];
 
 // ── Schedule mock data ─────────────────────────────────────────────────────
 type RunStatus = "available" | "almostFull" | "full" | "completed";
@@ -159,17 +237,79 @@ const placeSidebar = [
 
 export default function TourDetailPage() {
     const params = useParams();
+    const pathname = usePathname();
+    const [isLoggedIn, setIsLoggedIn] = useState(false);
+    const [loginPromptOpen, setLoginPromptOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>("Overview");
     const [expanded, setExpanded] = useState(false);
+    const [itinerary, setItinerary] = useState<ItineraryDTO | null>(null);
+    const [stops, setStops] = useState<ItineraryStopWithActivitiesDTO[]>([]);
+
+    useEffect(() => {
+        setIsLoggedIn(!!localStorage.getItem(StorageKeys.ACCESS_TOKEN));
+    }, []);
+
+    useEffect(() => {
+        const id = Array.isArray(params.id) ? params.id[0] : params.id;
+        if (!id) return;
+        agencyService.getItineraryById(id).then(res => {
+            if (res?.data) setItinerary(res.data);
+        });
+        agencyService.getItineraryStops(id).then(res => {
+            if (res?.data) setStops(res.data);
+        });
+    }, [params.id]);
     const [activePlaceCat, setActivePlaceCat] = useState("Top Attractions");
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [galleryIndex, setGalleryIndex] = useState(0);
+
+    // Reviews tab state
+    const [reviews, setReviews] = useState<TourReview[]>(MOCK_REVIEWS);
+    const [reviewLightbox, setReviewLightbox] = useState<string | null>(null);
+    const [writeOpen, setWriteOpen] = useState(false);
+    const [wRating, setWRating] = useState(0);
+    const [wHover, setWHover] = useState(0);
+    const [wTitle, setWTitle] = useState("");
+    const [wComment, setWComment] = useState("");
+    const [wError, setWError] = useState("");
+    const [wImages, setWImages] = useState<{ preview: string; name: string }[]>([]);
+    const [wDragging, setWDragging] = useState(false);
+    const wFileRef = useRef<HTMLInputElement>(null);
+
+    function processImages(files: FileList | File[]) {
+        Array.from(files).filter(f => f.type.startsWith("image/")).forEach(file => {
+            const reader = new FileReader();
+            reader.onload = e => setWImages(prev => [...prev, { preview: e.target?.result as string, name: file.name }]);
+            reader.readAsDataURL(file);
+        });
+    }
+
+    function submitReview() {
+        if (!wRating) { setWError("Please select a star rating."); return; }
+        if (!wTitle.trim()) { setWError("Please enter a title."); return; }
+        if (!wComment.trim()) { setWError("Please write a comment."); return; }
+        const newR: TourReview = {
+            id: Math.random().toString(36).slice(2),
+            name: "You",
+            rating: wRating,
+            title: wTitle.trim(),
+            comment: wComment.trim(),
+            images: wImages.map(i => i.preview),
+            date: new Date().toISOString().slice(0, 10),
+            helpful: 0,
+            bookingCode: "BKG-NEW",
+        };
+        setReviews(prev => [newR, ...prev]);
+        setWriteOpen(false);
+        setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]);
+        setActiveTab("Reviews");
+    }
 
     // Schedule tab state
     const today = new Date();
     const [schedYear,  setSchedYear]  = useState(today.getFullYear());
     const [schedMonth, setSchedMonth] = useState(today.getMonth());
-    const [selectedRun, setSelectedRun] = useState<TourRun | null>(null);
+    const [selectedSchedId, setSelectedSchedId] = useState<string | null>(null);
 
     function schedPrev() {
         if (schedMonth === 0) { setSchedYear(y => y - 1); setSchedMonth(11); }
@@ -198,26 +338,25 @@ export default function TourDetailPage() {
         return arr;
     })();
 
-    function runsOnDate(date: Date): TourRun[] {
-        return TOUR_RUNS.filter(r => {
-            const s = parseRunDate(r.startDate);
-            const e = parseRunDate(r.endDate);
-            return date >= s && date <= e;
+    const schedules = itinerary?.schedules ?? [];
+
+    function schedColorForDate(date: Date): string | null {
+        const hit = schedules.find(s => {
+            const start = new Date(s.startTime);
+            const end   = new Date(s.endTime);
+            const d = new Date(date); d.setHours(12);
+            return d >= start && d <= end;
         });
+        if (!hit) return null;
+        return new Date(hit.endTime) >= today ? "#22c55e" : "#9ca3af";
     }
 
-    function runColorForDate(date: Date): string | null {
-        const runs = runsOnDate(date);
-        if (!runs.length) return null;
-        if (runs.some(r => r.status === "available"))  return "#22c55e";
-        if (runs.some(r => r.status === "almostFull")) return "#f59e0b";
-        return "#ef4444";
-    }
-
-    const visibleRuns = TOUR_RUNS.filter(r => {
-        const s = parseRunDate(r.startDate);
-        return s.getFullYear() === schedYear && s.getMonth() === schedMonth;
+    const visibleSchedules = schedules.filter(s => {
+        const d = new Date(s.startTime);
+        return d.getFullYear() === schedYear && d.getMonth() === schedMonth;
     });
+
+    const selectedSched = schedules.find(s => s.id === selectedSchedId) ?? null;
 
     return (
         <>
@@ -232,7 +371,7 @@ export default function TourDetailPage() {
                         <span>/</span>
                         <Link href="/tours">Tours</Link>
                         <span>/</span>
-                        <span>{tour.title}</span>
+                        <span>{itinerary?.name ?? tour.title}</span>
                     </nav>
 
                     <div className={styles.layout}>
@@ -240,11 +379,11 @@ export default function TourDetailPage() {
                         <div className={styles.left}>
 
                             {/* Title + meta */}
-                            <h1 className={styles.title}>{tour.title}</h1>
+                            <h1 className={styles.title}>{itinerary?.name ?? tour.title}</h1>
                             <div className={styles.metaRow}>
                                 <span className={styles.metaItem}>
                                     <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V17a1 1 0 00-2 0v-.07A8.001 8.001 0 014.07 11H5a1 1 0 000-2h-.93A8.001 8.001 0 0111 4.07V5a1 1 0 002 0v-.93A8.001 8.001 0 0119.93 11H19a1 1 0 000 2h.93A8.001 8.001 0 0113 16.93z" fill="currentColor" /></svg>
-                                    {tour.meta.days} days, {tour.meta.nights} nights
+                                    {itinerary ? `${itinerary.durationDays} days` : `${tour.meta.days} days, ${tour.meta.nights} nights`}
                                 </span>
                                 <span className={styles.metaDot}>·</span>
                                 <span className={styles.metaItem}>
@@ -263,37 +402,44 @@ export default function TourDetailPage() {
                             </div>
 
                             {/* Gallery */}
-                            <div className={styles.gallery}>
-                                <div
-                                    className={styles.galleryMain}
-                                    onClick={() => { setGalleryIndex(0); setGalleryOpen(true); }}
-                                >
-                                    <Image
-                                        src={tour.gallery[0]}
-                                        alt="Main"
-                                        fill
-                                        sizes="560px"
-                                        style={{ objectFit: "cover" }}
-                                    />
-                                </div>
-                                <div className={styles.galleryGrid}>
-                                    {tour.gallery.slice(1, 5).map((src, i) => (
+                            {(() => {
+                                const gallery = itinerary?.images?.length
+                                    ? itinerary.images.map(img => img.url)
+                                    : tour.gallery;
+                                return (
+                                    <div className={styles.gallery}>
                                         <div
-                                            key={i}
-                                            className={styles.galleryThumb}
-                                            onClick={() => { setGalleryIndex(i + 1); setGalleryOpen(true); }}
+                                            className={styles.galleryMain}
+                                            onClick={() => { setGalleryIndex(0); setGalleryOpen(true); }}
                                         >
-                                            <Image src={src} alt={`Photo ${i + 2}`} fill sizes="260px" style={{ objectFit: "cover" }} />
-                                            {i === 3 && (
-                                                <div className={styles.galleryMore}>
-                                                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z" fill="currentColor" /></svg>
-                                                    Show gallery
-                                                </div>
-                                            )}
+                                            <Image
+                                                src={gallery[0]}
+                                                alt="Main"
+                                                fill
+                                                sizes="560px"
+                                                style={{ objectFit: "cover" }}
+                                            />
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
+                                        <div className={styles.galleryGrid}>
+                                            {gallery.slice(1, 5).map((src, i) => (
+                                                <div
+                                                    key={i}
+                                                    className={styles.galleryThumb}
+                                                    onClick={() => { setGalleryIndex(i + 1); setGalleryOpen(true); }}
+                                                >
+                                                    <Image src={src} alt={`Photo ${i + 2}`} fill sizes="260px" style={{ objectFit: "cover" }} />
+                                                    {i === 3 && (
+                                                        <div className={styles.galleryMore}>
+                                                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M4 6H2v14c0 1.1.9 2 2 2h14v-2H4V6zm16-4H8a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V4a2 2 0 00-2-2zm-1 9h-4v4h-2v-4H9V9h4V5h2v4h4v2z" fill="currentColor" /></svg>
+                                                            Show gallery
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
 
                             {/* Tabs */}
                             <div className={styles.tabs}>
@@ -313,7 +459,7 @@ export default function TourDetailPage() {
                                 <div className={styles.tabContent}>
                                     <h2 className={styles.sectionTitle}>About This Tour</h2>
                                     <p className={`${styles.description} ${expanded ? styles.descriptionExpanded : ""}`}>
-                                        {tour.description}
+                                        {itinerary?.description ?? tour.description}
                                     </p>
                                     <button className={styles.readMore} onClick={() => setExpanded(!expanded)}>
                                         {expanded ? "Show less" : "Read More"}
@@ -360,36 +506,58 @@ export default function TourDetailPage() {
                                 </div>
                             )}
 
-                            {/* ── What's Included ── */}
-                            {activeTab === "What's Included" && (
-                                <div className={styles.tabContent}>
-                                    <h2 className={styles.sectionTitle}>What&apos;s Included</h2>
-                                    <div className={styles.includedGrid}>
-                                        {tour.included.map((item, i) => (
-                                            <div key={i} className={`${styles.includedItem} ${item.icon === "✗" ? styles.includedItemNo : ""}`}>
-                                                <span className={styles.includedIcon}>{item.icon}</span>
-                                                {item.label}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
 
                             {/* ── Tour Details ── */}
                             {activeTab === "Tour Details" && (
                                 <div className={styles.tabContent}>
-                                    <h2 className={styles.sectionTitle}>Day-by-Day Itinerary</h2>
-                                    <div className={styles.itinerary}>
-                                        {tour.itinerary.map((day) => (
-                                            <div key={day.day} className={styles.dayCard}>
-                                                <div className={styles.dayBadge}>Day {day.day}</div>
-                                                <div className={styles.dayInfo}>
-                                                    <h3 className={styles.dayTitle}>{day.title}</h3>
-                                                    <p className={styles.dayDesc}>{day.desc}</p>
+                                    <h2 className={styles.sectionTitle}>Tour Stops</h2>
+                                    {stops.length === 0 ? (
+                                        <p className={styles.emptyNote}>No stop information available.</p>
+                                    ) : (
+                                        <div className={styles.stopList}>
+                                            {stops.map((stop, idx) => (
+                                                <div key={stop.id} className={styles.stopCard}>
+                                                    <div className={styles.stopHeader}>
+                                                        <div className={styles.stopBadge}>{idx + 1}</div>
+                                                        <div className={styles.stopMeta}>
+                                                            <h3 className={styles.stopName}>{stop.name}</h3>
+                                                            {stop.address && (
+                                                                <span className={styles.stopAddress}>
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/></svg>
+                                                                    {stop.address}
+                                                                </span>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                    {stop.activities.length > 0 && (
+                                                        <div className={styles.activityList}>
+                                                            {stop.activities.map(act => (
+                                                                <div key={act.id} className={styles.activityItem}>
+                                                                    <div className={styles.activityTime}>
+                                                                        {new Date(act.startTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                                                        {" – "}
+                                                                        {new Date(act.endTime).toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}
+                                                                    </div>
+                                                                    <div className={styles.activityBody}>
+                                                                        <span className={styles.activityName}>{act.serviceName}</span>
+                                                                        {act.serviceDescription && (
+                                                                            <span className={styles.activityDesc}>{act.serviceDescription}</span>
+                                                                        )}
+                                                                        {act.note && (
+                                                                            <span className={styles.activityNote}>{act.note}</span>
+                                                                        )}
+                                                                    </div>
+                                                                    <div className={styles.activityPrice}>
+                                                                        {act.price.toLocaleString("vi-VN")}đ
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            </div>
-                                        ))}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -420,10 +588,10 @@ export default function TourDetailPage() {
 
                                             <div className={styles.schedGrid}>
                                                 {schedCells.map((cell, idx) => {
-                                                    const color = cell.thisMonth ? runColorForDate(cell.date) : null;
+                                                    const color = cell.thisMonth ? schedColorForDate(cell.date) : null;
                                                     const isToday = cell.date.toDateString() === today.toDateString();
-                                                    const inSelected = selectedRun
-                                                        ? cell.date >= parseRunDate(selectedRun.startDate) && cell.date <= parseRunDate(selectedRun.endDate)
+                                                    const inSelected = selectedSched
+                                                        ? (() => { const s = new Date(selectedSched.startTime); const e = new Date(selectedSched.endTime); const d = new Date(cell.date); d.setHours(12); return d >= s && d <= e; })()
                                                         : false;
                                                     return (
                                                         <div
@@ -449,70 +617,61 @@ export default function TourDetailPage() {
                                             {/* Legend */}
                                             <div className={styles.schedLegend}>
                                                 <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#22c55e" }}/>Available</span>
-                                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#f59e0b" }}/>Almost Full</span>
-                                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#ef4444" }}/>Full</span>
+                                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background:"#9ca3af" }}/>Past</span>
                                             </div>
                                         </div>
 
-                                        {/* Run list */}
+                                        {/* Schedule list */}
                                         <div className={styles.schedList}>
-                                            {visibleRuns.length === 0 ? (
+                                            {visibleSchedules.length === 0 ? (
                                                 <p className={styles.schedEmpty}>No departures this month. Try another month.</p>
-                                            ) : visibleRuns.map(run => {
-                                                const cfg = RUN_STATUS_CFG[run.status];
-                                                const pct = Math.round((run.booked / run.slots) * 100);
-                                                const isSelected = selectedRun?.id === run.id;
+                                            ) : visibleSchedules.map(sched => {
+                                                const start  = new Date(sched.startTime);
+                                                const end    = new Date(sched.endTime);
+                                                const isPast = end < today;
+                                                const isSelected = selectedSchedId === sched.id;
+                                                const fmtD = (d: Date) => d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
                                                 return (
                                                     <div
-                                                        key={run.id}
+                                                        key={sched.id}
                                                         className={`${styles.runCard} ${isSelected ? styles.runCardSelected : ""}`}
-                                                        onClick={() => setSelectedRun(isSelected ? null : run)}
+                                                        onClick={() => setSelectedSchedId(isSelected ? null : sched.id)}
                                                     >
                                                         <div className={styles.runCardTop}>
                                                             <div className={styles.runDates}>
                                                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                                                <strong>{fmtDate(run.startDate)}</strong>
+                                                                <strong>{fmtD(start)}</strong>
                                                                 <span>→</span>
-                                                                <strong>{fmtDate(run.endDate)}</strong>
+                                                                <strong>{fmtD(end)}</strong>
                                                             </div>
-                                                            <span className={styles.runStatus} style={{ background: cfg.bg, color: cfg.color }}>
-                                                                {cfg.label}
+                                                            <span className={styles.runStatus} style={isPast
+                                                                ? { background:"#f3f4f6", color:"#6b7280" }
+                                                                : { background:"#d1fae5", color:"#065f46" }}>
+                                                                {isPast ? "Past" : "Available"}
                                                             </span>
                                                         </div>
 
                                                         <div className={styles.runMeta}>
                                                             <span className={styles.runMetaItem}>
                                                                 <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/></svg>
-                                                                Guide: {run.guide}
+                                                                Guide: —
                                                             </span>
                                                             <span className={styles.runMetaItem}>
                                                                 <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                                                {run.slots - run.booked} / {run.slots} spots left
+                                                                — spots left
                                                             </span>
-                                                        </div>
-
-                                                        {/* Occupancy bar */}
-                                                        <div className={styles.runBar}>
-                                                            <div className={styles.runBarTrack}>
-                                                                <div
-                                                                    className={styles.runBarFill}
-                                                                    style={{ width: `${pct}%`, background: pct >= 90 ? "#ef4444" : pct >= 70 ? "#f59e0b" : "#22c55e" }}
-                                                                />
-                                                            </div>
-                                                            <span className={styles.runBarPct}>{pct}%</span>
                                                         </div>
 
                                                         <div className={styles.runCardBottom}>
                                                             <div className={styles.runPrice}>
-                                                                <span className={styles.runPriceNew}>${run.price.toLocaleString()}</span>
-                                                                {run.originalPrice && (
-                                                                    <span className={styles.runPriceOld}>${run.originalPrice.toLocaleString()}</span>
-                                                                )}
+                                                                <span className={styles.runPriceNew}>
+                                                                    {(itinerary?.price ?? 0).toLocaleString("vi-VN")}đ
+                                                                </span>
                                                                 <span className={styles.runPricePer}>/ person</span>
                                                             </div>
-                                                            {run.status !== "full" && run.status !== "completed" ? (
+                                                            {!isPast ? (
                                                                 <Link
-                                                                    href={`/tours/${params?.id ?? 1}/booking?run=${run.id}`}
+                                                                    href={`/tours/${params?.id ?? 1}/booking?scheduleId=${sched.id}`}
                                                                     className={styles.runBookBtn}
                                                                     onClick={e => e.stopPropagation()}
                                                                 >
@@ -526,105 +685,390 @@ export default function TourDetailPage() {
                                                 );
                                             })}
 
-                                            {/* All upcoming runs count */}
                                             <p className={styles.schedAllHint}>
-                                                Showing {visibleRuns.length} departure{visibleRuns.length !== 1 ? "s" : ""} in {MONTHS_FULL[schedMonth]}. Use the arrows to browse other months.
+                                                Showing {visibleSchedules.length} departure{visibleSchedules.length !== 1 ? "s" : ""} in {MONTHS_FULL[schedMonth]}. Use the arrows to browse other months.
                                             </p>
                                         </div>
                                     </div>
                                 </div>
                             )}
 
-                            {/* ── Customization ── */}
-                            {activeTab === "Customization" && (
-                                <div className={styles.tabContent}>
-                                    <h2 className={styles.sectionTitle}>Customize Your Trip</h2>
-                                    <p className={styles.customNote}>
-                                        Want to tailor this tour to your preferences? Contact our travel experts to create a personalized itinerary just for you — private guide, preferred hotels, custom activities, and flexible dates.
-                                    </p>
-                                    <button className={styles.contactBtn}>Contact a Travel Expert</button>
-                                </div>
-                            )}
+
+                            {/* ── Reviews ── */}
+                            {activeTab === "Reviews" && (() => {
+                                const total = reviews.length;
+                                const avg = total ? +(reviews.reduce((s,r) => s + r.rating, 0) / total).toFixed(1) : 0;
+                                const dist = [5,4,3,2,1].map(star => ({
+                                    star,
+                                    count: reviews.filter(r => r.rating === star).length,
+                                    pct: total ? Math.round(reviews.filter(r => r.rating === star).length / total * 100) : 0,
+                                }));
+                                return (
+                                    <div className={styles.tabContent}>
+                                        {/* Summary bar */}
+                                        <div className={styles.reviewSummary}>
+                                            <div className={styles.reviewAvgBlock}>
+                                                <span className={styles.reviewAvgNum}>{avg}</span>
+                                                <div className={styles.reviewStars}>
+                                                    {[1,2,3,4,5].map(i => (
+                                                        <svg key={i} width="18" height="18" viewBox="0 0 24 24">
+                                                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                                                fill={i <= Math.round(avg) ? "#f5a623" : "#e5e7eb"} />
+                                                        </svg>
+                                                    ))}
+                                                </div>
+                                                <span className={styles.reviewCount}>{total} reviews</span>
+                                            </div>
+                                            <div className={styles.reviewDistBars}>
+                                                {dist.map(d => (
+                                                    <div key={d.star} className={styles.reviewDistRow}>
+                                                        <span className={styles.reviewDistLabel}>{d.star}★</span>
+                                                        <div className={styles.reviewDistTrack}>
+                                                            <div className={styles.reviewDistFill} style={{
+                                                                width: `${d.pct}%`,
+                                                                background: d.star >= 4 ? "#22c55e" : d.star === 3 ? "#f59e0b" : "#ef4444",
+                                                            }}/>
+                                                        </div>
+                                                        <span className={styles.reviewDistCount}>{d.count}</span>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                            <button className={styles.writeReviewBtn} onClick={() => isLoggedIn ? setWriteOpen(true) : setLoginPromptOpen(true)}>
+                                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                                Write a Review
+                                            </button>
+                                        </div>
+
+                                        {/* Review cards */}
+                                        <div className={styles.reviewList}>
+                                            {reviews.map(r => (
+                                                <div key={r.id} className={styles.reviewCard}>
+                                                    {/* Top */}
+                                                    <div className={styles.reviewCardTop}>
+                                                        <div className={styles.reviewerAvatar}>
+                                                            {r.avatar
+                                                                ? <img src={r.avatar} alt={r.name} className={styles.reviewerAvatarImg}/>
+                                                                : <span className={styles.reviewerAvatarFallback}>{r.name[0]}</span>
+                                                            }
+                                                        </div>
+                                                        <div className={styles.reviewerMeta}>
+                                                            <span className={styles.reviewerName}>{r.name}</span>
+                                                            <span className={styles.reviewerDate}>{new Date(r.date).toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" })}</span>
+                                                        </div>
+                                                        <div className={styles.reviewCardStars}>
+                                                            {[1,2,3,4,5].map(i => (
+                                                                <svg key={i} width="13" height="13" viewBox="0 0 24 24">
+                                                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                                                        fill={i <= r.rating ? "#f5a623" : "#e5e7eb"} />
+                                                                </svg>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                    {/* Content */}
+                                                    <p className={styles.reviewCardTitle}>{r.title}</p>
+                                                    <p className={styles.reviewCardComment}>{r.comment}</p>
+                                                    {/* Images */}
+                                                    {r.images.length > 0 && (
+                                                        <div className={styles.reviewImgRow}>
+                                                            {r.images.map((img, i) => (
+                                                                <div key={i} className={styles.reviewImgThumb} onClick={() => setReviewLightbox(img)}>
+                                                                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                                    <img src={img} alt="" />
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                    {/* Agency reply */}
+                                                    {r.agencyReply && (
+                                                        <div className={styles.reviewReply}>
+                                                            <span className={styles.reviewReplyLabel}>Agency reply</span>
+                                                            <p className={styles.reviewReplyText}>{r.agencyReply}</p>
+                                                        </div>
+                                                    )}
+                                                    {/* Footer */}
+                                                    <div className={styles.reviewCardFooter}>
+                                                        <span className={styles.reviewBookingCode}>{r.bookingCode}</span>
+                                                        {r.helpful > 0 && (
+                                                            <span className={styles.reviewHelpful}>
+                                                                <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                                                {r.helpful} found helpful
+                                                            </span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                );
+                            })()}
                         </div>
 
                         {/* ── RIGHT — Booking card ── */}
-                        <aside className={styles.sidebar}>
-                            <div className={styles.bookingCard}>
-                                <div className={styles.discountBadge}>DISCOUNT</div>
-                                <h3 className={styles.bookingName}>{booking.name}</h3>
+                        {(() => {
+                            const now = new Date();
+                            const nearestSchedule = itinerary?.schedules
+                                ?.map(s => ({ ...s, start: new Date(s.startTime), end: new Date(s.endTime) }))
+                                .filter(s => s.start >= now)
+                                .sort((a, b) => a.start.getTime() - b.start.getTime())[0] ?? null;
+                            const fmtBookingDate = (d: Date) =>
+                                d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, ".");
+                            return (
+                                <aside className={styles.sidebar}>
+                                    <div className={styles.bookingCard}>
+                                        <h3 className={styles.bookingName}>{itinerary?.name ?? booking.name}</h3>
 
-                                <div className={styles.bookingRating}>
-                                    {[1, 2, 3, 4, 5].map((s) => (
-                                        <svg key={s} width="14" height="14" viewBox="0 0 24 24">
-                                            <path
-                                                d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                                fill={s <= Math.round(booking.rating) ? "#f5a623" : "#e5e7eb"}
-                                            />
-                                        </svg>
-                                    ))}
-                                    <span className={styles.ratingValue}>{booking.rating}</span>
-                                    <span className={styles.ratingCount}>{booking.reviews} reviews</span>
-                                </div>
-
-                                <div className={styles.bookingDates}>
-                                    <div className={styles.dateBox}>
-                                        <span className={styles.dateLabel}>Check-in</span>
-                                        <span className={styles.dateValue}>{booking.checkIn}</span>
-                                    </div>
-                                    <div className={styles.dateArrow}>→</div>
-                                    <div className={styles.dateBox}>
-                                        <span className={styles.dateLabel}>Check-out</span>
-                                        <span className={styles.dateValue}>{booking.checkOut}</span>
-                                    </div>
-                                </div>
-
-                                <div className={styles.bookingLength}>
-                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 11h-4v-2h4V9l4 4-4 4v-4z" fill="currentColor" /></svg>
-                                    Total Length: <strong>{booking.nights} nights, {booking.days} days</strong>
-                                </div>
-
-                                <div className={styles.bookingPrice}>
-                                    <span className={styles.priceNew}>${booking.price.toLocaleString()}.00</span>
-                                    <span className={styles.priceOld}>${booking.originalPrice.toLocaleString()}.00</span>
-                                </div>
-
-                                <div className={styles.tripCode}>
-                                    Trip Code: <strong>{booking.tripCode}</strong>
-                                </div>
-
-                                <Link href={`/tours/${params?.id ?? 1}/booking`} className={styles.bookBtn}>Book Your Trip Now!</Link>
-
-                                <div className={styles.bookingFeatures}>
-                                    {booking.features.map((f) => (
-                                        <div key={f.label} className={styles.featureItem}>
-                                            <span>{f.icon}</span>
-                                            <span>{f.label}</span>
+                                        <div className={styles.bookingRating}>
+                                            {[1, 2, 3, 4, 5].map((s) => (
+                                                <svg key={s} width="14" height="14" viewBox="0 0 24 24">
+                                                    <path
+                                                        d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
+                                                        fill={s <= Math.round(booking.rating) ? "#f5a623" : "#e5e7eb"}
+                                                    />
+                                                </svg>
+                                            ))}
+                                            <span className={styles.ratingValue}>{booking.rating}</span>
+                                            <span className={styles.ratingCount}>{booking.reviews} reviews</span>
                                         </div>
-                                    ))}
-                                </div>
-                            </div>
-                        </aside>
+
+                                        <div className={styles.bookingDates}>
+                                            <div className={styles.dateBox}>
+                                                <span className={styles.dateLabel}>Check-in</span>
+                                                <span className={styles.dateValue}>
+                                                    {nearestSchedule ? fmtBookingDate(nearestSchedule.start) : "—"}
+                                                </span>
+                                            </div>
+                                            <div className={styles.dateArrow}>→</div>
+                                            <div className={styles.dateBox}>
+                                                <span className={styles.dateLabel}>Check-out</span>
+                                                <span className={styles.dateValue}>
+                                                    {nearestSchedule ? fmtBookingDate(nearestSchedule.end) : "—"}
+                                                </span>
+                                            </div>
+                                        </div>
+
+                                        <div className={styles.bookingLength}>
+                                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 11h-4v-2h4V9l4 4-4 4v-4z" fill="currentColor" /></svg>
+                                            Total Length: <strong>{itinerary?.durationDays ?? booking.days} days</strong>
+                                        </div>
+
+                                        <div className={styles.bookingPrice}>
+                                            <span className={styles.priceNew}>
+                                                {(itinerary?.price ?? booking.price).toLocaleString("vi-VN")}đ
+                                            </span>
+                                        </div>
+
+
+                                        <Link href={`/tours/${params?.id ?? 1}/booking`} className={styles.bookBtn}>Book Your Trip Now!</Link>
+
+                                        <div className={styles.bookingFeatures}>
+                                            {booking.features.map((f) => (
+                                                <div key={f.label} className={styles.featureItem}>
+                                                    <span>{f.icon}</span>
+                                                    <span>{f.label}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </aside>
+                            );
+                        })()}
                     </div>
                 </div>
             </main>
 
-            {/* Lightbox */}
-            {galleryOpen && (
-                <div className={styles.lightbox} onClick={() => setGalleryOpen(false)}>
-                    <button className={styles.lightboxClose} onClick={() => setGalleryOpen(false)}>✕</button>
-                    <button
-                        className={`${styles.lightboxNav} ${styles.lightboxPrev}`}
-                        onClick={(e) => { e.stopPropagation(); setGalleryIndex((galleryIndex - 1 + tour.gallery.length) % tour.gallery.length); }}
-                    >‹</button>
-                    <div className={styles.lightboxImg} onClick={(e) => e.stopPropagation()}>
-                        <Image src={tour.gallery[galleryIndex]} alt="Gallery" fill sizes="90vw" style={{ objectFit: "contain" }} />
+            {/* ── Login Required Prompt ── */}
+            {loginPromptOpen && (
+                <div className={styles.reviewOverlay} onClick={() => setLoginPromptOpen(false)}>
+                    <div className={styles.loginPrompt} onClick={e => e.stopPropagation()}>
+                        <button className={styles.reviewModalClose} style={{ alignSelf: "flex-end", flexShrink: 0 }} onClick={() => setLoginPromptOpen(false)}>
+                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                        </button>
+                        <div className={styles.loginPromptIcon}>
+                            <svg viewBox="0 0 24 24" fill="none" width="32" height="32"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="currentColor" strokeWidth="1.6" strokeLinejoin="round"/></svg>
+                        </div>
+                        <h3 className={styles.loginPromptTitle}>Sign in to leave feedback</h3>
+                        <p className={styles.loginPromptDesc}>
+                            You need to be signed in to write a review. Your experience helps other travellers make better decisions!
+                        </p>
+                        <div className={styles.loginPromptBtns}>
+                            <Link
+                                href={`/signin?redirect=${encodeURIComponent(pathname ?? "")}`}
+                                className={styles.loginPromptSignIn}
+                                onClick={() => setLoginPromptOpen(false)}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M15 3h4a2 2 0 012 2v14a2 2 0 01-2 2h-4M10 17l5-5-5-5M15 12H3" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                Sign In
+                            </Link>
+                            <Link href="/signup" className={styles.loginPromptSignUp} onClick={() => setLoginPromptOpen(false)}>
+                                Create Account
+                            </Link>
+                        </div>
+                        <p className={styles.loginPromptCancel} onClick={() => setLoginPromptOpen(false)}>
+                            Continue browsing without signing in
+                        </p>
                     </div>
-                    <button
-                        className={`${styles.lightboxNav} ${styles.lightboxNext}`}
-                        onClick={(e) => { e.stopPropagation(); setGalleryIndex((galleryIndex + 1) % tour.gallery.length); }}
-                    >›</button>
                 </div>
             )}
+
+            {/* ── Write Review Modal ── */}
+            {writeOpen && (
+                <div className={styles.reviewOverlay} onClick={() => setWriteOpen(false)}>
+                    <div className={styles.reviewModal} onClick={e => e.stopPropagation()}>
+                        <div className={styles.reviewModalHeader}>
+                            <div>
+                                <h3 className={styles.reviewModalTitle}>Leave Feedback</h3>
+                                <p className={styles.reviewModalSub}>{tour.title}</p>
+                            </div>
+                            <button className={styles.reviewModalClose} onClick={() => { setWriteOpen(false); setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]); }}>
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                            </button>
+                        </div>
+
+                        <div className={styles.reviewModalBody}>
+                            {/* Star picker */}
+                            <div className={styles.reviewField}>
+                                <label className={styles.reviewLabel}>Your Rating <span className={styles.reviewRequired}>*</span></label>
+                                <div className={styles.starPicker}>
+                                    {[1,2,3,4,5].map(i => (
+                                        <button
+                                            key={i}
+                                            type="button"
+                                            className={`${styles.starPickerBtn} ${i <= (wHover || wRating) ? styles.starPickerFilled : ""}`}
+                                            onMouseEnter={() => setWHover(i)}
+                                            onMouseLeave={() => setWHover(0)}
+                                            onClick={() => { setWRating(i); setWError(""); }}
+                                        >★</button>
+                                    ))}
+                                    {wRating > 0 && (
+                                        <span className={styles.starPickerLabel}>
+                                            {["","Terrible","Poor","Average","Good","Excellent"][wRating]}
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            {/* Title */}
+                            <div className={styles.reviewField}>
+                                <label className={styles.reviewLabel}>Title <span className={styles.reviewRequired}>*</span></label>
+                                <input
+                                    className={styles.reviewInput}
+                                    placeholder="Summarize your experience…"
+                                    value={wTitle}
+                                    onChange={e => { setWTitle(e.target.value); setWError(""); }}
+                                />
+                            </div>
+
+                            {/* Comment */}
+                            <div className={styles.reviewField}>
+                                <label className={styles.reviewLabel}>Your Review <span className={styles.reviewRequired}>*</span></label>
+                                <textarea
+                                    className={styles.reviewTextarea}
+                                    rows={4}
+                                    placeholder="Tell others about your experience — what you loved, what could be improved, and any tips for future travellers…"
+                                    value={wComment}
+                                    onChange={e => { setWComment(e.target.value); setWError(""); }}
+                                />
+                            </div>
+
+                            {/* Images */}
+                            <div className={styles.reviewField}>
+                                <label className={styles.reviewLabel}>
+                                    Photos
+                                    <span className={styles.reviewLabelNote}>optional · PNG, JPG</span>
+                                </label>
+                                <div
+                                    className={`${styles.reviewDropZone} ${wDragging ? styles.reviewDropZoneActive : ""}`}
+                                    onDragOver={e => { e.preventDefault(); setWDragging(true); }}
+                                    onDragLeave={() => setWDragging(false)}
+                                    onDrop={e => { e.preventDefault(); setWDragging(false); processImages(Array.from(e.dataTransfer.files)); }}
+                                    onClick={() => wFileRef.current?.click()}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" width="22" height="22" style={{ color: wDragging ? "#4f46e5" : "#9ca3af", flexShrink: 0 }}><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.6"/><circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/><path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    <span className={styles.reviewDropZoneText}>
+                                        {wDragging ? "Release to add photos" : "Drag photos here or "}
+                                        {!wDragging && <span className={styles.reviewDropZoneLink}>browse</span>}
+                                    </span>
+                                </div>
+                                <input
+                                    ref={wFileRef}
+                                    type="file"
+                                    accept="image/*"
+                                    multiple
+                                    style={{ display: "none" }}
+                                    onChange={e => { if (e.target.files) processImages(e.target.files); if (wFileRef.current) wFileRef.current.value = ""; }}
+                                />
+                                {wImages.length > 0 && (
+                                    <div className={styles.reviewImgPreviewGrid}>
+                                        {wImages.map((img, i) => (
+                                            <div key={i} className={styles.reviewImgPreviewThumb}>
+                                                {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                <img src={img.preview} alt={img.name} />
+                                                <button
+                                                    type="button"
+                                                    className={styles.reviewImgPreviewRemove}
+                                                    onClick={e => { e.stopPropagation(); setWImages(prev => prev.filter((_, j) => j !== i)); }}
+                                                >
+                                                    <svg viewBox="0 0 24 24" fill="none" width="9" height="9"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                                </button>
+                                            </div>
+                                        ))}
+                                        <button type="button" className={styles.reviewImgAddMore} onClick={() => wFileRef.current?.click()}>
+                                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+
+                            {wError && <p className={styles.reviewError}>{wError}</p>}
+                        </div>
+
+                        <div className={styles.reviewModalFooter}>
+                            <button className={styles.reviewCancelBtn} onClick={() => { setWriteOpen(false); setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]); }}>Cancel</button>
+                            <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                                {wImages.length > 0 && <span style={{ fontSize: 12, color: "#6b7280" }}>{wImages.length} photo{wImages.length > 1 ? "s" : ""}</span>}
+                                <button className={styles.reviewSubmitBtn} onClick={submitReview}>
+                                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    Submit
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ── Review image lightbox ── */}
+            {reviewLightbox && (
+                <div className={styles.lightbox} onClick={() => setReviewLightbox(null)}>
+                    <button className={styles.lightboxClose} onClick={() => setReviewLightbox(null)}>✕</button>
+                    <div className={styles.lightboxImg} onClick={e => e.stopPropagation()}>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img src={reviewLightbox} alt="" style={{ maxWidth: "90vw", maxHeight: "88vh", objectFit: "contain", borderRadius: 10 }} />
+                    </div>
+                </div>
+            )}
+
+            {/* Lightbox */}
+            {galleryOpen && (() => {
+                const gallery = itinerary?.images?.length
+                    ? itinerary.images.map(img => img.url)
+                    : tour.gallery;
+                return (
+                    <div className={styles.lightbox} onClick={() => setGalleryOpen(false)}>
+                        <button className={styles.lightboxClose} onClick={() => setGalleryOpen(false)}>✕</button>
+                        <button
+                            className={`${styles.lightboxNav} ${styles.lightboxPrev}`}
+                            onClick={(e) => { e.stopPropagation(); setGalleryIndex((galleryIndex - 1 + gallery.length) % gallery.length); }}
+                        >‹</button>
+                        <div className={styles.lightboxImg} onClick={(e) => e.stopPropagation()}>
+                            <Image src={gallery[galleryIndex]} alt="Gallery" fill sizes="90vw" style={{ objectFit: "contain" }} />
+                        </div>
+                        <button
+                            className={`${styles.lightboxNav} ${styles.lightboxNext}`}
+                            onClick={(e) => { e.stopPropagation(); setGalleryIndex((galleryIndex + 1) % gallery.length); }}
+                        >›</button>
+                    </div>
+                );
+            })()}
 
             <Footer />
         </>

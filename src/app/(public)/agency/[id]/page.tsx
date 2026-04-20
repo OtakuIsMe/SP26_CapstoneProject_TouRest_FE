@@ -171,7 +171,7 @@ const TABS = [
 ];
 
 function formatPrice(p: number) {
-  return p.toLocaleString("vi-VN") + "₫";
+  return p.toLocaleString("vi-VN") + "đ";
 }
 
 // ── Page ───────────────────────────────────────────────────────────────────

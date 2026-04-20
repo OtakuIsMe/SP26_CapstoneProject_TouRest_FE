@@ -1,4 +1,4 @@
-import { PackageDTO, PackageQuery } from "@/types/package.type";
+import { CreatePackagePayload, PackageDTO, PackageQuery, PackageWithServicesDTO } from "@/types/package.type";
 import { ServiceDTO, ServiceQuery } from "@/types/service.type";
 import { ProviderDTO } from "@/types/provider.type";
 import axiosClient from "../http/axios-client";
@@ -10,19 +10,8 @@ export enum ServiceStatus {
     Discontinued = 2,
 }
 
-export type RegisterProviderPayload = {
-    name: string;
-    description?: string;
-    contactEmail: string;
-    contactPhone: string;
-    latitude?: number;
-    longitude?: number;
-    openingTime?: string;
-    closingTime?: string;
-    images?: string[];
-};
-
 export type CreateServicePayload = {
+    providerId: string;
     name: string;
     description?: string;
     price: number;       // int
@@ -32,15 +21,29 @@ export type CreateServicePayload = {
 };
 
 export const providerService = {
-    register: (payload: RegisterProviderPayload): Promise<ApiResponse<ProviderDTO>> =>
-        axiosClient.post("/providers", payload),
+    register: (formData: FormData): Promise<ApiResponse<ProviderDTO>> =>
+        axiosClient.post("/providers", formData, {
+            headers: { "Content-Type": "multipart/form-data" },
+        }),
 
-    getServices: (params?: ServiceQuery): Promise<ApiResponse<PagedResult<ServiceDTO>>> =>
-        axiosClient.get("/services", { params }),
+    getMe: (): Promise<ApiResponse<ProviderDTO>> =>
+        axiosClient.get("/providers/me"),
+
+    getServices: (params?: ServiceQuery): Promise<ApiResponse<ServiceDTO[]>> =>
+        axiosClient.get("/service", { params }),
 
     createService: (payload: CreateServicePayload): Promise<ApiResponse<ServiceDTO>> =>
-        axiosClient.post("/services", payload),
+        axiosClient.post("/service", payload),
 
-    getPackages: (params?: PackageQuery): Promise<ApiResponse<PagedResult<PackageDTO>>> =>
+    getPackages: (params?: PackageQuery): Promise<ApiResponse<PackageDTO[]>> =>
         axiosClient.get("/packages", { params }),
+
+    createPackage: (payload: CreatePackagePayload): Promise<ApiResponse<PackageDTO>> =>
+        axiosClient.post("/packages", payload),
+
+    getServicesByProvider: (providerId: string): Promise<ApiResponse<ServiceDTO[]>> =>
+        axiosClient.get(`/service/provider/${providerId}`),
+
+    getPackagesByProvider: (providerId: string): Promise<ApiResponse<PackageWithServicesDTO[]>> =>
+        axiosClient.get(`/packages/provider/${providerId}`),
 };

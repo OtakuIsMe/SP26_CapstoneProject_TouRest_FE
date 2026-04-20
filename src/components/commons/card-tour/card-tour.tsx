@@ -49,9 +49,9 @@ export default function CardTour({
                     {rating} ({reviews.toLocaleString()} Reviews)
                 </div>
                 <div className={styles.priceRow}>
-                    <span className={styles.price}>${price}</span>
+                    <span className={styles.price}>{typeof price === "number" ? price.toLocaleString("vi-VN") + "đ" : price}</span>
                     {originalPrice && (
-                        <span className={styles.originalPrice}>${originalPrice}</span>
+                        <span className={styles.originalPrice}>{typeof originalPrice === "number" ? originalPrice.toLocaleString("vi-VN") + "đ" : originalPrice}</span>
                     )}
                 </div>
                 <p className={styles.taxNote}>Includes taxes & fees</p>

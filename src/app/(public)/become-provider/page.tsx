@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
 import MapPicker from "@/components/commons/map-picker/map-picker";
 import { providerService } from "@/libs/services/provider.service";
+import { StorageKeys } from "@/constants/storage";
 import styles from "./page.module.scss";
 
 interface ImagePreview {
@@ -16,11 +17,18 @@ interface ImagePreview {
 
 export default function BecomeProviderPage() {
     const router = useRouter();
+    const pathname = usePathname();
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        setIsLoggedIn(!!localStorage.getItem(StorageKeys.ACCESS_TOKEN));
+    }, []);
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [contactEmail, setContactEmail] = useState("");
     const [contactPhone, setContactPhone] = useState("");
+    const [address, setAddress] = useState("");
     const [latitude, setLatitude] = useState("");
     const [longitude, setLongitude] = useState("");
     const [openingTime, setOpeningTime] = useState("");
@@ -55,32 +63,20 @@ export default function BecomeProviderPage() {
         setLoading(true);
 
         try {
-            // Convert images to base64 data URLs for submission
-            const imageDataUrls = await Promise.all(
-                images.map(
-                    (img) =>
-                        new Promise<string>((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result as string);
-                            reader.onerror = reject;
-                            reader.readAsDataURL(img.file);
-                        })
-                )
-            );
+            const formData = new FormData();
+            formData.append("Name", name.trim());
+            formData.append("Description", description.trim());
+            formData.append("ContactEmail", contactEmail.trim());
+            formData.append("ContactPhone", contactPhone.trim());
+            formData.append("Address", address.trim());
+            formData.append("StartTime", openingTime);
+            formData.append("EndTime", closingTime);
+            if (latitude)  formData.append("Latitude", latitude);
+            if (longitude) formData.append("Longitude", longitude);
+            images.forEach((img) => formData.append("Images", img.file));
 
-            await providerService.register({
-                name: name.trim(),
-                description: description.trim() || undefined,
-                contactEmail: contactEmail.trim(),
-                contactPhone: contactPhone.trim(),
-                latitude: latitude ? parseFloat(latitude) : undefined,
-                longitude: longitude ? parseFloat(longitude) : undefined,
-                openingTime: openingTime || undefined,
-                closingTime: closingTime || undefined,
-                images: imageDataUrls.length > 0 ? imageDataUrls : undefined,
-            });
-
-            router.push("/signin");
+            await providerService.register(formData);
+            router.push("/");
         } catch (err: any) {
             const msg =
                 err?.response?.data?.message ||
@@ -90,6 +86,8 @@ export default function BecomeProviderPage() {
             setLoading(false);
         }
     }
+
+    if (isLoggedIn === null) return null;
 
     return (
         <main>
@@ -106,6 +104,29 @@ export default function BecomeProviderPage() {
                 </div>
 
                 <div className={styles.container}>
+                    {!isLoggedIn ? (
+                        <div className={styles.loginGate}>
+                            <div className={styles.loginGateIcon}>
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                                    <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                            <h2 className={styles.loginGateTitle}>Sign in to continue</h2>
+                            <p className={styles.loginGateDesc}>
+                                You need a TouRest customer account to apply as a Provider partner.
+                            </p>
+                            <div className={styles.loginGateBtns}>
+                                <Link href={`/signin?redirect=${encodeURIComponent(pathname ?? "/become-provider")}`} className={styles.loginGateSignIn}>
+                                    Sign In
+                                </Link>
+                                <Link href="/signup" className={styles.loginGateSignUp}>
+                                    Create Account
+                                </Link>
+                            </div>
+                            <Link href="/" className={styles.loginGateBack}>← Back to home</Link>
+                        </div>
+                    ) : (
                     <form className={styles.form} onSubmit={handleSubmit}>
                         {error && <p className={styles.error}>{error}</p>}
 
@@ -211,7 +232,23 @@ export default function BecomeProviderPage() {
                                 </div>
                                 <div>
                                     <h2 className={styles.sectionTitle}>Location</h2>
-                                    <p className={styles.sectionDesc}>Coordinates of your business</p>
+                                    <p className={styles.sectionDesc}>Address and coordinates of your business</p>
+                                </div>
+                            </div>
+
+                            <div className={styles.fields}>
+                                <div className={styles.fieldFull}>
+                                    <label className={styles.label}>
+                                        Address <span className={styles.required}>*</span>
+                                    </label>
+                                    <input
+                                        className={styles.input}
+                                        type="text"
+                                        placeholder="e.g. 45 Le Loi Street, District 1, Ho Chi Minh City"
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                        required
+                                    />
                                 </div>
                             </div>
 
@@ -336,6 +373,7 @@ export default function BecomeProviderPage() {
                             <Link href="#">Provider Guidelines</Link>.
                         </p>
                     </form>
+                    )}
                 </div>
             </div>
 

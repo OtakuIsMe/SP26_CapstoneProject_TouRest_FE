@@ -2,22 +2,50 @@ import { AgencyDTO } from "@/types/agency.type";
 import { ProviderDTO } from "@/types/provider.type";
 import axiosClient from "../http/axios-client";
 
+export type PagedResult<T> = {
+    items: T[];
+    totalCount: number;
+    page: number;
+    pageSize: number;
+    totalPages: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
+};
+
 export const adminService = {
     getProviders: (): Promise<ApiResponse<ProviderDTO[]>> =>
-        axiosClient.get("/providers"),
+        axiosClient.get("/admin/pending-providers"),
 
     getAgencies: (): Promise<ApiResponse<AgencyDTO[]>> =>
-        axiosClient.get("/agencies"),
+        axiosClient.get("/admin/pending-agencies"),
 
-    approveProvider: (id: string): Promise<ApiResponse<ProviderDTO>> =>
-        axiosClient.put(`/providers/${id}/approve`),
+    getAllAgencies: (page = 1, pageSize = 10): Promise<ApiResponse<PagedResult<AgencyDTO>>> =>
+        axiosClient.get("/agency", { params: { page, pageSize } }),
 
-    rejectProvider: (id: string): Promise<ApiResponse<ProviderDTO>> =>
-        axiosClient.put(`/providers/${id}/reject`),
+    getAllProviders: (page = 1, pageSize = 10): Promise<ApiResponse<PagedResult<ProviderDTO>>> =>
+        axiosClient.get("/providers", { params: { page, pageSize } }),
 
-    approveAgency: (id: string): Promise<ApiResponse<AgencyDTO>> =>
-        axiosClient.put(`/agencies/${id}/approve`),
+    approveProvider: (id: string): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/admin/provider/${id}/approve`),
 
-    rejectAgency: (id: string): Promise<ApiResponse<AgencyDTO>> =>
-        axiosClient.put(`/agencies/${id}/reject`),
+    rejectProvider: (id: string): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/admin/provider/${id}/reject`),
+
+    approveAgency: (id: string): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/admin/agency/${id}/approve`),
+
+    rejectAgency: (id: string): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/admin/agency/${id}/reject`),
+
+    createAgencyAccount: (
+        id: string,
+        body: { email: string; password: string; username: string; phone?: string }
+    ): Promise<ApiResponse<void>> =>
+        axiosClient.post(`/admin/agency/${id}/create-account`, body),
+
+    createProviderAccount: (
+        id: string,
+        body: { email: string; password: string; username: string; phone?: string }
+    ): Promise<ApiResponse<void>> =>
+        axiosClient.post(`/admin/provider/${id}/create-account`, body),
 };

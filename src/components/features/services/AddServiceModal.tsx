@@ -35,11 +35,12 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
     const [submitErr, setSubmitErr] = useState("");
     const [tags, setTags]       = useState<string[]>([]);
     const [tagInput, setTagInput] = useState("");
+    const [providerId, setProviderId] = useState<string | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const firstInputRef = useRef<HTMLInputElement>(null);
     const tagInputRef = useRef<HTMLInputElement>(null);
 
-    // Reset form when opened
+    // Reset form and fetch provider ID when opened
     useEffect(() => {
         if (open) {
             setForm(INITIAL_FORM);
@@ -48,6 +49,7 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
             setTags([]);
             setTagInput("");
             setTimeout(() => firstInputRef.current?.focus(), 50);
+            providerService.getMe().then((res) => setProviderId(res.data?.id ?? null)).catch(() => {});
         }
     }, [open]);
 
@@ -118,10 +120,15 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validate()) return;
+        if (!providerId) {
+            setSubmitErr("Could not resolve provider. Please refresh and try again.");
+            return;
+        }
         setLoading(true);
         setSubmitErr("");
         try {
             await providerService.createService({
+                providerId,
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
                 price: Math.round(Number(form.price)),

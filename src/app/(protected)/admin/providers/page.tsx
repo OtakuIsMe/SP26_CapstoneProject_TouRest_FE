@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
 import { adminService } from "@/libs/services/admin.service";
-import { AgencyDTO } from "@/types/agency.type";
+import { ProviderDTO } from "@/types/provider.type";
 import styles from "./page.module.scss";
 
 const STATUS_MAP: Record<string, { label: string; cls: string }> = {
@@ -13,10 +13,10 @@ const STATUS_MAP: Record<string, { label: string; cls: string }> = {
     Pending:   { label: "Pending",   cls: styles.statusPending   },
 };
 
-const columns: ColumnDef<AgencyDTO>[] = [
+const columns: ColumnDef<ProviderDTO>[] = [
     {
         key: "name",
-        label: "Agency",
+        label: "Provider",
         sortable: true,
         render: (row) => (
             <div className={styles.nameCell}>
@@ -63,30 +63,30 @@ const columns: ColumnDef<AgencyDTO>[] = [
     },
 ];
 
-export default function AdminAgenciesPage() {
-    const [agencies,   setAgencies]   = useState<AgencyDTO[]>([]);
+export default function AdminProvidersPage() {
+    const [providers,  setProviders]  = useState<ProviderDTO[]>([]);
     const [loading,    setLoading]    = useState(true);
     const [page,       setPage]       = useState(1);
     const [pageSize,   setPageSize]   = useState(10);
     const [totalCount, setTotalCount] = useState(0);
 
-    const fetchAgencies = useCallback(async (p: number, ps: number) => {
+    const fetchProviders = useCallback(async (p: number, ps: number) => {
         setLoading(true);
         try {
-            const res = await adminService.getAllAgencies(p, ps);
-            setAgencies(res.data?.items ?? []);
+            const res = await adminService.getAllProviders(p, ps);
+            setProviders(res.data?.items ?? []);
             setTotalCount(res.data?.totalCount ?? 0);
         } catch {
-            setAgencies([]);
+            setProviders([]);
             setTotalCount(0);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => { fetchAgencies(page, pageSize); }, [fetchAgencies, page, pageSize]);
+    useEffect(() => { fetchProviders(page, pageSize); }, [fetchProviders, page, pageSize]);
 
-    const actions: ActionDef<AgencyDTO>[] = [
+    const actions: ActionDef<ProviderDTO>[] = [
         {
             label: "Edit",
             variant: "edit",
@@ -96,36 +96,36 @@ export default function AdminAgenciesPage() {
             label: "Delete",
             variant: "delete",
             onClick: (row) => {
-                if (!confirm(`Delete agency "${row.name}"?`)) return;
-                setAgencies((prev) => prev.filter((a) => a.id !== row.id));
+                if (!confirm(`Delete provider "${row.name}"?`)) return;
+                setProviders((prev) => prev.filter((p) => p.id !== row.id));
                 setTotalCount((c) => c - 1);
             },
         },
     ];
 
-    const active    = agencies.filter((a) => a.status === "Active").length;
-    const inactive  = agencies.filter((a) => a.status === "Inactive").length;
-    const suspended = agencies.filter((a) => a.status === "Suspended").length;
+    const active    = providers.filter((p) => p.status === "Active").length;
+    const inactive  = providers.filter((p) => p.status === "Inactive").length;
+    const suspended = providers.filter((p) => p.status === "Suspended").length;
 
     return (
         <div className={styles.page}>
             <div className={styles.header}>
                 <div>
-                    <h1 className={styles.title}>Agencies</h1>
-                    <p className={styles.subtitle}>Manage all travel agencies on the platform</p>
+                    <h1 className={styles.title}>Providers</h1>
+                    <p className={styles.subtitle}>Manage all service providers on the platform</p>
                 </div>
                 <button className={styles.btnAdd}>
                     <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                         <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
-                    Add Agency
+                    Add Provider
                 </button>
             </div>
 
             <div className={styles.statsRow}>
                 <div className={styles.statCard}>
                     <span className={styles.statValue}>{totalCount}</span>
-                    <span className={styles.statLabel}>Total Agencies</span>
+                    <span className={styles.statLabel}>Total Providers</span>
                 </div>
                 <div className={styles.statCard}>
                     <span className={`${styles.statValue} ${styles.green}`}>{active}</span>
@@ -141,15 +141,15 @@ export default function AdminAgenciesPage() {
                 </div>
             </div>
 
-            <DataTable<AgencyDTO>
+            <DataTable<ProviderDTO>
                 columns={columns}
-                data={agencies}
+                data={providers}
                 actions={actions}
                 searchPlaceholder="Search by name, email..."
                 loading={loading}
                 selectable
                 exportable
-                emptyText="No agencies found"
+                emptyText="No providers found"
                 serverSide={{
                     totalCount,
                     page,

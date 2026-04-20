@@ -301,7 +301,7 @@ export default function AdminDashboard() {
                                     <td className={styles.tdSold}>{p.sold}</td>
                                     <td>
                                         <span className={`${styles.revenue} ${styles[p.rev as keyof typeof styles]}`}>
-                                            ${p.revenue.toLocaleString()}
+                                            {p.revenue.toLocaleString("vi-VN")}đ
                                         </span>
                                     </td>
                                     <td>

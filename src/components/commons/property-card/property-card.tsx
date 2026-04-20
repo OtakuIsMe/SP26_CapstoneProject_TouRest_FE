@@ -7,18 +7,16 @@ import styles from "./property-card.module.scss";
 
 interface PropertyCardProps {
     id?: string | number;
-    image: string;
-    type: string;
+    image?: string;
+    type?: string;
     name: string;
-    guests: number;
-    homeType: string;
-    beds: number;
-    baths: number;
-    amenities: string[];
-    rating: number;
-    reviews: number;
+    duration?: number;
+    stopCount?: number;
+    rating?: number;
+    reviews?: number;
     price: number;
     priceUnit?: string;
+    description?: string;
 }
 
 export default function PropertyCard({
@@ -26,26 +24,29 @@ export default function PropertyCard({
     image,
     type,
     name,
-    guests,
-    homeType,
-    beds,
-    baths,
-    amenities,
+    duration,
+    stopCount,
     rating,
     reviews,
     price,
-    priceUnit = "/night",
+    priceUnit = "/tour",
+    description,
 }: PropertyCardProps) {
     const [liked, setLiked] = useState(false);
+    const hasImage = !!image;
 
     return (
         <Link href={id ? `/tours/${id}` : "/tours"} className={styles.card}>
             <div className={styles.imageWrapper}>
-                <Image src={image} alt={name} fill sizes="320px" style={{ objectFit: "cover" }} />
+                {hasImage ? (
+                    <Image src={image} alt={name} fill sizes="320px" style={{ objectFit: "cover" }} />
+                ) : (
+                    <div className={styles.imageSkeleton} />
+                )}
             </div>
             <div className={styles.content}>
                 <div className={styles.topRow}>
-                    <span className={styles.type}>{type}</span>
+                    <span className={styles.type}>{type ?? "Tour Package"}</span>
                     <button
                         className={`${styles.heart} ${liked ? styles.heartActive : ""}`}
                         onClick={(e) => { e.preventDefault(); setLiked(!liked); }}
@@ -57,24 +58,56 @@ export default function PropertyCard({
                         </svg>
                     </button>
                 </div>
+
                 <h3 className={styles.name}>{name}</h3>
-                <p className={styles.details}>
-                    {guests} guests · {homeType} · {beds} beds · {baths} bath
-                </p>
-                <p className={styles.amenities}>
-                    {amenities.join(" · ")}
-                </p>
+
+                {(duration || stopCount) && (
+                    <div className={styles.tags}>
+                        {duration && (
+                            <span className={styles.tag}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8" />
+                                    <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                                </svg>
+                                {duration} {duration === 1 ? "day" : "days"}
+                            </span>
+                        )}
+                        {stopCount != null && stopCount > 0 && (
+                            <span className={styles.tag}>
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor" />
+                                </svg>
+                                {stopCount} {stopCount === 1 ? "stop" : "stops"}
+                            </span>
+                        )}
+                    </div>
+                )}
+
+                {description && (
+                    <p className={styles.amenities}>{description}</p>
+                )}
+
                 <div className={styles.bottomRow}>
                     <div className={styles.rating}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#f59e0b" />
-                        </svg>
-                        <span className={styles.ratingScore}>{rating}</span>
-                        <span className={styles.ratingDot}>·</span>
-                        <span className={styles.reviewCount}>{reviews} reviews</span>
+                        {rating && rating > 0 ? (
+                            <>
+                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                    <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#f59e0b" />
+                                </svg>
+                                <span className={styles.ratingScore}>{rating}</span>
+                                {reviews && reviews > 0 && (
+                                    <>
+                                        <span className={styles.ratingDot}>·</span>
+                                        <span className={styles.reviewCount}>{reviews.toLocaleString()} reviews</span>
+                                    </>
+                                )}
+                            </>
+                        ) : (
+                            <span className={styles.noRating}>No reviews yet</span>
+                        )}
                     </div>
                     <div className={styles.price}>
-                        <span className={styles.priceAmount}>${price}</span>
+                        <span className={styles.priceAmount}>{price.toLocaleString("vi-VN")}đ</span>
                         <span className={styles.priceUnit}>{priceUnit}</span>
                     </div>
                 </div>

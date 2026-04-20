@@ -20,7 +20,7 @@ function generateCode(name: string): string {
 }
 
 function formatVND(n: number) {
-    return n.toLocaleString("vi-VN") + " ₫";
+    return n.toLocaleString("vi-VN") + "đ";
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -47,8 +47,11 @@ export default function NewPackagePage() {
     const fetchServices = useCallback(async () => {
         setSvcLoading(true);
         try {
-            const res = await providerService.getServices({ pageSize: 100, status: "Active" });
-            setServices(res.data.items ?? []);
+            const meRes = await providerService.getMe();
+            const providerId = meRes.data?.id;
+            if (!providerId) return;
+            const res = await providerService.getServicesByProvider(providerId);
+            setServices((res.data ?? []).filter(s => s.status === "Active"));
         } catch {
             setServices([]);
         } finally {
@@ -102,8 +105,12 @@ export default function NewPackagePage() {
         if (!validate()) return;
         setSubmitting(true);
         try {
-            // TODO: call createPackage API when backend is ready
-            await new Promise((r) => setTimeout(r, 600)); // mock delay
+            await providerService.createPackage({
+                name: name.trim(),
+                code: code.trim(),
+                basePrice: Math.round(basePriceNum),
+                serviceIds: Array.from(selected).filter(Boolean),
+            });
             router.push("/provider/packages");
         } catch {
             setErrors((prev) => ({ ...prev, submit: "Failed to create package. Please try again." }));

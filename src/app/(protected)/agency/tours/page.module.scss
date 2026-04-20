@@ -348,6 +348,32 @@ $r:      12px;
     to   { opacity: 1; }
 }
 
+// ── Edit modal ────────────────────────────────────────────────────────────────
+.editModal {
+    background: $white;
+    border-radius: 18px;
+    width: 500px;
+    max-width: calc(100vw - 48px);
+    box-shadow: 0 28px 80px rgba(0,0,0,.24);
+    animation: modalIn 0.2s ease;
+    overflow: hidden;
+}
+
+.editPriceInfo {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 9px;
+    padding: 10px 14px;
+    font-size: 12.5px;
+    color: #1d4ed8;
+
+    svg { flex-shrink: 0; }
+    strong { font-weight: 700; }
+}
+
 // ── Schedule modal ────────────────────────────────────────────────────────────
 .schedModal {
     background: $white;
@@ -452,6 +478,62 @@ $r:      12px;
 .hint { font-size: 11.5px; color: $light; }
 .errorMsg { font-size: 11.5px; color: $red; }
 .inputError { border-color: $red !important; }
+
+.imageUploadArea {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    padding: 20px;
+    border: 1.5px dashed $border;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.15s, background 0.15s;
+    &:hover { border-color: $indigo; background: #f5f3ff; }
+}
+
+.imagePreviews {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.imagePreviewWrap {
+    position: relative;
+    width: 72px;
+    height: 72px;
+    border-radius: 6px;
+    overflow: hidden;
+    border: 1px solid $border;
+}
+
+.imagePreviewImg {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.imagePreviewRemove {
+    position: absolute;
+    top: 2px;
+    right: 2px;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: rgba(0,0,0,0.55);
+    color: #fff;
+    border: none;
+    font-size: 13px;
+    line-height: 1;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    &:hover { background: $red; }
+}
 
 .modalFooter {
     display: flex;
@@ -1207,3 +1289,373 @@ $r:      12px;
 .reviewStopName { font-size: 13px; font-weight: 700; color: $dark; }
 .reviewStopAddr { font-size: 11.5px; color: $light; margin: 2px 0 6px; }
 .reviewActivity { font-size: 12px; color: $mid; display: flex; align-items: center; gap: 6px; }
+
+// ── Detail Drawer ──────────────────────────────────────────────────────────────
+.drawerOverlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.40);
+    z-index: 400;
+    display: flex;
+    justify-content: flex-end;
+    animation: ovIn 0.18s ease;
+}
+
+.drawer {
+    width: 480px;
+    max-width: 100vw;
+    height: 100%;
+    background: $white;
+    display: flex;
+    flex-direction: column;
+    box-shadow: -8px 0 40px rgba(0,0,0,.18);
+    animation: drawerIn 0.22s ease;
+    overflow: hidden;
+}
+
+@keyframes drawerIn {
+    from { transform: translateX(60px); opacity: 0; }
+    to   { transform: translateX(0);    opacity: 1; }
+}
+
+.drawerHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    padding: 20px 22px 16px;
+    border-bottom: 1px solid #f3f4f6;
+    flex-shrink: 0;
+    gap: 12px;
+}
+
+.drawerHeaderLeft {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    flex: 1;
+    min-width: 0;
+}
+
+.drawerStatusDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.drawerTitle {
+    font-size: 17px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0 0 6px;
+    line-height: 1.3;
+}
+
+.drawerStatusBadge {
+    font-size: 10.5px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    padding: 3px 10px;
+    border-radius: 20px;
+    display: inline-block;
+}
+
+.drawerCloseBtn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    background: $white;
+    color: $mid;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    &:hover { background: #fee2e2; color: $red; border-color: #fecaca; }
+}
+
+.drawerBody {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 22px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
+}
+
+.drawerSection {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.drawerSectionTitle {
+    font-size: 12.5px;
+    font-weight: 700;
+    color: $mid;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    svg { color: $light; }
+}
+
+.drawerSectionTitleRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.drawerMetaGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+}
+
+.drawerMetaCell {
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 10px;
+    padding: 12px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.drawerMetaLabel {
+    font-size: 11px;
+    color: $light;
+    font-weight: 500;
+}
+
+.drawerMetaValue {
+    font-size: 16px;
+    font-weight: 700;
+    color: $dark;
+}
+
+.drawerDesc {
+    font-size: 13px;
+    color: $mid;
+    line-height: 1.6;
+    margin: 0;
+    background: $bg;
+    border-radius: 10px;
+    padding: 12px 14px;
+    border: 1px solid $border;
+}
+
+// Stop timeline
+.drawerStopList {
+    display: flex;
+    flex-direction: column;
+}
+
+.drawerStopRow {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+}
+
+.drawerStopTrack {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    flex-shrink: 0;
+    width: 26px;
+    padding-top: 1px;
+}
+
+.drawerStopNum {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: $indigo;
+    color: $white;
+    font-size: 11.5px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.drawerStopLine {
+    width: 2px;
+    flex: 1;
+    min-height: 18px;
+    background: #e0e7ff;
+    margin: 4px 0;
+}
+
+.drawerStopInfo {
+    padding-bottom: 14px;
+    flex: 1;
+    min-width: 0;
+}
+
+.drawerStopName {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: $dark;
+    margin: 0;
+    line-height: 1.4;
+}
+
+.drawerStopAddr {
+    font-size: 11.5px;
+    color: $light;
+    margin: 2px 0 0;
+}
+
+// Schedule list
+.drawerAddSchedBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #15803d;
+    cursor: pointer;
+    transition: background 0.12s;
+    &:hover { background: #dcfce7; }
+}
+
+.drawerEmptySched {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 28px 16px;
+    border: 2px dashed $border;
+    border-radius: 12px;
+    text-align: center;
+
+    p { margin: 0; font-size: 13px; font-weight: 600; color: $mid; }
+    span { font-size: 12px; color: $light; }
+}
+
+.drawerSchedList {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.drawerSchedCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: $bg;
+    border: 1px solid $border;
+    border-radius: 12px;
+    padding: 14px 16px;
+    transition: border-color 0.15s, box-shadow 0.15s;
+
+    &:hover {
+        border-color: #c7d2fe;
+        box-shadow: 0 2px 10px rgba(79,70,229,.07);
+    }
+}
+
+.drawerSchedIndex {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #eef2ff;
+    color: $indigo;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.drawerSchedContent {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-width: 0;
+    flex-wrap: wrap;
+}
+
+.drawerSchedDates {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.drawerSchedDateBlock {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.drawerSchedDateLabel {
+    font-size: 10.5px;
+    color: $light;
+    font-weight: 500;
+}
+
+.drawerSchedDateValue {
+    font-size: 13px;
+    font-weight: 700;
+    color: $dark;
+}
+
+.drawerSchedArrow {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1px;
+    flex-shrink: 0;
+}
+
+.drawerSchedDays {
+    font-size: 10px;
+    color: $light;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.drawerSchedStatusBadge {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 20px;
+    flex-shrink: 0;
+}
+
+.drawerSchedDeleteBtn {
+    width: 28px;
+    height: 28px;
+    border: 1px solid $border;
+    border-radius: 7px;
+    background: $white;
+    color: $light;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.12s, color 0.12s;
+    &:hover { background: #fee2e2; color: $red; border-color: #fecaca; }
+}

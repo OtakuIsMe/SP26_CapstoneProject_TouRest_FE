@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import type { ProviderMarker } from "@/libs/services/agency.service";
 import styles from "./tour-map-builder.module.scss";
 
 export interface StopPoint {
@@ -13,6 +14,8 @@ export interface StopPoint {
 interface TourMapBuilderProps {
     stops: StopPoint[];
     onMapClick: (lat: number, lng: number) => void;
+    providers?: ProviderMarker[];
+    onProviderClick?: (provider: ProviderMarker) => void;
 }
 
 const DEFAULT_CENTER: [number, number] = [16.047079, 108.20623]; // Vietnam center
@@ -32,18 +35,36 @@ function createNumberedIcon(L: typeof import("leaflet"), num: number) {
     });
 }
 
-export default function TourMapBuilder({ stops, onMapClick }: TourMapBuilderProps) {
+function createProviderIcon(L: typeof import("leaflet")) {
+    return L.divIcon({
+        html: `<div style="width:28px;height:28px;background:#f97316;border-radius:50%;border:3px solid #fff;box-shadow:0 2px 8px rgba(249,115,22,0.5);display:flex;align-items:center;justify-content:center">
+            <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#fff"/>
+                <circle cx="12" cy="9" r="2.5" fill="#f97316"/>
+            </svg>
+        </div>`,
+        className: "",
+        iconSize: [28, 28],
+        iconAnchor: [14, 28],
+        popupAnchor: [0, -32],
+    });
+}
+
+export default function TourMapBuilder({ stops, onMapClick, providers = [], onProviderClick }: TourMapBuilderProps) {
     const mapRef = useRef<HTMLDivElement>(null);
     const mapInstanceRef = useRef<import("leaflet").Map | null>(null);
     const markersRef = useRef<Map<string, import("leaflet").Marker>>(new Map());
+    const providerMarkersRef = useRef<import("leaflet").Marker[]>([]);
     const lineRef = useRef<import("leaflet").Polyline | null>(null);
     const onClickRef = useRef(onMapClick);
+    const onProviderClickRef = useRef(onProviderClick);
     const [loaded, setLoaded] = useState(false);
     const [searchQuery, setSearchQuery] = useState("");
     const [searching, setSearching] = useState(false);
 
-    // Keep callback in sync without re-running map init
+    // Keep callbacks in sync without re-running map init
     useEffect(() => { onClickRef.current = onMapClick; }, [onMapClick]);
+    useEffect(() => { onProviderClickRef.current = onProviderClick; }, [onProviderClick]);
 
     // Init map once
     useEffect(() => {
@@ -143,6 +164,39 @@ export default function TourMapBuilder({ stops, onMapClick }: TourMapBuilderProp
         });
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [stops, loaded]);
+
+    // Sync provider markers
+    useEffect(() => {
+        const map = mapInstanceRef.current;
+        if (!map || !loaded) return;
+
+        import("leaflet").then((L) => {
+            providerMarkersRef.current.forEach(m => m.remove());
+            providerMarkersRef.current = [];
+
+            const icon = createProviderIcon(L);
+            providers.forEach((p) => {
+                if (!p.latitude || !p.longitude) return;
+                const marker = L.marker([Number(p.latitude), Number(p.longitude)], { icon }).addTo(map);
+                marker.on("click", (e: import("leaflet").LeafletMouseEvent) => {
+                    e.originalEvent.stopPropagation();
+                    if (onProviderClickRef.current) {
+                        onProviderClickRef.current(p);
+                    }
+                });
+                marker.bindPopup(
+                    `<div style="font-family:ui-sans-serif,sans-serif;min-width:140px">
+                        <p style="font-weight:700;font-size:13px;margin:0 0 3px;color:#111827">${p.name}</p>
+                        ${p.address ? `<p style="font-size:11px;color:#6b7280;margin:0 0 2px">${p.address}</p>` : ""}
+                        ${p.contactPhone ? `<p style="font-size:11px;color:#6b7280;margin:0">${p.contactPhone}</p>` : ""}
+                    </div>`,
+                    { maxWidth: 240 }
+                );
+                providerMarkersRef.current.push(marker);
+            });
+        });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [providers, loaded]);
 
     async function handleSearch() {
         if (!searchQuery.trim() || !mapInstanceRef.current) return;

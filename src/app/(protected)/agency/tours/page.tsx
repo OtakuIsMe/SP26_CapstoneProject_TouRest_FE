@@ -1,8 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styles from "./page.module.scss";
 import TourMapBuilder from "@/components/commons/tour-map-builder/tour-map-builder";
+import { agencyService, ProviderMarker, CreateItineraryPayload } from "@/libs/services/agency.service";
+import { providerService } from "@/libs/services/provider.service";
+import type { ServiceDTO } from "@/types/service.type";
+import type { PackageWithServicesDTO } from "@/types/package.type";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TourStatus = "DRAFT" | "ACTIVE" | "INACTIVE";
@@ -20,6 +24,8 @@ interface ActivityItem {
     type: "service" | "package" | "custom";
     name: string;
     serviceName?: string;
+    serviceId?: string;
+    packageBasePrice?: number;
     startTime: string;
     endTime: string;
     price: number;
@@ -28,6 +34,7 @@ interface ActivityItem {
 
 interface StopWithActivities extends TourStop {
     activities: ActivityItem[];
+    providerId?: string;
 }
 
 interface TourSchedule {
@@ -43,69 +50,10 @@ interface Itinerary {
     price: number;
     durationDays: number;
     status: TourStatus;
+    stopCount: number;
     stops: { name: string; address: string }[];
     schedules: TourSchedule[];
 }
-
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_TOURS: Itinerary[] = [
-    {
-        id: "i1", name: "Ha Long Bay & Wellness Retreat", description: "3-day cruise combining scenic bay views with medical wellness services at top providers.",
-        price: 4200000, durationDays: 3, status: "ACTIVE",
-        stops: [{ name: "Ha Long Bay", address: "Quảng Ninh" }, { name: "Tuan Chau Island", address: "Hạ Long, Quảng Ninh" }],
-        schedules: [
-            { id: "s1", startTime: "2026-04-13", endTime: "2026-04-16" },
-            { id: "s2", startTime: "2026-05-01", endTime: "2026-05-04" },
-        ],
-    },
-    {
-        id: "i2", name: "Sapa Mountain Health Trek", description: "Trek through the misty mountains while enjoying herbal spa and respiratory health checks.",
-        price: 3500000, durationDays: 4, status: "ACTIVE",
-        stops: [{ name: "Sapa Town", address: "Lào Cai" }, { name: "Fansipan", address: "Sa Pa, Lào Cai" }, { name: "Cat Cat Village", address: "Lào Cai" }],
-        schedules: [{ id: "s3", startTime: "2026-04-20", endTime: "2026-04-24" }],
-    },
-    {
-        id: "i3", name: "Hoi An Heritage & Spa Tour", description: "Explore the ancient town by day and unwind with full-body treatments by evening.",
-        price: 2800000, durationDays: 2, status: "DRAFT",
-        stops: [{ name: "Hoi An Ancient Town", address: "Quảng Nam" }, { name: "An Bang Beach", address: "Hội An, Quảng Nam" }],
-        schedules: [],
-    },
-    {
-        id: "i4", name: "Phu Quoc Island Medical Escape", description: "Beach holiday combined with comprehensive health screening packages.",
-        price: 5600000, durationDays: 5, status: "ACTIVE",
-        stops: [{ name: "Phu Quoc North", address: "Kiên Giang" }, { name: "Phu Quoc South", address: "Kiên Giang" }],
-        schedules: [
-            { id: "s4", startTime: "2026-04-25", endTime: "2026-04-30" },
-            { id: "s5", startTime: "2026-05-15", endTime: "2026-05-20" },
-            { id: "s6", startTime: "2026-06-01", endTime: "2026-06-06" },
-        ],
-    },
-    {
-        id: "i5", name: "Hanoi Cultural Dental Tour", description: "Visit historic sites while receiving premium dental care from certified providers.",
-        price: 1900000, durationDays: 2, status: "INACTIVE",
-        stops: [{ name: "Old Quarter", address: "Hoàn Kiếm, Hà Nội" }],
-        schedules: [],
-    },
-];
-
-// ── Mock services & packages for activity picker ──────────────────────────────
-const MOCK_SERVICES = [
-    { id: "sv1", name: "Full Body Massage",    duration: 90,  price: 450000,  category: "Wellness"  },
-    { id: "sv2", name: "Full Blood Panel",     duration: 60,  price: 350000,  category: "Medical"   },
-    { id: "sv3", name: "Herbal Steam Bath",    duration: 45,  price: 280000,  category: "Wellness"  },
-    { id: "sv4", name: "Dental Cleaning",      duration: 60,  price: 200000,  category: "Dental"    },
-    { id: "sv5", name: "Eye Examination",      duration: 30,  price: 150000,  category: "Medical"   },
-    { id: "sv6", name: "Deep Tissue Massage",  duration: 60,  price: 380000,  category: "Wellness"  },
-    { id: "sv7", name: "Cardiac Screening",    duration: 90,  price: 600000,  category: "Medical"   },
-    { id: "sv8", name: "Aromatherapy Facial",  duration: 75,  price: 320000,  category: "Cosmetic"  },
-];
-
-const MOCK_PACKAGES = [
-    { id: "pk1", name: "Basic Wellness Pack",   services: ["sv1", "sv3"],        price: 680000  },
-    { id: "pk2", name: "Full Health Screening", services: ["sv2", "sv5", "sv7"], price: 950000  },
-    { id: "pk3", name: "Premium Spa Day",       services: ["sv1", "sv6", "sv8"], price: 1050000 },
-    { id: "pk4", name: "Dental & Eye Pack",     services: ["sv4", "sv5"],        price: 320000  },
-];
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<TourStatus, { label: string; color: string; bg: string; accent: string }> = {
@@ -114,18 +62,18 @@ const STATUS_CFG: Record<TourStatus, { label: string; color: string; bg: string;
     INACTIVE: { label: "Inactive", color: "#6b7280", bg: "#f3f4f6", accent: "#d1d5db" },
 };
 
-function fmtPrice(n: number) { return n.toLocaleString("vi-VN") + " ₫"; }
-function fmtDate(s: string) {
-    const d = new Date(s + "T00:00:00");
-    return d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
-}
+function fmtPrice(n: number) { return n.toLocaleString("vi-VN") + "đ"; }
 function uid() { return Math.random().toString(36).slice(2); }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AgencyToursPage() {
-    const [tours, setTours] = useState<Itinerary[]>(MOCK_TOURS);
+    const [tours, setTours] = useState<Itinerary[]>([]);
+    const [toursLoading, setToursLoading] = useState(true);
     const [search, setSearch] = useState("");
     const [statusFilter, setStatusFilter] = useState<TourStatus | "">("");
+
+    // Detail drawer
+    const [detailTour, setDetailTour] = useState<Itinerary | null>(null);
 
     // Schedule modal
     const [schedTarget, setSchedTarget] = useState<Itinerary | null>(null);
@@ -134,16 +82,52 @@ export default function AgencyToursPage() {
     const [schedErr,   setSchedErr]   = useState("");
 
     // Wizard modal
-    const [wizOpen, setWizOpen]   = useState(false);
-    const [wizStep, setWizStep]   = useState(1);
+    const [wizOpen, setWizOpen]     = useState(false);
+    const [wizStep, setWizStep]     = useState(1);
+    const [editMode, setEditMode]   = useState(false);
+    const [editTargetId, setEditTargetId] = useState<string | null>(null);
     // step1
-    const [wName, setWName]       = useState("");
-    const [wDesc, setWDesc]       = useState("");
-    const [wPrice, setWPrice]     = useState("");
-    const [wDays, setWDays]       = useState("");
-    const [wStatus, setWStatus]   = useState<TourStatus>("DRAFT");
+    const [wName, setWName]         = useState("");
+    const [wDesc, setWDesc]         = useState("");
+    const [wDays, setWDays]         = useState("");
+    const [wStatus, setWStatus]     = useState<TourStatus>("DRAFT");
+    const [wImages, setWImages]     = useState<File[]>([]);
+    const [wImagePreviews, setWImagePreviews] = useState<string[]>([]);
     // step 2 – map itinerary
     const [wStops, setWStops]     = useState<StopWithActivities[]>([]);
+    const [providerMarkers, setProviderMarkers] = useState<ProviderMarker[]>([]);
+    const [confirmProvider, setConfirmProvider] = useState<ProviderMarker | null>(null);
+
+    useEffect(() => {
+        agencyService.getMe()
+            .then(meRes => {
+                if (!meRes.data) return;
+                return agencyService.getItinerariesByAgency(meRes.data.id);
+            })
+            .then(res => {
+                if (res?.data) {
+                    setTours(res.data.map(dto => ({
+                        id: dto.id,
+                        name: dto.name,
+                        description: dto.description ?? "",
+                        price: dto.price,
+                        durationDays: dto.durationDays,
+                        status: dto.status.toUpperCase() as TourStatus,
+                        stopCount: dto.stopCount ?? 0,
+                        stops: [],
+                        schedules: [],
+                    })));
+                }
+            })
+            .catch(() => {})
+            .finally(() => setToursLoading(false));
+    }, []);
+
+    useEffect(() => {
+        agencyService.getProviderMarkers().then(res => {
+            if (res.data) setProviderMarkers(res.data);
+        }).catch(() => {});
+    }, []);
     // pending stop (when user clicks the map)
     const [pendingMarker, setPendingMarker]         = useState<{ lat: number; lng: number } | null>(null);
     const [pendingName, setPendingName]             = useState("");
@@ -159,6 +143,12 @@ export default function AgencyToursPage() {
     const [actEnd, setActEnd]       = useState("");
     const [actPrice, setActPrice]   = useState("");
     const [actNote, setActNote]     = useState("");
+    const [actServices, setActServices] = useState<ServiceDTO[]>([]);
+    const [actPackages, setActPackages] = useState<PackageWithServicesDTO[]>([]);
+    const [actDataLoading, setActDataLoading] = useState(false);
+    const [providerPackagesCache, setProviderPackagesCache] = useState<Record<string, PackageWithServicesDTO[]>>({});
+    const [wizSubmitting, setWizSubmitting] = useState(false);
+    const [wizError, setWizError] = useState("");
 
     // Filtered tours
     const filtered = tours.filter(t => {
@@ -182,15 +172,28 @@ export default function AgencyToursPage() {
         setSchedErr("");
     }
 
-    function submitSched() {
+    async function submitSched() {
         if (!schedStart || !schedEnd) { setSchedErr("Please select both start and end dates."); return; }
         if (schedEnd <= schedStart)   { setSchedErr("End date must be after start date."); return; }
-        setTours(prev => prev.map(t =>
-            t.id === schedTarget!.id
-                ? { ...t, schedules: [...t.schedules, { id: uid(), startTime: schedStart, endTime: schedEnd }] }
-                : t
-        ));
-        setSchedTarget(null);
+        try {
+            const res = await agencyService.addSchedule(
+                schedTarget!.id,
+                new Date(schedStart).toISOString(),
+                new Date(schedEnd).toISOString()
+            );
+            if (res.data) {
+                const newSched: TourSchedule = { id: res.data.id, startTime: res.data.startTime, endTime: res.data.endTime };
+                setTours(prev => prev.map(t =>
+                    t.id === schedTarget!.id ? { ...t, schedules: [...t.schedules, newSched] } : t
+                ));
+                if (detailTour?.id === schedTarget!.id) {
+                    setDetailTour(prev => prev ? { ...prev, schedules: [...prev.schedules, newSched] } : prev);
+                }
+            }
+            setSchedTarget(null);
+        } catch {
+            setSchedErr("Failed to add schedule. Please try again.");
+        }
     }
 
     // ── Wizard helpers ───────────────────────────────────────────────────────
@@ -235,11 +238,27 @@ export default function AgencyToursPage() {
         setPendingAddress("");
     }
 
+    function confirmProviderAsStop() {
+        if (!confirmProvider) return;
+        setWStops(prev => [...prev, {
+            id: uid(),
+            name: confirmProvider.name,
+            address: confirmProvider.address ?? "",
+            latitude: Number(confirmProvider.latitude),
+            longitude: Number(confirmProvider.longitude),
+            activities: [],
+            providerId: confirmProvider.id,
+        }]);
+        setConfirmProvider(null);
+    }
+
     function removeStop(id: string) { setWStops(prev => prev.filter(s => s.id !== id)); }
 
     function openAddActivity(stopId: string) {
+        const stop = wStops.find(s => s.id === stopId);
+        const defaultType = stop?.providerId ? "service" : "custom";
         setActTarget(stopId);
-        setActType("service");
+        setActType(defaultType);
         setActServiceId("");
         setActPackageId("");
         setActCustomName("");
@@ -247,6 +266,82 @@ export default function AgencyToursPage() {
         setActEnd("");
         setActPrice("");
         setActNote("");
+        setActServices([]);
+        setActPackages([]);
+        if (stop?.providerId) {
+            if (defaultType === "service") fetchActServices(stop.providerId);
+            // Pre-fetch packages into cache for bundle detection (silent)
+            if (!providerPackagesCache[stop.providerId]) {
+                providerService.getPackagesByProvider(stop.providerId).then(res => {
+                    if (res.data) setProviderPackagesCache(prev => ({ ...prev, [stop.providerId!]: res.data }));
+                }).catch(() => {});
+            }
+        }
+    }
+
+    function fetchActServices(providerId: string) {
+        setActDataLoading(true);
+        providerService.getServicesByProvider(providerId)
+            .then(res => setActServices(res.data ?? []))
+            .catch(() => {})
+            .finally(() => setActDataLoading(false));
+    }
+
+    function fetchActPackages(providerId: string) {
+        setActDataLoading(true);
+        providerService.getPackagesByProvider(providerId)
+            .then(res => setActPackages(res.data ?? []))
+            .catch(() => {})
+            .finally(() => setActDataLoading(false));
+    }
+
+    function addMinutes(time: string, minutes: number): string {
+        if (!time) return "";
+        const [h, m] = time.split(":").map(Number);
+        const total = h * 60 + m + minutes;
+        const hh = String(Math.floor(total / 60) % 24).padStart(2, "0");
+        const mm = String(total % 60).padStart(2, "0");
+        return `${hh}:${mm}`;
+    }
+
+    function handleActServiceSelect(id: string) {
+        setActServiceId(id);
+        const svc = actServices.find(s => s.id === id);
+        if (svc && actStart) setActEnd(addMinutes(actStart, svc.durationMinutes));
+    }
+
+    function handleActPackageSelect(id: string) {
+        setActPackageId(id);
+        const pkg = actPackages.find(p => p.id === id);
+        if (pkg && actStart) {
+            const total = pkg.services.reduce((sum, s) => sum + s.serviceDurationMinutes, 0);
+            setActEnd(addMinutes(actStart, total));
+        }
+    }
+
+    function handleActStartChange(val: string) {
+        setActStart(val);
+        if (!val) return;
+        if (actType === "service" && actServiceId) {
+            const svc = actServices.find(s => s.id === actServiceId);
+            if (svc) setActEnd(addMinutes(val, svc.durationMinutes));
+        } else if (actType === "package" && actPackageId) {
+            const pkg = actPackages.find(p => p.id === actPackageId);
+            if (pkg) {
+                const total = pkg.services.reduce((sum, s) => sum + s.serviceDurationMinutes, 0);
+                setActEnd(addMinutes(val, total));
+            }
+        }
+    }
+
+    function handleActTypeChange(type: "service" | "package" | "custom") {
+        setActType(type);
+        setActServiceId("");
+        setActPackageId("");
+        const providerId = wStops.find(s => s.id === actTarget)?.providerId;
+        if (!providerId) return;
+        if (type === "service" && actServices.length === 0) fetchActServices(providerId);
+        if (type === "package" && actPackages.length === 0) fetchActPackages(providerId);
     }
 
     function confirmAddActivity() {
@@ -256,47 +351,208 @@ export default function AgencyToursPage() {
         const newActs: ActivityItem[] = [];
 
         if (actType === "service" && actServiceId) {
-            const svc = MOCK_SERVICES.find(s => s.id === actServiceId)!;
-            newActs.push({ id: uid(), type: "service", name: svc.name, startTime: actStart, endTime: actEnd, price: Number(actPrice) || svc.price, note: actNote });
+            const svc = actServices.find(s => s.id === actServiceId)!;
+            newActs.push({ id: uid(), type: "service", name: svc.name, serviceId: svc.id, startTime: actStart, endTime: actEnd, price: Number(actPrice) || svc.price, note: actNote });
         } else if (actType === "package" && actPackageId) {
-            const pkg = MOCK_PACKAGES.find(p => p.id === actPackageId)!;
-            pkg.services.forEach((svId, idx) => {
-                const svc = MOCK_SERVICES.find(s => s.id === svId)!;
-                newActs.push({ id: uid(), type: "package", name: svc.name, serviceName: pkg.name, startTime: actStart, endTime: actEnd, price: svc.price, note: actNote });
-            });
+            const pkg = actPackages.find(p => p.id === actPackageId)!;
+            let cursor = actStart;
+            for (const ps of pkg.services) {
+                const dur = Number(ps.serviceDurationMinutes) || 60;
+                const end = cursor ? addMinutes(cursor, dur) : "";
+                newActs.push({ id: uid(), type: "package", name: ps.serviceName, serviceId: ps.serviceId, serviceName: pkg.name, packageBasePrice: pkg.basePrice, startTime: cursor, endTime: end, price: ps.servicePrice, note: actNote });
+                if (end) cursor = end;
+            }
         } else if (actType === "custom" && actCustomName) {
             newActs.push({ id: uid(), type: "custom", name: actCustomName, startTime: actStart, endTime: actEnd, price: Number(actPrice) || 0, note: actNote });
         }
 
         if (!newActs.length) return;
-        setWStops(prev => prev.map(s =>
-            s.id === actTarget ? { ...s, activities: [...s.activities, ...newActs] } : s
-        ));
+
+        const currentStop = wStops.find(s => s.id === actTarget)!;
+        const candidateStop: StopWithActivities = { ...currentStop, activities: [...currentStop.activities, ...newActs] };
+
+        // Auto-detect and apply bundle when adding services
+        if (actType === "service") {
+            const bundle = detectBundle(candidateStop);
+            if (bundle) {
+                const matchedIds = new Set(bundle.matched.map(a => a.id));
+                const firstStart = bundle.matched.reduce((e, a) => (!e || (a.startTime && a.startTime < e)) ? a.startTime : e, "");
+                let cursor = firstStart;
+                const pkgActs: ActivityItem[] = bundle.pkg.services.map(ps => {
+                    const dur = Number(ps.serviceDurationMinutes) || 60;
+                    const end = cursor ? addMinutes(cursor, dur) : "";
+                    const act: ActivityItem = { id: uid(), type: "package", name: ps.serviceName, serviceId: ps.serviceId, serviceName: bundle.pkg.name, packageBasePrice: bundle.pkg.basePrice, startTime: cursor, endTime: end, price: ps.servicePrice, note: "" };
+                    if (end) cursor = end;
+                    return act;
+                });
+                const finalActivities = [...candidateStop.activities.filter(a => !matchedIds.has(a.id)), ...pkgActs];
+                setWStops(prev => prev.map(s => s.id === actTarget ? { ...s, activities: finalActivities } : s));
+                setActTarget(null);
+                return;
+            }
+        }
+
+        setWStops(prev => prev.map(s => s.id === actTarget ? candidateStop : s));
         setActTarget(null);
     }
 
     function removeActivity(stopId: string, actId: string) {
-        setWStops(prev => prev.map(s =>
-            s.id === stopId ? { ...s, activities: s.activities.filter(a => a.id !== actId) } : s
-        ));
+        setWStops(prev => prev.map(s => {
+            if (s.id !== stopId) return s;
+            const target = s.activities.find(a => a.id === actId);
+            if (target?.type === "package" && target.serviceName) {
+                const pkgName = target.serviceName;
+                return {
+                    ...s,
+                    activities: s.activities
+                        .filter(a => a.id !== actId)
+                        .map(a => a.type === "package" && a.serviceName === pkgName
+                            ? { ...a, type: "service" as const, serviceName: undefined }
+                            : a),
+                };
+            }
+            return { ...s, activities: s.activities.filter(a => a.id !== actId) };
+        }));
     }
 
-    function submitWizard() {
-        setTours(prev => [{
-            id: uid(),
-            name: wName,
-            description: wDesc,
-            price: Number(wPrice) || 0,
-            durationDays: Number(wDays) || 1,
-            status: wStatus,
-            stops: wStops.map(s => ({ name: s.name, address: s.address })),
-            schedules: [],
-        }, ...prev]);
+    function detectBundle(stop: StopWithActivities): { pkg: PackageWithServicesDTO; matched: ActivityItem[]; savings: number } | null {
+        if (!stop.providerId) return null;
+        const packages = providerPackagesCache[stop.providerId] ?? [];
+        const serviceActs = stop.activities.filter(a => a.type === "service" && a.serviceId);
+        const serviceIdSet = new Set(serviceActs.map(a => a.serviceId!));
+        for (const pkg of packages) {
+            const pkgIds = pkg.services.map(s => s.serviceId);
+            if (pkgIds.length < 2) continue;
+            if (pkgIds.every(id => serviceIdSet.has(id))) {
+                const matched = serviceActs.filter(a => pkgIds.includes(a.serviceId!));
+                const individualTotal = matched.reduce((sum, a) => sum + a.price, 0);
+                const savings = individualTotal - pkg.basePrice;
+                if (savings > 0) return { pkg, matched, savings };
+            }
+        }
+        return null;
+    }
+
+
+    function openEdit(tour: Itinerary) {
+        setEditMode(true);
+        setEditTargetId(tour.id);
+        setWName(tour.name);
+        setWDesc(tour.description);
+        setWDays(String(tour.durationDays));
+        setWStatus(tour.status);
+        setWizStep(1);
+        setWizError("");
+        setWizOpen(true);
+    }
+
+    function closeWizard() {
         setWizOpen(false);
         setWizStep(1);
-        setWName(""); setWDesc(""); setWPrice(""); setWDays(""); setWStatus("DRAFT");
+        setEditMode(false);
+        setEditTargetId(null);
+        setWName(""); setWDesc(""); setWDays(""); setWStatus("DRAFT");
+        setWImages([]); setWImagePreviews([]);
         setWStops([]);
         setPendingMarker(null); setPendingName(""); setPendingAddress("");
+    }
+
+    async function submitWizard() {
+        setWizError("");
+        setWizSubmitting(true);
+
+        // ── Edit mode ────────────────────────────────────────────────────────
+        if (editMode && editTargetId) {
+            const target = tours.find(t => t.id === editTargetId)!;
+            try {
+                const res = await agencyService.updateItinerary(editTargetId, {
+                    agencyId: editTargetId,
+                    name: wName.trim(),
+                    description: wDesc.trim(),
+                    price: target.price,
+                    durationDays: Number(wDays) || 1,
+                    status: wStatus,
+                });
+                if (res.data) {
+                    const updated: Itinerary = {
+                        ...target,
+                        name: res.data.name,
+                        description: res.data.description ?? "",
+                        durationDays: res.data.durationDays,
+                        price: res.data.price,
+                        status: res.data.status.toUpperCase() as TourStatus,
+                    };
+                    setTours(prev => prev.map(t => t.id === updated.id ? updated : t));
+                    if (detailTour?.id === updated.id) setDetailTour(prev => prev ? { ...prev, ...updated } : prev);
+                }
+                closeWizard();
+            } catch {
+                setWizError("Failed to save changes. Please try again.");
+            } finally {
+                setWizSubmitting(false);
+            }
+            return;
+        }
+
+        // ── Create mode ──────────────────────────────────────────────────────
+        const totalPrice = wStops.reduce((grand, stop) => {
+            const seen = new Set<string>();
+            return grand + stop.activities.reduce((sum, a) => {
+                if (a.type === "package" && a.serviceName && a.packageBasePrice !== undefined) {
+                    if (seen.has(a.serviceName)) return sum;
+                    seen.add(a.serviceName);
+                    return sum + a.packageBasePrice;
+                }
+                return sum + a.price;
+            }, 0);
+        }, 0);
+        const stops = wStops.map((stop, idx) => ({
+            stopOrder: idx,
+            name: stop.name,
+            longitude: stop.longitude,
+            latitude: stop.latitude,
+            address: stop.address ?? "",
+            providerId: stop.providerId,
+            activities: stop.activities
+                .filter(a => a.serviceId)
+                .map((act, jdx) => ({
+                    serviceId: act.serviceId!,
+                    activityOrder: jdx,
+                    startTime: act.startTime || "",
+                    endTime: act.endTime || "",
+                    price: act.price,
+                    note: act.note,
+                })),
+        }));
+        const formData = new FormData();
+        formData.append("name", wName.trim());
+        formData.append("description", wDesc.trim());
+        formData.append("duration", String(Number(wDays) || 1));
+        formData.append("price", String(totalPrice));
+        formData.append("stopsJson", JSON.stringify(stops));
+        wImages.forEach(f => formData.append("images", f));
+        try {
+            const created = await agencyService.createItinerary(formData);
+            if (created.data) {
+                const dto = created.data;
+                setTours(prev => [{
+                    id: dto.id,
+                    name: dto.name,
+                    description: dto.description ?? "",
+                    price: dto.price,
+                    durationDays: dto.durationDays,
+                    status: dto.status.toUpperCase() as TourStatus,
+                    stopCount: dto.stopCount ?? 0,
+                    stops: [],
+                    schedules: [],
+                }, ...prev]);
+            }
+            closeWizard();
+        } catch {
+            setWizError("Failed to create tour. Please try again.");
+        } finally {
+            setWizSubmitting(false);
+        }
     }
 
     const ACTIVITY_TYPE_COLOR: Record<string, { bg: string; color: string }> = {
@@ -352,6 +608,8 @@ export default function AgencyToursPage() {
 
             {/* ── Tour cards ── */}
             <div className={styles.tourGrid}>
+                {toursLoading && <p style={{ color: "#6b7280", gridColumn: "1/-1" }}>Loading tours…</p>}
+                {!toursLoading && filtered.length === 0 && <p style={{ color: "#6b7280", gridColumn: "1/-1" }}>No tours found.</p>}
                 {filtered.map(tour => {
                     const cfg = STATUS_CFG[tour.status];
                     const upcomingCount = tour.schedules.filter(s => new Date(s.endTime) >= new Date()).length;
@@ -379,7 +637,7 @@ export default function AgencyToursPage() {
                                 </span>
                                 <span className={styles.tourMetaItem}>
                                     <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
-                                    {tour.stops.length} {tour.stops.length === 1 ? "stop" : "stops"}
+                                    {tour.stopCount} {tour.stopCount === 1 ? "stop" : "stops"}
                                 </span>
                                 {upcomingCount > 0 && (
                                     <span className={styles.tourMetaItem} style={{ marginLeft: "auto", background: "#f5f3ff", border: "1px solid #ede9fe", color: "#6d28d9" }}>
@@ -410,12 +668,21 @@ export default function AgencyToursPage() {
 
                             {/* ── Actions footer ── */}
                             <div className={styles.tourCardActions}>
-                                <button className={styles.actionBtn}>
+                                <button className={styles.actionBtn} onClick={() => {
+                                        setDetailTour(tour);
+                                        agencyService.getSchedules(tour.id).then(res => {
+                                            if (res.data) {
+                                                const scheds: TourSchedule[] = res.data.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime }));
+                                                setDetailTour(prev => prev?.id === tour.id ? { ...prev, schedules: scheds } : prev);
+                                                setTours(prev => prev.map(t => t.id === tour.id ? { ...t, schedules: scheds } : t));
+                                            }
+                                        }).catch(() => {});
+                                    }}>
                                     <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
                                     View
                                 </button>
-                                <button className={styles.actionBtn}>
-                                    <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                <button className={styles.actionBtn} onClick={() => openEdit(tour)}>
+                                    <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
                                     Edit
                                 </button>
                                 <button className={`${styles.actionBtn} ${styles.actionBtnGreen}`} onClick={() => openSched(tour)}>
@@ -427,6 +694,184 @@ export default function AgencyToursPage() {
                     );
                 })}
             </div>
+
+            {/* ════════════════ DETAIL DRAWER ════════════════ */}
+            {detailTour && (
+                <div className={styles.drawerOverlay} onClick={() => setDetailTour(null)}>
+                    <aside className={styles.drawer} onClick={e => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className={styles.drawerHeader}>
+                            <div className={styles.drawerHeaderLeft}>
+                                <span
+                                    className={styles.drawerStatusDot}
+                                    style={{ background: STATUS_CFG[detailTour.status].accent }}
+                                />
+                                <div>
+                                    <h2 className={styles.drawerTitle}>{detailTour.name}</h2>
+                                    <span
+                                        className={styles.drawerStatusBadge}
+                                        style={{ background: STATUS_CFG[detailTour.status].bg, color: STATUS_CFG[detailTour.status].color }}
+                                    >
+                                        {STATUS_CFG[detailTour.status].label}
+                                    </span>
+                                </div>
+                            </div>
+                            <button className={styles.drawerCloseBtn} onClick={() => setDetailTour(null)}>
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className={styles.drawerBody}>
+
+                            {/* Overview */}
+                            <section className={styles.drawerSection}>
+                                <h3 className={styles.drawerSectionTitle}>
+                                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M12 8v4l3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                    Overview
+                                </h3>
+                                <div className={styles.drawerMetaGrid}>
+                                    <div className={styles.drawerMetaCell}>
+                                        <span className={styles.drawerMetaLabel}>Price</span>
+                                        <span className={styles.drawerMetaValue} style={{ color: "#4f46e5" }}>{fmtPrice(detailTour.price)}</span>
+                                    </div>
+                                    <div className={styles.drawerMetaCell}>
+                                        <span className={styles.drawerMetaLabel}>Duration</span>
+                                        <span className={styles.drawerMetaValue}>{detailTour.durationDays} day{detailTour.durationDays !== 1 ? "s" : ""}</span>
+                                    </div>
+                                    <div className={styles.drawerMetaCell}>
+                                        <span className={styles.drawerMetaLabel}>Stops</span>
+                                        <span className={styles.drawerMetaValue}>{detailTour.stopCount}</span>
+                                    </div>
+                                    <div className={styles.drawerMetaCell}>
+                                        <span className={styles.drawerMetaLabel}>Upcoming</span>
+                                        <span className={styles.drawerMetaValue}>
+                                            {detailTour.schedules.filter(s => new Date(s.endTime) >= new Date()).length}
+                                        </span>
+                                    </div>
+                                </div>
+                                {detailTour.description && (
+                                    <p className={styles.drawerDesc}>{detailTour.description}</p>
+                                )}
+                            </section>
+
+                            {/* Stops */}
+                            {detailTour.stops.length > 0 && (
+                                <section className={styles.drawerSection}>
+                                    <h3 className={styles.drawerSectionTitle}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                        Itinerary Stops
+                                    </h3>
+                                    <div className={styles.drawerStopList}>
+                                        {detailTour.stops.map((s, i) => (
+                                            <div key={i} className={styles.drawerStopRow}>
+                                                <div className={styles.drawerStopTrack}>
+                                                    <span className={styles.drawerStopNum}>{i + 1}</span>
+                                                    {i < detailTour.stops.length - 1 && <span className={styles.drawerStopLine} />}
+                                                </div>
+                                                <div className={styles.drawerStopInfo}>
+                                                    <p className={styles.drawerStopName}>{s.name}</p>
+                                                    <p className={styles.drawerStopAddr}>{s.address}</p>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </section>
+                            )}
+
+                            {/* Schedules */}
+                            <section className={styles.drawerSection}>
+                                <div className={styles.drawerSectionTitleRow}>
+                                    <h3 className={styles.drawerSectionTitle}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                        Schedules
+                                    </h3>
+                                    <button
+                                        className={styles.drawerAddSchedBtn}
+                                        onClick={() => { const t = detailTour; setDetailTour(null); setTimeout(() => openSched(t), 50); }}
+                                    >
+                                        <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                                        Add
+                                    </button>
+                                </div>
+
+                                {detailTour.schedules.length === 0 ? (
+                                    <div className={styles.drawerEmptySched}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="28" height="28"><rect x="3" y="4" width="18" height="18" rx="2" stroke="#d1d5db" strokeWidth="1.5"/><path d="M16 2v4M8 2v4M3 10h18" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                                        <p>No schedules yet</p>
+                                        <span>Add a departure date to start accepting bookings</span>
+                                    </div>
+                                ) : (
+                                    <div className={styles.drawerSchedList}>
+                                        {detailTour.schedules
+                                            .slice()
+                                            .sort((a, b) => a.startTime.localeCompare(b.startTime))
+                                            .map((sched, idx) => {
+                                                const start = new Date(sched.startTime);
+                                                const end   = new Date(sched.endTime);
+                                                const days  = Math.ceil((end.getTime() - start.getTime()) / 86400000);
+                                                const isPast    = end < new Date();
+                                                const isActive  = start <= new Date() && end >= new Date();
+                                                const isUpcoming = start > new Date();
+                                                const schedStatus = isPast ? "past" : isActive ? "active" : "upcoming";
+                                                const SCHED_CFG = {
+                                                    past:     { label: "Past",     bg: "#f3f4f6", color: "#6b7280", dot: "#9ca3af" },
+                                                    active:   { label: "Active",   bg: "#f0fdf4", color: "#15803d", dot: "#22c55e" },
+                                                    upcoming: { label: "Upcoming", bg: "#eff6ff", color: "#1d4ed8", dot: "#3b82f6" },
+                                                };
+                                                const cfg = SCHED_CFG[schedStatus];
+                                                const fmt = (d: Date) => d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+                                                return (
+                                                    <div key={sched.id} className={styles.drawerSchedCard}>
+                                                        <div className={styles.drawerSchedIndex}>{idx + 1}</div>
+                                                        <div className={styles.drawerSchedContent}>
+                                                            <div className={styles.drawerSchedDates}>
+                                                                <div className={styles.drawerSchedDateBlock}>
+                                                                    <span className={styles.drawerSchedDateLabel}>Departure</span>
+                                                                    <span className={styles.drawerSchedDateValue}>{fmt(start)}</span>
+                                                                </div>
+                                                                <div className={styles.drawerSchedArrow}>
+                                                                    <svg viewBox="0 0 24 6" fill="none" width="32" height="6">
+                                                                        <path d="M0 3h20M16 1l4 2-4 2" stroke="#d1d5db" strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+                                                                    </svg>
+                                                                    <span className={styles.drawerSchedDays}>{days}d</span>
+                                                                </div>
+                                                                <div className={styles.drawerSchedDateBlock}>
+                                                                    <span className={styles.drawerSchedDateLabel}>Return</span>
+                                                                    <span className={styles.drawerSchedDateValue}>{fmt(end)}</span>
+                                                                </div>
+                                                            </div>
+                                                            <span
+                                                                className={styles.drawerSchedStatusBadge}
+                                                                style={{ background: cfg.bg, color: cfg.color }}
+                                                            >
+                                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, display: "inline-block", flexShrink: 0 }} />
+                                                                {cfg.label}
+                                                            </span>
+                                                        </div>
+                                                        <button
+                                                            className={styles.drawerSchedDeleteBtn}
+                                                            title="Remove schedule"
+                                                            onClick={() => {
+                                                                agencyService.deleteSchedule(detailTour.id, sched.id).then(() => {
+                                                                    const updated = { ...detailTour, schedules: detailTour.schedules.filter(s => s.id !== sched.id) };
+                                                                    setTours(prev => prev.map(t => t.id === detailTour.id ? updated : t));
+                                                                    setDetailTour(updated);
+                                                                }).catch(() => {});
+                                                            }}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })}
+                                    </div>
+                                )}
+                            </section>
+                        </div>
+                    </aside>
+                </div>
+            )}
 
             {/* ════════════════ SCHEDULE MODAL ════════════════ */}
             {schedTarget && (
@@ -448,17 +893,43 @@ export default function AgencyToursPage() {
                             <div className={styles.fieldRow}>
                                 <div className={styles.field}>
                                     <label className={styles.label}>Departure Date <span className={styles.required}>*</span></label>
-                                    <input className={`${styles.input} ${schedErr && !schedStart ? styles.inputError : ""}`} type="date" value={schedStart} onChange={e => { setSchedStart(e.target.value); setSchedErr(""); }} />
+                                    <input
+                                        className={`${styles.input} ${schedErr && !schedStart ? styles.inputError : ""}`}
+                                        type="date" value={schedStart}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setSchedStart(val);
+                                            setSchedErr("");
+                                            if (val && schedTarget) {
+                                                const d = new Date(val);
+                                                d.setDate(d.getDate() + schedTarget.durationDays);
+                                                setSchedEnd(d.toISOString().slice(0, 10));
+                                            }
+                                        }}
+                                    />
                                 </div>
                                 <div className={styles.field}>
                                     <label className={styles.label}>Return Date <span className={styles.required}>*</span></label>
-                                    <input className={`${styles.input} ${schedErr && !schedEnd ? styles.inputError : ""}`} type="date" value={schedEnd} min={schedStart} onChange={e => { setSchedEnd(e.target.value); setSchedErr(""); }} />
+                                    <input
+                                        className={`${styles.input} ${schedErr && !schedEnd ? styles.inputError : ""}`}
+                                        type="date" value={schedEnd} min={schedStart}
+                                        onChange={e => {
+                                            const val = e.target.value;
+                                            setSchedEnd(val);
+                                            setSchedErr("");
+                                            if (val && schedTarget) {
+                                                const d = new Date(val);
+                                                d.setDate(d.getDate() - schedTarget.durationDays);
+                                                setSchedStart(d.toISOString().slice(0, 10));
+                                            }
+                                        }}
+                                    />
                                 </div>
                             </div>
                             {schedStart && schedEnd && (
                                 <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:9, padding:"10px 14px", fontSize:13, color:"#15803d", display:"flex", alignItems:"center", gap:7 }}>
                                     <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                    Duration: {Math.ceil((new Date(schedEnd).getTime() - new Date(schedStart).getTime()) / 86400000)} days
+                                    {schedTarget?.durationDays} days · {new Date(schedStart).toLocaleDateString("en-GB")} → {new Date(schedEnd).toLocaleDateString("en-GB")}
                                 </div>
                             )}
                             {schedErr && <p className={styles.errorMsg}>{schedErr}</p>}
@@ -476,11 +947,11 @@ export default function AgencyToursPage() {
 
             {/* ════════════════ CREATE TOUR WIZARD ════════════════ */}
             {wizOpen && (
-                <div className={styles.overlay} onClick={() => setWizOpen(false)}>
+                <div className={styles.overlay} onClick={closeWizard}>
                     <div className={styles.wizardModal} onClick={e => e.stopPropagation()}>
 
-                        {/* Step bar */}
-                        <div className={styles.wizardSteps}>
+                        {/* Step bar — hidden in edit mode */}
+                        <div className={styles.wizardSteps} style={editMode ? { display: "none" } : undefined}>
                             {[
                                 { n:1, label:"Basic Info"    },
                                 { n:2, label:"Itinerary Map" },
@@ -503,8 +974,8 @@ export default function AgencyToursPage() {
                         {wizStep === 1 && (
                             <div className={styles.wizardBody}>
                                 <div>
-                                    <p className={styles.stepTitle}>Basic Information</p>
-                                    <p className={styles.stepSubtitle}>Give your itinerary a name, description, duration and price.</p>
+                                    <p className={styles.stepTitle}>{editMode ? "Edit Tour" : "Basic Information"}</p>
+                                    <p className={styles.stepSubtitle}>{editMode ? "Update the tour name, description, duration and status." : "Give your itinerary a name, description and duration."}</p>
                                 </div>
                                 <div className={styles.field}>
                                     <label className={styles.label}>Tour Name <span className={styles.required}>*</span></label>
@@ -514,24 +985,56 @@ export default function AgencyToursPage() {
                                     <label className={styles.label}>Description</label>
                                     <textarea className={styles.textarea} placeholder="Briefly describe this tour…" rows={3} value={wDesc} onChange={e => setWDesc(e.target.value)} />
                                 </div>
-                                <div className={styles.fieldRow}>
-                                    <div className={styles.field}>
-                                        <label className={styles.label}>Price (₫) <span className={styles.required}>*</span></label>
-                                        <input className={styles.input} type="number" min="0" placeholder="3500000" value={wPrice} onChange={e => setWPrice(e.target.value)} />
-                                    </div>
+                                <div className={`${styles.fieldRow} ${editMode ? "" : ""}`}>
                                     <div className={styles.field}>
                                         <label className={styles.label}>Duration (days) <span className={styles.required}>*</span></label>
                                         <input className={styles.input} type="number" min="1" placeholder="3" value={wDays} onChange={e => setWDays(e.target.value)} />
                                     </div>
+                                    {editMode && (
+                                        <div className={styles.field}>
+                                            <label className={styles.label}>Status</label>
+                                            <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
+                                                <option value="DRAFT">Draft</option>
+                                                <option value="ACTIVE">Active</option>
+                                                <option value="INACTIVE">Inactive</option>
+                                            </select>
+                                        </div>
+                                    )}
                                 </div>
-                                <div className={styles.field}>
-                                    <label className={styles.label}>Initial Status</label>
-                                    <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
-                                        <option value="DRAFT">Draft — not visible to customers</option>
-                                        <option value="ACTIVE">Active — visible and bookable</option>
-                                        <option value="INACTIVE">Inactive — hidden</option>
-                                    </select>
-                                </div>
+                                {!editMode && (
+                                    <div className={styles.field}>
+                                        <label className={styles.label}>Tour Images</label>
+                                        <label className={styles.imageUploadArea}>
+                                            <input
+                                                type="file" accept="image/*" multiple style={{ display: "none" }}
+                                                onChange={e => {
+                                                    const files = Array.from(e.target.files ?? []);
+                                                    setWImages(prev => [...prev, ...files]);
+                                                    setWImagePreviews(prev => [...prev, ...files.map(f => URL.createObjectURL(f))]);
+                                                    e.target.value = "";
+                                                }}
+                                            />
+                                            <svg viewBox="0 0 24 24" fill="none" width="20" height="20" style={{ color: "#9ca3af" }}>
+                                                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                            <span style={{ fontSize: 13, color: "#6b7280" }}>Click to upload images</span>
+                                        </label>
+                                        {wImagePreviews.length > 0 && (
+                                            <div className={styles.imagePreviews}>
+                                                {wImagePreviews.map((src, i) => (
+                                                    <div key={i} className={styles.imagePreviewWrap}>
+                                                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                                                        <img src={src} alt="" className={styles.imagePreviewImg} />
+                                                        <button type="button" className={styles.imagePreviewRemove} onClick={() => {
+                                                            setWImages(prev => prev.filter((_, j) => j !== i));
+                                                            setWImagePreviews(prev => prev.filter((_, j) => j !== i));
+                                                        }}>×</button>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
                             </div>
                         )}
 
@@ -548,6 +1051,8 @@ export default function AgencyToursPage() {
                                         <TourMapBuilder
                                             stops={wStops.map(s => ({ id: s.id, name: s.name, latitude: s.latitude, longitude: s.longitude }))}
                                             onMapClick={handleMapClick}
+                                            providers={providerMarkers}
+                                            onProviderClick={p => setConfirmProvider(p)}
                                         />
 
                                         {/* Right: stops panel */}
@@ -600,6 +1105,25 @@ export default function AgencyToursPage() {
                                                 ))
                                             )}
                                         </div>
+                                        {wStops.length > 0 && (() => {
+                                            const total = wStops.reduce((grand, stop) => {
+                                                const seen = new Set<string>();
+                                                return grand + stop.activities.reduce((sum, a) => {
+                                                    if (a.type === "package" && a.serviceName && a.packageBasePrice !== undefined) {
+                                                        if (seen.has(a.serviceName)) return sum;
+                                                        seen.add(a.serviceName);
+                                                        return sum + a.packageBasePrice;
+                                                    }
+                                                    return sum + a.price;
+                                                }, 0);
+                                            }, 0);
+                                            return total > 0 ? (
+                                                <div style={{ padding: "10px 14px", borderTop: "1px solid #e5e7eb", background: "#f9fafb", borderRadius: "0 0 10px 10px", display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                                    <span style={{ fontSize: 12, color: "#6b7280", fontWeight: 500 }}>Total activities</span>
+                                                    <span style={{ fontSize: 13, fontWeight: 700, color: "#4f46e5" }}>{fmtPrice(total)}</span>
+                                                </div>
+                                            ) : null;
+                                        })()}
                                     </div>
                                 </div>
                             </div>
@@ -619,8 +1143,7 @@ export default function AgencyToursPage() {
                                     </p>
                                     <div className={styles.reviewRow}><span className={styles.reviewKey}>Name</span><span className={styles.reviewVal}>{wName || "—"}</span></div>
                                     <div className={styles.reviewRow}><span className={styles.reviewKey}>Duration</span><span className={styles.reviewVal}>{wDays || "—"} days</span></div>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Price</span><span className={styles.reviewVal}>{wPrice ? fmtPrice(Number(wPrice)) : "—"}</span></div>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Status</span><span className={styles.reviewVal}>{wStatus}</span></div>
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Status</span><span className={styles.reviewVal}>Draft</span></div>
                                 </div>
                                 <div className={styles.reviewSection}>
                                     <p className={styles.reviewSectionTitle}>
@@ -649,22 +1172,36 @@ export default function AgencyToursPage() {
 
                         {/* Wizard footer */}
                         <div className={styles.wizardFooter}>
-                            <button className={styles.btnBack} onClick={() => { if (wizStep > 1) setWizStep(s => s - 1); else setWizOpen(false); }}>
+                            <button className={styles.btnBack} onClick={() => { if (!editMode && wizStep > 1) setWizStep(s => s - 1); else closeWizard(); }}>
                                 <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                {wizStep === 1 ? "Cancel" : "Back"}
+                                {!editMode && wizStep > 1 ? "Back" : "Cancel"}
                             </button>
                             <div className={styles.wizardFooterRight}>
-                                <span style={{ fontSize:12, color:"#9ca3af" }}>Step {wizStep} of 3</span>
-                                {wizStep < 3
-                                    ? <button className={styles.btnNext} onClick={() => setWizStep(s => s + 1)} disabled={wizStep === 1 && !wName.trim()}>
-                                        Next
-                                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                {!editMode && <span style={{ fontSize:12, color:"#9ca3af" }}>Step {wizStep} of 3</span>}
+                                {editMode
+                                    ? <button className={styles.btnNext} onClick={submitWizard} disabled={wizSubmitting}>
+                                        {wizSubmitting ? "Saving…" : (
+                                            <>
+                                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                Save Changes
+                                            </>
+                                        )}
                                       </button>
-                                    : <button className={styles.btnNext} onClick={submitWizard}>
-                                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                        Create Tour
-                                      </button>
+                                    : wizStep < 3
+                                        ? <button className={styles.btnNext} onClick={() => { setWizError(""); setWizStep(s => s + 1); }} disabled={wizStep === 1 && !wName.trim()}>
+                                            Next
+                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                          </button>
+                                        : <button className={styles.btnNext} onClick={submitWizard} disabled={wizSubmitting}>
+                                            {wizSubmitting ? "Creating…" : (
+                                                <>
+                                                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                    Create Tour
+                                                </>
+                                            )}
+                                          </button>
                                 }
+                                {wizError && <p style={{ fontSize: 12, color: "#ef4444", margin: "6px 0 0", textAlign: "right" }}>{wizError}</p>}
                             </div>
                         </div>
                     </div>
@@ -687,8 +1224,11 @@ export default function AgencyToursPage() {
                         <div className={styles.modalBody} style={{ overflowY:"auto", maxHeight:"55vh" }}>
                             {/* Type tabs */}
                             <div className={styles.activityTypeTabs}>
-                                {(["service","package","custom"] as const).map(t => (
-                                    <button key={t} className={`${styles.activityTypeTab} ${actType === t ? styles.activityTypeTabActive : ""}`} onClick={() => setActType(t)}>
+                                {(wStops.find(s => s.id === actTarget)?.providerId
+                                    ? (["service","package","custom"] as const)
+                                    : (["custom"] as const)
+                                ).map(t => (
+                                    <button key={t} className={`${styles.activityTypeTab} ${actType === t ? styles.activityTypeTabActive : ""}`} onClick={() => handleActTypeChange(t)}>
                                         {t === "service" ? "Service" : t === "package" ? "Package" : "Custom"}
                                     </button>
                                 ))}
@@ -703,14 +1243,20 @@ export default function AgencyToursPage() {
                             {actType === "service" && (
                                 <div className={styles.field}>
                                     <label className={styles.label}>Select Service</label>
-                                    <div className={styles.serviceGrid}>
-                                        {MOCK_SERVICES.map(svc => (
-                                            <div key={svc.id} className={`${styles.serviceOption} ${actServiceId === svc.id ? styles.serviceOptionSelected : ""}`} onClick={() => setActServiceId(svc.id)}>
-                                                <p className={styles.serviceOptName}>{svc.name}</p>
-                                                <p className={styles.serviceOptMeta}>{svc.category} · {svc.duration} min · {fmtPrice(svc.price)}</p>
-                                            </div>
-                                        ))}
-                                    </div>
+                                    {actDataLoading ? (
+                                        <p style={{ fontSize:12, color:"#9ca3af" }}>Loading…</p>
+                                    ) : actServices.length === 0 ? (
+                                        <p style={{ fontSize:12, color:"#9ca3af" }}>No services found for this provider.</p>
+                                    ) : (
+                                        <div className={styles.serviceGrid}>
+                                            {actServices.map(svc => (
+                                                <div key={svc.id} className={`${styles.serviceOption} ${actServiceId === svc.id ? styles.serviceOptionSelected : ""}`} onClick={() => handleActServiceSelect(svc.id)}>
+                                                    <p className={styles.serviceOptName}>{svc.name}</p>
+                                                    <p className={styles.serviceOptMeta}>{svc.durationMinutes} min · {fmtPrice(svc.price)}</p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -718,17 +1264,20 @@ export default function AgencyToursPage() {
                             {actType === "package" && (
                                 <div className={styles.field}>
                                     <label className={styles.label}>Select Package</label>
-                                    <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                                        {MOCK_PACKAGES.map(pkg => {
-                                            const svcNames = pkg.services.map(id => MOCK_SERVICES.find(s => s.id === id)?.name).join(", ");
-                                            return (
-                                                <div key={pkg.id} className={`${styles.serviceOption} ${actPackageId === pkg.id ? styles.serviceOptionSelected : ""}`} onClick={() => setActPackageId(pkg.id)} style={{ gridColumn:"1/-1" }}>
-                                                    <p className={styles.serviceOptName}>{pkg.name} — {fmtPrice(pkg.price)}</p>
-                                                    <p className={styles.serviceOptMeta}>{svcNames}</p>
+                                    {actDataLoading ? (
+                                        <p style={{ fontSize:12, color:"#9ca3af" }}>Loading…</p>
+                                    ) : actPackages.length === 0 ? (
+                                        <p style={{ fontSize:12, color:"#9ca3af" }}>No packages found for this provider.</p>
+                                    ) : (
+                                        <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                                            {actPackages.map(pkg => (
+                                                <div key={pkg.id} className={`${styles.serviceOption} ${actPackageId === pkg.id ? styles.serviceOptionSelected : ""}`} onClick={() => handleActPackageSelect(pkg.id)} style={{ gridColumn:"1/-1" }}>
+                                                    <p className={styles.serviceOptName}>{pkg.name} — {fmtPrice(pkg.basePrice)}</p>
+                                                    <p className={styles.serviceOptMeta}>{pkg.services.map(s => s.serviceName).join(", ")}</p>
                                                 </div>
-                                            );
-                                        })}
-                                    </div>
+                                            ))}
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
@@ -744,7 +1293,7 @@ export default function AgencyToursPage() {
                             <div className={styles.fieldRow} style={{ marginTop:12 }}>
                                 <div className={styles.field}>
                                     <label className={styles.label}>Start Time</label>
-                                    <input className={styles.input} type="time" value={actStart} onChange={e => setActStart(e.target.value)} />
+                                    <input className={styles.input} type="time" value={actStart} onChange={e => handleActStartChange(e.target.value)} />
                                 </div>
                                 <div className={styles.field}>
                                     <label className={styles.label}>End Time</label>
@@ -821,6 +1370,41 @@ export default function AgencyToursPage() {
                                 disabled={!pendingName.trim()}
                                 onClick={confirmPendingStop}
                             >
+                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                                Add Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ════════════════ PROVIDER CONFIRM DIALOG ════════════════ */}
+            {confirmProvider && (
+                <div className={styles.overlay} style={{ zIndex: 600 }} onClick={() => setConfirmProvider(null)}>
+                    <div className={styles.pendingStopModal} onClick={e => e.stopPropagation()} style={{ maxWidth: 380 }}>
+                        <div className={styles.modalHeader}>
+                            <div>
+                                <h3 className={styles.modalTitle}>Add as Stop?</h3>
+                                <p className={styles.modalSubtitle}>{confirmProvider.name}</p>
+                            </div>
+                            <button className={styles.modalCloseBtn} onClick={() => setConfirmProvider(null)}>
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                            </button>
+                        </div>
+                        <div className={styles.modalBody}>
+                            {confirmProvider.address && (
+                                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 4px" }}>{confirmProvider.address}</p>
+                            )}
+                            {confirmProvider.contactPhone && (
+                                <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>{confirmProvider.contactPhone}</p>
+                            )}
+                            <p style={{ fontSize: 13, color: "#374151", marginTop: 12 }}>
+                                Use <strong>{confirmProvider.name}</strong> as the next stop on this tour?
+                            </p>
+                        </div>
+                        <div className={styles.modalFooter}>
+                            <button className={styles.btnCancel} onClick={() => setConfirmProvider(null)}>Cancel</button>
+                            <button className={styles.btnSubmit} onClick={confirmProviderAsStop}>
                                 <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
                                 Add Stop
                             </button>

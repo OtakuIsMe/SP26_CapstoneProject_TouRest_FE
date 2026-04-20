@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useRef, useEffect } from "react";
+import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
 import MapPicker from "@/components/commons/map-picker/map-picker";
 import { agencyService } from "@/libs/services/agency.service";
+import { StorageKeys } from "@/constants/storage";
 import styles from "./page.module.scss";
 
 interface ImagePreview {
@@ -16,13 +17,22 @@ interface ImagePreview {
 
 export default function BecomeAgencyPage() {
     const router = useRouter();
+    const pathname = usePathname();
+    const [isLoggedIn, setIsLoggedIn] = useState<boolean | null>(null);
+
+    useEffect(() => {
+        setIsLoggedIn(!!localStorage.getItem(StorageKeys.ACCESS_TOKEN));
+    }, []);
 
     const [name, setName] = useState("");
     const [description, setDescription] = useState("");
     const [contactEmail, setContactEmail] = useState("");
     const [contactPhone, setContactPhone] = useState("");
+    const [address, setAddress] = useState("");
     const [latitude, setLatitude] = useState("");
     const [longitude, setLongitude] = useState("");
+    const [startTime, setStartTime] = useState("");
+    const [endTime, setEndTime] = useState("");
     const [images, setImages] = useState<ImagePreview[]>([]);
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -52,29 +62,20 @@ export default function BecomeAgencyPage() {
         setLoading(true);
 
         try {
-            const imageDataUrls = await Promise.all(
-                images.map(
-                    (img) =>
-                        new Promise<string>((resolve, reject) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result as string);
-                            reader.onerror = reject;
-                            reader.readAsDataURL(img.file);
-                        })
-                )
-            );
+            const formData = new FormData();
+            formData.append("Name", name.trim());
+            formData.append("Description", description.trim());
+            formData.append("ContactEmail", contactEmail.trim());
+            formData.append("ContactPhone", contactPhone.trim());
+            formData.append("Address", address.trim());
+            formData.append("StartTime", startTime);
+            formData.append("EndTime", endTime);
+            if (latitude)  formData.append("Latitude", latitude);
+            if (longitude) formData.append("Longitude", longitude);
+            images.forEach((img) => formData.append("Images", img.file));
 
-            await agencyService.register({
-                name: name.trim(),
-                description: description.trim() || undefined,
-                contactEmail: contactEmail.trim(),
-                contactPhone: contactPhone.trim(),
-                latitude: latitude ? parseFloat(latitude) : undefined,
-                longitude: longitude ? parseFloat(longitude) : undefined,
-                images: imageDataUrls.length > 0 ? imageDataUrls : undefined,
-            });
-
-            router.push("/signin");
+            await agencyService.register(formData);
+            router.push("/");
         } catch (err: any) {
             const msg =
                 err?.response?.data?.message ||
@@ -84,6 +85,8 @@ export default function BecomeAgencyPage() {
             setLoading(false);
         }
     }
+
+    if (isLoggedIn === null) return null;
 
     return (
         <main>
@@ -100,6 +103,29 @@ export default function BecomeAgencyPage() {
                 </div>
 
                 <div className={styles.container}>
+                    {!isLoggedIn ? (
+                        <div className={styles.loginGate}>
+                            <div className={styles.loginGateIcon}>
+                                <svg viewBox="0 0 24 24" fill="none">
+                                    <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/>
+                                    <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </div>
+                            <h2 className={styles.loginGateTitle}>Sign in to continue</h2>
+                            <p className={styles.loginGateDesc}>
+                                You need a TouRest customer account to apply as an Agency partner.
+                            </p>
+                            <div className={styles.loginGateBtns}>
+                                <Link href={`/signin?redirect=${encodeURIComponent(pathname ?? "/become-agency")}`} className={styles.loginGateSignIn}>
+                                    Sign In
+                                </Link>
+                                <Link href="/signup" className={styles.loginGateSignUp}>
+                                    Create Account
+                                </Link>
+                            </div>
+                            <Link href="/" className={styles.loginGateBack}>← Back to home</Link>
+                        </div>
+                    ) : (
                     <form className={styles.form} onSubmit={handleSubmit}>
                         {error && <p className={styles.error}>{error}</p>}
 
@@ -210,6 +236,22 @@ export default function BecomeAgencyPage() {
                                 </div>
                             </div>
 
+                            <div className={styles.fields}>
+                                <div className={styles.fieldFull}>
+                                    <label className={styles.label}>
+                                        Address <span className={styles.required}>*</span>
+                                    </label>
+                                    <input
+                                        className={styles.input}
+                                        type="text"
+                                        placeholder="e.g. 123 Nguyen Hue, District 1, Ho Chi Minh City"
+                                        value={address}
+                                        onChange={(e) => setAddress(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
+
                             <MapPicker
                                 latitude={latitude ? parseFloat(latitude) : undefined}
                                 longitude={longitude ? parseFloat(longitude) : undefined}
@@ -218,6 +260,49 @@ export default function BecomeAgencyPage() {
                                     setLongitude(String(lng));
                                 }}
                             />
+                        </section>
+
+                        {/* ── Section: Operating Hours ── */}
+                        <section className={styles.section}>
+                            <div className={styles.sectionHeader}>
+                                <div className={styles.sectionIcon}>
+                                    <svg viewBox="0 0 24 24" fill="none">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                                    </svg>
+                                </div>
+                                <div>
+                                    <h2 className={styles.sectionTitle}>Operating Hours</h2>
+                                    <p className={styles.sectionDesc}>Your agency's daily opening and closing times</p>
+                                </div>
+                            </div>
+
+                            <div className={styles.fields}>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>
+                                        Opening Time <span className={styles.required}>*</span>
+                                    </label>
+                                    <input
+                                        className={styles.input}
+                                        type="time"
+                                        value={startTime}
+                                        onChange={(e) => setStartTime(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>
+                                        Closing Time <span className={styles.required}>*</span>
+                                    </label>
+                                    <input
+                                        className={styles.input}
+                                        type="time"
+                                        value={endTime}
+                                        onChange={(e) => setEndTime(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                            </div>
                         </section>
 
                         {/* ── Section: Images ── */}
@@ -293,6 +378,7 @@ export default function BecomeAgencyPage() {
                             <Link href="#">Agency Partnership Guidelines</Link>.
                         </p>
                     </form>
+                    )}
                 </div>
             </div>
 

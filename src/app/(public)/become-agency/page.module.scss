@@ -362,3 +362,86 @@
         }
     }
 }
+
+/* ── Login Gate ── */
+.loginGate {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    padding: 80px 24px;
+    max-width: 480px;
+    margin: 0 auto;
+}
+
+.loginGateIcon {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #eef2ff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 24px;
+    color: #6366f1;
+
+    svg {
+        width: 32px;
+        height: 32px;
+    }
+}
+
+.loginGateTitle {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1a1a2e;
+    margin: 0 0 12px;
+}
+
+.loginGateDesc {
+    font-size: 15px;
+    color: #666;
+    line-height: 1.6;
+    margin: 0 0 32px;
+}
+
+.loginGateBtns {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.loginGateSignIn {
+    padding: 12px 32px;
+    background: #1a2a45;
+    color: #fff;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.18s;
+
+    &:hover { background: #243650; }
+}
+
+.loginGateSignUp {
+    padding: 12px 32px;
+    background: #fff;
+    color: #1a2a45;
+    border: 1.5px solid #d0d5dd;
+    border-radius: 8px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: border-color 0.18s, background 0.18s;
+
+    &:hover { border-color: #1a2a45; background: #f8f9fb; }
+}
+
+.loginGateBack {
+    font-size: 13px;
+    color: #888;
+    text-decoration: none;
+
+    &:hover { color: #333; }
+}

@@ -44,9 +44,9 @@ const columns: ColumnDef<ServiceDTO>[] = [
         sortable: true,
         render: (row) => (
             <div className={styles.priceCell}>
-                <span className={styles.price}>${row.price.toLocaleString()}</span>
+                <span className={styles.price}>{row.price.toLocaleString("vi-VN")}đ</span>
                 {row.basePrice !== row.price && (
-                    <span className={styles.basePrice}>${row.basePrice.toLocaleString()}</span>
+                    <span className={styles.basePrice}>{row.basePrice.toLocaleString("vi-VN")}đ</span>
                 )}
             </div>
         ),
@@ -92,13 +92,16 @@ export default function ProviderServicesPage() {
     const fetchData = useCallback(async (p: number, ps: number, q: string, st: string) => {
         setLoading(true);
         try {
-            const res = await providerService.getServices({
-                page: p, pageSize: ps,
-                search: q || undefined,
-                status: st || undefined,
-            });
-            setData(res.data.items);
-            setTotal(res.data.totalCount);
+            const meRes = await providerService.getMe();
+            const providerId = meRes.data?.id;
+            if (!providerId) return;
+            const res = await providerService.getServicesByProvider(providerId);
+            let items = res.data ?? [];
+            if (q) items = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()));
+            if (st) items = items.filter(i => i.status === st);
+            const start = (p - 1) * ps;
+            setData(items.slice(start, start + ps));
+            setTotal(items.length);
         } finally {
             setLoading(false);
         }
