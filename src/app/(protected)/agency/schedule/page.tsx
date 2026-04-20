@@ -236,9 +236,8 @@ export default function AgencySchedulePage() {
     const upcomingRuns = useMemo(() => {
         return MOCK_RUNS
             .filter(r => {
-                const matchStatus = statusFilter === "all" || r.status === statusFilter;
-                const notDone = r.status !== "completed" && r.status !== "cancelled";
-                return matchStatus || (statusFilter !== "all" ? matchStatus : notDone);
+                if (statusFilter === "all") return r.status !== "completed" && r.status !== "cancelled";
+                return r.status === statusFilter;
             })
             .sort((a, b) => parseDate(a.startDate).getTime() - parseDate(b.startDate).getTime());
     }, [statusFilter]);
