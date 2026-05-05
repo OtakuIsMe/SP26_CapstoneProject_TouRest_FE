@@ -1,11 +1,12 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
 import { userService } from "@/libs/services/user.service";
 import { UserDTO } from "@/types/user.type";
 import AddUserModal from "@/components/features/users/AddUserModal";
+import ViewUserModal from "@/components/features/users/ViewUserModal";
+import EditUserModal from "@/components/features/users/EditUserModal";
 import styles from "./page.module.scss";
 
 // ── Column definitions ─────────────────────────────────────────────────────────
@@ -76,15 +77,15 @@ const columns: ColumnDef<UserDTO>[] = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminUsersPage() {
-    const router = useRouter();
-
     const [users, setUsers]         = useState<UserDTO[]>([]);
     const [loading, setLoading]     = useState(true);
     const [totalCount, setTotal]    = useState(0);
     const [page, setPage]           = useState(1);
     const [pageSize, setPageSize]   = useState(10);
     const [search, setSearch]       = useState("");
-    const [modalOpen, setModalOpen] = useState(false);
+    const [modalOpen, setModalOpen]   = useState(false);
+    const [viewUserId, setViewUserId] = useState<string | null>(null);
+    const [editUserId, setEditUserId] = useState<string | null>(null);
 
     const fetchUsers = useCallback(async (p: number, ps: number, q: string) => {
         setLoading(true);
@@ -116,12 +117,12 @@ export default function AdminUsersPage() {
         {
             label: "View",
             variant: "view",
-            onClick: (row) => router.push(`/admin/users/${row.id}`),
+            onClick: (row) => setViewUserId(row.id),
         },
         {
             label: "Edit",
             variant: "edit",
-            onClick: (row) => router.push(`/admin/users/${row.id}/edit`),
+            onClick: (row) => setEditUserId(row.id),
         },
         {
             label: "Delete",
@@ -167,6 +168,15 @@ export default function AdminUsersPage() {
                 open={modalOpen}
                 onClose={() => setModalOpen(false)}
                 onCreated={() => fetchUsers(page, pageSize, search)}
+            />
+            <ViewUserModal
+                userId={viewUserId}
+                onClose={() => setViewUserId(null)}
+            />
+            <EditUserModal
+                userId={editUserId}
+                onClose={() => setEditUserId(null)}
+                onUpdated={() => fetchUsers(page, pageSize, search)}
             />
         </div>
     );

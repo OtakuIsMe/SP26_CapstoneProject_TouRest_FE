@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import styles from "./page.module.scss";
 import TourMapBuilder from "@/components/commons/tour-map-builder/tour-map-builder";
 import { agencyService, ProviderMarker, CreateItineraryPayload } from "@/libs/services/agency.service";
+import { userService } from "@/libs/services/user.service";
+import type { UserDTO } from "@/types/user.type";
 import { providerService } from "@/libs/services/provider.service";
 import type { ServiceDTO } from "@/types/service.type";
 import type { PackageWithServicesDTO } from "@/types/package.type";
@@ -41,6 +43,10 @@ interface TourSchedule {
     id: string;
     startTime: string;
     endTime: string;
+    spot: number;
+    spotLeft: number;
+    guideId?: string;
+    guideName?: string;
 }
 
 interface Itinerary {
@@ -76,10 +82,14 @@ export default function AgencyToursPage() {
     const [detailTour, setDetailTour] = useState<Itinerary | null>(null);
 
     // Schedule modal
-    const [schedTarget, setSchedTarget] = useState<Itinerary | null>(null);
-    const [schedStart, setSchedStart] = useState("");
-    const [schedEnd,   setSchedEnd]   = useState("");
-    const [schedErr,   setSchedErr]   = useState("");
+    const [schedTarget,  setSchedTarget]  = useState<Itinerary | null>(null);
+    const [schedStart,   setSchedStart]   = useState("");
+    const [schedEnd,     setSchedEnd]     = useState("");
+    const [schedSpot,    setSchedSpot]    = useState("");
+    const [schedGuideId, setSchedGuideId] = useState("");
+    const [schedErr,     setSchedErr]     = useState("");
+    const [agencyUsers,  setAgencyUsers]  = useState<UserDTO[]>([]);
+    const [agencyId,     setAgencyId]     = useState<string>("");
 
     // Wizard modal
     const [wizOpen, setWizOpen]     = useState(false);
@@ -102,7 +112,12 @@ export default function AgencyToursPage() {
         agencyService.getMe()
             .then(meRes => {
                 if (!meRes.data) return;
-                return agencyService.getItinerariesByAgency(meRes.data.id);
+                setAgencyId(meRes.data.id);
+                // Pre-fetch all users for guide dropdown
+                userService.getAllUsers()
+                    .then(r => { if (r.data) setAgencyUsers(r.data); })
+                    .catch(() => {});
+                return agencyService.getMyItineraries();
             })
             .then(res => {
                 if (res?.data) {
@@ -169,20 +184,30 @@ export default function AgencyToursPage() {
         setSchedTarget(tour);
         setSchedStart("");
         setSchedEnd("");
+        setSchedSpot("");
+        setSchedGuideId("");
         setSchedErr("");
     }
 
     async function submitSched() {
-        if (!schedStart || !schedEnd) { setSchedErr("Please select both start and end dates."); return; }
-        if (schedEnd <= schedStart)   { setSchedErr("End date must be after start date."); return; }
+        if (!schedStart || !schedEnd)          { setSchedErr("Please select both start and end dates."); return; }
+        if (schedEnd <= schedStart)            { setSchedErr("End date must be after start date."); return; }
+        const spotNum = parseInt(schedSpot, 10);
+        if (!schedSpot || isNaN(spotNum) || spotNum < 1) { setSchedErr("Spot must be at least 1."); return; }
         try {
             const res = await agencyService.addSchedule(
                 schedTarget!.id,
                 new Date(schedStart).toISOString(),
-                new Date(schedEnd).toISOString()
+                new Date(schedEnd).toISOString(),
+                spotNum,
+                schedGuideId || undefined,
             );
             if (res.data) {
-                const newSched: TourSchedule = { id: res.data.id, startTime: res.data.startTime, endTime: res.data.endTime };
+                const d = res.data;
+                const newSched: TourSchedule = {
+                    id: d.id, startTime: d.startTime, endTime: d.endTime,
+                    spot: d.spot, spotLeft: d.spotLeft, guideId: d.guideId, guideName: d.guideName,
+                };
                 setTours(prev => prev.map(t =>
                     t.id === schedTarget!.id ? { ...t, schedules: [...t.schedules, newSched] } : t
                 ));
@@ -672,7 +697,10 @@ export default function AgencyToursPage() {
                                         setDetailTour(tour);
                                         agencyService.getSchedules(tour.id).then(res => {
                                             if (res.data) {
-                                                const scheds: TourSchedule[] = res.data.map(s => ({ id: s.id, startTime: s.startTime, endTime: s.endTime }));
+                                                const scheds: TourSchedule[] = res.data.map(s => ({
+                                                    id: s.id, startTime: s.startTime, endTime: s.endTime,
+                                                    spot: s.spot, spotLeft: s.spotLeft, guideId: s.guideId, guideName: s.guideName,
+                                                }));
                                                 setDetailTour(prev => prev?.id === tour.id ? { ...prev, schedules: scheds } : prev);
                                                 setTours(prev => prev.map(t => t.id === tour.id ? { ...t, schedules: scheds } : t));
                                             }
@@ -841,13 +869,25 @@ export default function AgencyToursPage() {
                                                                     <span className={styles.drawerSchedDateValue}>{fmt(end)}</span>
                                                                 </div>
                                                             </div>
-                                                            <span
-                                                                className={styles.drawerSchedStatusBadge}
-                                                                style={{ background: cfg.bg, color: cfg.color }}
-                                                            >
-                                                                <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, display: "inline-block", flexShrink: 0 }} />
-                                                                {cfg.label}
-                                                            </span>
+                                                            <div style={{ display:"flex", alignItems:"center", gap:6, flexWrap:"wrap" }}>
+                                                                <span
+                                                                    className={styles.drawerSchedStatusBadge}
+                                                                    style={{ background: cfg.bg, color: cfg.color }}
+                                                                >
+                                                                    <span style={{ width: 6, height: 6, borderRadius: "50%", background: cfg.dot, display: "inline-block", flexShrink: 0 }} />
+                                                                    {cfg.label}
+                                                                </span>
+                                                                {sched.spot > 0 && (
+                                                                    <span style={{ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:999, background: sched.spotLeft === 0 ? "#fee2e2" : "#f3f4f6", color: sched.spotLeft === 0 ? "#dc2626" : "#6b7280" }}>
+                                                                        {sched.spotLeft}/{sched.spot} spots
+                                                                    </span>
+                                                                )}
+                                                                {sched.guideName && (
+                                                                    <span style={{ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:999, background:"#eef2ff", color:"#4f46e5" }}>
+                                                                        {sched.guideName}
+                                                                    </span>
+                                                                )}
+                                                            </div>
                                                         </div>
                                                         <button
                                                             className={styles.drawerSchedDeleteBtn}
@@ -887,9 +927,11 @@ export default function AgencyToursPage() {
                             </button>
                         </div>
                         <div className={styles.modalBody}>
-                            <p style={{ fontSize:13, color:"#6b7280", margin:0 }}>
+                            <p style={{ fontSize:13, color:"#6b7280", margin:"0 0 14px" }}>
                                 Set the departure and return dates for this tour run. Guests will see this as an available booking slot.
                             </p>
+
+                            {/* Row 1: Dates */}
                             <div className={styles.fieldRow}>
                                 <div className={styles.field}>
                                     <label className={styles.label}>Departure Date <span className={styles.required}>*</span></label>
@@ -917,22 +959,69 @@ export default function AgencyToursPage() {
                                             const val = e.target.value;
                                             setSchedEnd(val);
                                             setSchedErr("");
-                                            if (val && schedTarget) {
-                                                const d = new Date(val);
-                                                d.setDate(d.getDate() - schedTarget.durationDays);
-                                                setSchedStart(d.toISOString().slice(0, 10));
-                                            }
                                         }}
                                     />
                                 </div>
                             </div>
+
+                            {/* Duration preview */}
                             {schedStart && schedEnd && (
-                                <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:9, padding:"10px 14px", fontSize:13, color:"#15803d", display:"flex", alignItems:"center", gap:7 }}>
+                                <div style={{ background:"#f0fdf4", border:"1px solid #bbf7d0", borderRadius:9, padding:"10px 14px", fontSize:13, color:"#15803d", display:"flex", alignItems:"center", gap:7, marginBottom:14 }}>
                                     <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
                                     {schedTarget?.durationDays} days · {new Date(schedStart).toLocaleDateString("en-GB")} → {new Date(schedEnd).toLocaleDateString("en-GB")}
                                 </div>
                             )}
-                            {schedErr && <p className={styles.errorMsg}>{schedErr}</p>}
+
+                            {/* Row 2: Spot + Guide */}
+                            <div className={styles.fieldRow}>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13" style={{ verticalAlign:"middle", marginRight:4 }}>
+                                            <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                            <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
+                                            <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                        </svg>
+                                        Spots (capacity) <span className={styles.required}>*</span>
+                                    </label>
+                                    <input
+                                        className={`${styles.input} ${schedErr && (!schedSpot || parseInt(schedSpot) < 1) ? styles.inputError : ""}`}
+                                        type="number" min="1" placeholder="e.g. 20"
+                                        value={schedSpot}
+                                        onChange={e => { setSchedSpot(e.target.value); setSchedErr(""); }}
+                                    />
+                                </div>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13" style={{ verticalAlign:"middle", marginRight:4 }}>
+                                            <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                            <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
+                                        </svg>
+                                        Tour Guide
+                                    </label>
+                                    <select
+                                        className={`${styles.input} ${styles.select}`}
+                                        value={schedGuideId}
+                                        onChange={e => setSchedGuideId(e.target.value)}
+                                    >
+                                        <option value="">— No guide assigned —</option>
+                                        {agencyUsers.map(u => (
+                                            <option key={u.id} value={u.id}>
+                                                {u.username}{u.fullName ? ` (${u.fullName})` : ""}
+                                            </option>
+                                        ))}
+                                    </select>
+                                </div>
+                            </div>
+
+                            {/* Spot summary */}
+                            {schedSpot && parseInt(schedSpot) > 0 && (
+                                <div style={{ background:"#eff6ff", border:"1px solid #bfdbfe", borderRadius:9, padding:"10px 14px", fontSize:13, color:"#1d4ed8", display:"flex", alignItems:"center", gap:7 }}>
+                                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                    {schedSpot} spots available · all open on departure
+                                </div>
+                            )}
+
+                            {schedErr && <p className={styles.errorMsg} style={{ marginTop:10 }}>{schedErr}</p>}
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.btnCancel} onClick={() => setSchedTarget(null)}>Cancel</button>

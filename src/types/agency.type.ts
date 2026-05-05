@@ -13,3 +13,7 @@ export type AgencyDTO = {
     createdAt: string;
     updatedAt: string | null;
 };
+
+export type AgencyDetailDTO = AgencyDTO & {
+    images: string[];
+};

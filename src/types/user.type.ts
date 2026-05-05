@@ -11,6 +11,7 @@ export type UserDTO = {
     cityId?: string;
     districtId?: string;
     addressDetail?: string;
+    imageUrl?: string;
 };
 
 export type UpdateProfileRequest = {

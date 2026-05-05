@@ -4,6 +4,15 @@ import { ItineraryDTO, ItineraryScheduleDTO, ItineraryStopWithActivitiesDTO } fr
 import { PagedResult } from "@/types/common.type";
 import axiosClient from "../http/axios-client";
 
+export type AgencyUserDTO = {
+    agencyId: string;
+    userId: string;
+    agencyName: string;
+    userFullName: string;
+    role: string;
+    email: string;
+};
+
 export type ProviderMarker = Pick<ProviderDTO, "id" | "name" | "latitude" | "longitude" | "address" | "contactPhone">;
 
 export type CreateItineraryActivityPayload = {
@@ -81,9 +90,23 @@ export const agencyService = {
     getSchedules: (itineraryId: string): Promise<ApiResponse<ItineraryScheduleDTO[]>> =>
         axiosClient.get(`/itinerary/${itineraryId}/schedules`),
 
-    addSchedule: (itineraryId: string, startTime: string, endTime: string): Promise<ApiResponse<ItineraryScheduleDTO>> =>
-        axiosClient.post(`/itinerary/${itineraryId}/schedules`, { startTime, endTime }),
+    addSchedule: (
+        itineraryId: string,
+        startTime: string,
+        endTime: string,
+        spot: number,
+        guideId?: string,
+    ): Promise<ApiResponse<ItineraryScheduleDTO>> =>
+        axiosClient.post(`/itinerary/${itineraryId}/schedules`, {
+            startTime,
+            endTime,
+            spot,
+            guideId: guideId || undefined,
+        }),
 
     deleteSchedule: (itineraryId: string, scheduleId: string): Promise<ApiResponse<void>> =>
         axiosClient.delete(`/itinerary/${itineraryId}/schedules/${scheduleId}`),
+
+    getAgencyUsers: (agencyId: string): Promise<ApiResponse<AgencyUserDTO[]>> =>
+        axiosClient.get("/agency/user-list", { params: { agencyId } }),
 };

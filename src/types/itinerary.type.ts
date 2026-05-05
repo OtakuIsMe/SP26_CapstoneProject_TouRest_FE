@@ -13,6 +13,10 @@ export interface ItineraryScheduleDTO {
     itineraryId: string;
     startTime: string;
     endTime: string;
+    spot: number;
+    spotLeft: number;
+    guideId?: string;
+    guideName?: string;
 }
 
 export interface ItineraryDTO {

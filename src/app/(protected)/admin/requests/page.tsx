@@ -1,9 +1,10 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Image from "next/image";
 import { adminService } from "@/libs/services/admin.service";
-import { ProviderDTO } from "@/types/provider.type";
-import { AgencyDTO } from "@/types/agency.type";
+import { ProviderDetailDTO, ProviderDTO } from "@/types/provider.type";
+import { AgencyDetailDTO, AgencyDTO } from "@/types/agency.type";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
 import styles from "./page.module.scss";
 
@@ -201,6 +202,411 @@ function ApproveModal({
     );
 }
 
+function ProviderDetailModal({
+    providerId,
+    onClose,
+}: {
+    providerId: string;
+    onClose: () => void;
+}) {
+    const [detail, setDetail] = useState<ProviderDetailDTO | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [imgIndex, setImgIndex] = useState(0);
+    const [descExpanded, setDescExpanded] = useState(false);
+    const overlayRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        adminService.getProviderDetail(providerId)
+            .then((res) => setDetail(res.data ?? null))
+            .finally(() => setLoading(false));
+    }, [providerId]);
+
+    const fmt = (t: string) => {
+        const [h, m] = t.split(":");
+        const hour = parseInt(h);
+        return `${hour % 12 || 12}:${m} ${hour < 12 ? "AM" : "PM"}`;
+    };
+
+    const prev = () => detail && setImgIndex((i) => (i - 1 + detail.images.length) % detail.images.length);
+    const next = () => detail && setImgIndex((i) => (i + 1) % detail.images.length);
+
+    return (
+        <div
+            className={styles.overlay}
+            ref={overlayRef}
+            onMouseDown={(e) => { if (e.target === overlayRef.current) onClose(); }}
+        >
+            <div className={`${styles.modal} ${styles.detailModal}`}>
+
+                {/* ── Hero image section ── */}
+                <div className={styles.detailHero}>
+                    {loading ? null : detail?.images.length ? (
+                        <>
+                            <Image
+                                key={imgIndex}
+                                src={detail.images[imgIndex]}
+                                alt={`Photo ${imgIndex + 1}`}
+                                fill
+                                className={styles.heroImg}
+                                style={{ objectFit: "cover" }}
+                                unoptimized
+                            />
+                            <div className={styles.heroGradient} />
+
+                            {detail.images.length > 1 && (
+                                <>
+                                    <button className={`${styles.galleryNav} ${styles.galleryPrev}`} onClick={prev}>‹</button>
+                                    <button className={`${styles.galleryNav} ${styles.galleryNext}`} onClick={next}>›</button>
+                                    <span className={styles.galleryCount}>
+                                        {imgIndex + 1} / {detail.images.length}
+                                    </span>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                        <div className={styles.heroNoImg}>
+                            <svg viewBox="0 0 24 24" fill="none" width="40" height="40">
+                                <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+                                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                                <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>No images uploaded</span>
+                        </div>
+                    )}
+
+                    {/* Close button always on hero */}
+                    <button className={styles.heroClose} onClick={onClose} type="button">
+                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+
+                    {/* Provider name overlay */}
+                    {!loading && detail && (
+                        <div className={styles.heroMeta}>
+                            <div>
+                                <h2 className={styles.heroName}>{detail.name}</h2>
+                                <p className={styles.heroSub}>Submitted {new Date(detail.createdAt).toLocaleDateString("en-GB")}</p>
+                            </div>
+                            <StatusBadge status={detail.status} />
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Thumbnail strip ── */}
+                {!loading && detail && detail.images.length > 1 && (
+                    <div className={styles.thumbStrip}>
+                        {detail.images.map((url, i) => (
+                            <button
+                                key={i}
+                                className={`${styles.thumb} ${i === imgIndex ? styles.thumbActive : ""}`}
+                                onClick={() => setImgIndex(i)}
+                            >
+                                <Image src={url} alt="" fill style={{ objectFit: "cover" }} unoptimized />
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {/* ── Loading ── */}
+                {loading && <div className={styles.detailLoading}>Loading details</div>}
+
+                {/* ── Body ── */}
+                {!loading && detail && (
+                    <div className={styles.detailBody}>
+                        <div className={styles.infoCards}>
+                            {/* Email */}
+                            <div className={styles.infoCard}>
+                                <div className={`${styles.infoIcon} ${styles.iconBlue}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="1.7"/><path d="M2 8l10 6 10-6" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Email</span>
+                                    <a href={`mailto:${detail.contactEmail}`} className={styles.infoCardLink}>{detail.contactEmail}</a>
+                                </div>
+                            </div>
+
+                            {/* Phone */}
+                            <div className={styles.infoCard}>
+                                <div className={`${styles.infoIcon} ${styles.iconGreen}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2A19.79 19.79 0 013.09 4.18 2 2 0 015.09 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L9.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Phone</span>
+                                    <span className={styles.infoCardValue}>{detail.contactPhone || "—"}</span>
+                                </div>
+                            </div>
+
+                            {/* Hours */}
+                            <div className={styles.infoCard}>
+                                <div className={`${styles.infoIcon} ${styles.iconOrange}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Opening Hours</span>
+                                    <span className={styles.infoCardValue}>{fmt(detail.startTime)} – {fmt(detail.endTime)}</span>
+                                </div>
+                            </div>
+
+                            {/* Address (full width) */}
+                            <div className={`${styles.infoCard} ${styles.infoCardWide}`}>
+                                <div className={`${styles.infoIcon} ${styles.iconTeal}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" strokeWidth="1.7"/><path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Address</span>
+                                    <span className={styles.infoCardValue}>{detail.address || "—"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* OpenStreetMap */}
+                        {detail.latitude !== 0 && detail.longitude !== 0 && (
+                            <div className={styles.mapSection}>
+                                <div className={styles.mapHeader}>
+                                    <div className={`${styles.infoIcon} ${styles.iconPurple}`} style={{ width: 28, height: 28 }}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                    </div>
+                                    <span className={styles.mapTitle}>Location</span>
+                                    <span className={styles.mapCoords}>
+                                        {Number(detail.latitude).toFixed(6)}, {Number(detail.longitude).toFixed(6)}
+                                    </span>
+                                    <a
+                                        href={`https://www.openstreetmap.org/?mlat=${detail.latitude}&mlon=${detail.longitude}#map=16/${detail.latitude}/${detail.longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.mapLink}
+                                    >
+                                        Open in OSM ↗
+                                    </a>
+                                </div>
+                                <iframe
+                                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(detail.longitude) - 0.008},${Number(detail.latitude) - 0.006},${Number(detail.longitude) + 0.008},${Number(detail.latitude) + 0.006}&layer=mapnik&marker=${detail.latitude},${detail.longitude}`}
+                                    title="Provider location"
+                                    loading="lazy"
+                                    style={{ width: "100%", height: 240, border: "none", display: "block" }}
+                                />
+                            </div>
+                        )}
+
+                        {/* Description with Read More */}
+                        {detail.description && (
+                            <div className={styles.descSection}>
+                                <p className={styles.descTitle}>About this provider</p>
+                                <p className={`${styles.descText} ${!descExpanded ? styles.descClamped : ""}`}>
+                                    {detail.description}
+                                </p>
+                                {detail.description.length > 220 && (
+                                    <button
+                                        className={styles.readMoreBtn}
+                                        onClick={() => setDescExpanded((v) => !v)}
+                                    >
+                                        {descExpanded ? "Show less ↑" : "Read more ↓"}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
+function AgencyDetailModal({
+    agencyId,
+    onClose,
+}: {
+    agencyId: string;
+    onClose: () => void;
+}) {
+    const [detail, setDetail] = useState<AgencyDetailDTO | null>(null);
+    const [loading, setLoading] = useState(true);
+    const [imgIndex, setImgIndex] = useState(0);
+    const [descExpanded, setDescExpanded] = useState(false);
+    const overlayRef = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        adminService.getAgencyDetail(agencyId)
+            .then((res) => setDetail(res.data ?? null))
+            .finally(() => setLoading(false));
+    }, [agencyId]);
+
+    const fmt = (t: string) => {
+        const [h, m] = t.split(":");
+        const hour = parseInt(h);
+        return `${hour % 12 || 12}:${m} ${hour < 12 ? "AM" : "PM"}`;
+    };
+
+    const prev = () => detail && setImgIndex((i) => (i - 1 + detail.images.length) % detail.images.length);
+    const next = () => detail && setImgIndex((i) => (i + 1) % detail.images.length);
+
+    return (
+        <div
+            className={styles.overlay}
+            ref={overlayRef}
+            onMouseDown={(e) => { if (e.target === overlayRef.current) onClose(); }}
+        >
+            <div className={`${styles.modal} ${styles.detailModal}`}>
+
+                {/* ── Hero ── */}
+                <div className={styles.detailHero}>
+                    {loading ? null : detail?.images.length ? (
+                        <>
+                            <Image
+                                key={imgIndex}
+                                src={detail.images[imgIndex]}
+                                alt={`Photo ${imgIndex + 1}`}
+                                fill
+                                className={styles.heroImg}
+                                style={{ objectFit: "cover" }}
+                                unoptimized
+                            />
+                            <div className={styles.heroGradient} />
+                            {detail.images.length > 1 && (
+                                <>
+                                    <button className={`${styles.galleryNav} ${styles.galleryPrev}`} onClick={prev}>‹</button>
+                                    <button className={`${styles.galleryNav} ${styles.galleryNext}`} onClick={next}>›</button>
+                                    <span className={styles.galleryCount}>{imgIndex + 1} / {detail.images.length}</span>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                        <div className={styles.heroNoImg}>
+                            <svg viewBox="0 0 24 24" fill="none" width="40" height="40">
+                                <rect x="3" y="3" width="18" height="18" rx="3" stroke="currentColor" strokeWidth="1.5"/>
+                                <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.5"/>
+                                <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+                            </svg>
+                            <span>No images uploaded</span>
+                        </div>
+                    )}
+
+                    <button className={styles.heroClose} onClick={onClose} type="button">
+                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+
+                    {!loading && detail && (
+                        <div className={styles.heroMeta}>
+                            <div>
+                                <h2 className={styles.heroName}>{detail.name}</h2>
+                                <p className={styles.heroSub}>Submitted {new Date(detail.createdAt).toLocaleDateString("en-GB")}</p>
+                            </div>
+                            <StatusBadge status={detail.status} />
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Thumbnails ── */}
+                {!loading && detail && detail.images.length > 1 && (
+                    <div className={styles.thumbStrip}>
+                        {detail.images.map((url, i) => (
+                            <button
+                                key={i}
+                                className={`${styles.thumb} ${i === imgIndex ? styles.thumbActive : ""}`}
+                                onClick={() => setImgIndex(i)}
+                            >
+                                <Image src={url} alt="" fill style={{ objectFit: "cover" }} unoptimized />
+                            </button>
+                        ))}
+                    </div>
+                )}
+
+                {loading && <div className={styles.detailLoading}>Loading details</div>}
+
+                {!loading && detail && (
+                    <div className={styles.detailBody}>
+                        <div className={styles.infoCards}>
+                            <div className={styles.infoCard}>
+                                <div className={`${styles.infoIcon} ${styles.iconBlue}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="4" width="20" height="16" rx="3" stroke="currentColor" strokeWidth="1.7"/><path d="M2 8l10 6 10-6" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Email</span>
+                                    <a href={`mailto:${detail.contactEmail}`} className={styles.infoCardLink}>{detail.contactEmail}</a>
+                                </div>
+                            </div>
+
+                            <div className={styles.infoCard}>
+                                <div className={`${styles.infoIcon} ${styles.iconGreen}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2A19.79 19.79 0 013.09 4.18 2 2 0 015.09 2h3a2 2 0 012 1.72c.13.96.36 1.9.7 2.81a2 2 0 01-.45 2.11L9.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Phone</span>
+                                    <span className={styles.infoCardValue}>{detail.contactPhone || "—"}</span>
+                                </div>
+                            </div>
+
+                            <div className={styles.infoCard}>
+                                <div className={`${styles.infoIcon} ${styles.iconOrange}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.7"/><path d="M12 7v5l3 3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Opening Hours</span>
+                                    <span className={styles.infoCardValue}>{fmt(detail.startTime)} – {fmt(detail.endTime)}</span>
+                                </div>
+                            </div>
+
+                            <div className={`${styles.infoCard} ${styles.infoCardWide}`}>
+                                <div className={`${styles.infoIcon} ${styles.iconTeal}`}>
+                                    <svg viewBox="0 0 24 24" fill="none"><path d="M3 9l9-7 9 7v11a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" stroke="currentColor" strokeWidth="1.7"/><path d="M9 22V12h6v10" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                </div>
+                                <div className={styles.infoCardContent}>
+                                    <span className={styles.infoCardLabel}>Address</span>
+                                    <span className={styles.infoCardValue}>{detail.address || "—"}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {detail.latitude !== 0 && detail.longitude !== 0 && (
+                            <div className={styles.mapSection}>
+                                <div className={styles.mapHeader}>
+                                    <div className={`${styles.infoIcon} ${styles.iconPurple}`} style={{ width: 28, height: 28 }}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.7"/></svg>
+                                    </div>
+                                    <span className={styles.mapTitle}>Location</span>
+                                    <span className={styles.mapCoords}>{Number(detail.latitude).toFixed(6)}, {Number(detail.longitude).toFixed(6)}</span>
+                                    <a
+                                        href={`https://www.openstreetmap.org/?mlat=${detail.latitude}&mlon=${detail.longitude}#map=16/${detail.latitude}/${detail.longitude}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className={styles.mapLink}
+                                    >Open in OSM ↗</a>
+                                </div>
+                                <iframe
+                                    src={`https://www.openstreetmap.org/export/embed.html?bbox=${Number(detail.longitude) - 0.008},${Number(detail.latitude) - 0.006},${Number(detail.longitude) + 0.008},${Number(detail.latitude) + 0.006}&layer=mapnik&marker=${detail.latitude},${detail.longitude}`}
+                                    title="Agency location"
+                                    loading="lazy"
+                                    style={{ width: "100%", height: 240, border: "none", display: "block" }}
+                                />
+                            </div>
+                        )}
+
+                        {detail.description && (
+                            <div className={styles.descSection}>
+                                <p className={styles.descTitle}>About this agency</p>
+                                <p className={`${styles.descText} ${!descExpanded ? styles.descClamped : ""}`}>
+                                    {detail.description}
+                                </p>
+                                {detail.description.length > 220 && (
+                                    <button
+                                        className={styles.readMoreBtn}
+                                        onClick={() => setDescExpanded((v) => !v)}
+                                    >
+                                        {descExpanded ? "Show less ↑" : "Read more ↓"}
+                                    </button>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                )}
+            </div>
+        </div>
+    );
+}
+
 export default function AdminRequestsPage() {
     const [tab, setTab] = useState<Tab>("providers");
 
@@ -209,6 +615,8 @@ export default function AdminRequestsPage() {
     const [loading,   setLoading]   = useState(true);
 
     const [approveTarget, setApproveTarget] = useState<ApproveTarget | null>(null);
+    const [detailProviderId, setDetailProviderId] = useState<string | null>(null);
+    const [detailAgencyId, setDetailAgencyId] = useState<string | null>(null);
 
     const fetchAll = useCallback(async () => {
         setLoading(true);
@@ -270,6 +678,11 @@ export default function AdminRequestsPage() {
     ];
 
     const providerActions: ActionDef<ProviderDTO>[] = [
+        {
+            label: "View",
+            variant: "view",
+            onClick: (row) => setDetailProviderId(row.id),
+        },
         {
             label: "Approve",
             variant: "edit",
@@ -333,6 +746,11 @@ export default function AdminRequestsPage() {
     ];
 
     const agencyActions: ActionDef<AgencyDTO>[] = [
+        {
+            label: "View",
+            variant: "view",
+            onClick: (row) => setDetailAgencyId(row.id),
+        },
         {
             label: "Approve",
             variant: "edit",
@@ -461,6 +879,20 @@ export default function AdminRequestsPage() {
                     target={approveTarget}
                     onClose={() => setApproveTarget(null)}
                     onSuccess={handleApproveSuccess}
+                />
+            )}
+
+            {detailProviderId && (
+                <ProviderDetailModal
+                    providerId={detailProviderId}
+                    onClose={() => setDetailProviderId(null)}
+                />
+            )}
+
+            {detailAgencyId && (
+                <AgencyDetailModal
+                    agencyId={detailAgencyId}
+                    onClose={() => setDetailAgencyId(null)}
                 />
             )}
         </div>

@@ -44,3 +44,11 @@ export type PackageQuery = {
     search?: string;
     status?: string;
 };
+
+export type UpdatePackagePayload = {
+    code: string;
+    name: string;
+    basePrice: number;
+    status: string;
+    serviceIds: string[];
+};

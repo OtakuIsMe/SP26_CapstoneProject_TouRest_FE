@@ -1,5 +1,5 @@
-import { AgencyDTO } from "@/types/agency.type";
-import { ProviderDTO } from "@/types/provider.type";
+import { AgencyDetailDTO, AgencyDTO } from "@/types/agency.type";
+import { ProviderDetailDTO, ProviderDTO } from "@/types/provider.type";
 import axiosClient from "../http/axios-client";
 
 export type PagedResult<T> = {
@@ -48,4 +48,10 @@ export const adminService = {
         body: { email: string; password: string; username: string; phone?: string }
     ): Promise<ApiResponse<void>> =>
         axiosClient.post(`/admin/provider/${id}/create-account`, body),
+
+    getProviderDetail: (id: string): Promise<ApiResponse<ProviderDetailDTO>> =>
+        axiosClient.get(`/providers/${id}/detail`),
+
+    getAgencyDetail: (id: string): Promise<ApiResponse<AgencyDetailDTO>> =>
+        axiosClient.get(`/agency/${id}/detail`),
 };

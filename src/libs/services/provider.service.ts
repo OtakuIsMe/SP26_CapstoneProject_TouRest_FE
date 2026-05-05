@@ -1,4 +1,4 @@
-import { CreatePackagePayload, PackageDTO, PackageQuery, PackageWithServicesDTO } from "@/types/package.type";
+import { CreatePackagePayload, PackageDTO, PackageQuery, PackageWithServicesDTO, UpdatePackagePayload } from "@/types/package.type";
 import { ServiceDTO, ServiceQuery } from "@/types/service.type";
 import { ProviderDTO } from "@/types/provider.type";
 import axiosClient from "../http/axios-client";
@@ -14,10 +14,19 @@ export type CreateServicePayload = {
     providerId: string;
     name: string;
     description?: string;
-    price: number;       // int
-    basePrice: number;   // int
+    price: number;
+    basePrice: number;
     durationMinutes: number;
     status: ServiceStatus;
+};
+
+export type UpdateServicePayload = {
+    name: string;
+    description?: string;
+    price: number;
+    basePrice: number;
+    durationMinutes: number;
+    status: string;
 };
 
 export const providerService = {
@@ -44,6 +53,21 @@ export const providerService = {
     getServicesByProvider: (providerId: string): Promise<ApiResponse<ServiceDTO[]>> =>
         axiosClient.get(`/service/provider/${providerId}`),
 
+    getServiceById: (id: string): Promise<ApiResponse<ServiceDTO>> =>
+        axiosClient.get(`/service/${id}`),
+
+    updateService: (id: string, payload: UpdateServicePayload): Promise<ApiResponse<ServiceDTO>> =>
+        axiosClient.put(`/service/${id}`, payload),
+
     getPackagesByProvider: (providerId: string): Promise<ApiResponse<PackageWithServicesDTO[]>> =>
         axiosClient.get(`/packages/provider/${providerId}`),
+
+    getPackageById: (id: string): Promise<ApiResponse<PackageDTO>> =>
+        axiosClient.get(`/packages/${id}`),
+
+    getPackageDetail: (id: string): Promise<ApiResponse<PackageWithServicesDTO>> =>
+        axiosClient.get(`/packages/${id}/detail`),
+
+    updatePackage: (id: string, payload: UpdatePackagePayload): Promise<ApiResponse<PackageDTO>> =>
+        axiosClient.put(`/packages/${id}`, payload),
 };

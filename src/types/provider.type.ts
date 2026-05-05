@@ -14,3 +14,7 @@ export type ProviderDTO = {
     createdAt: string;
     updatedAt: string | null;
 };
+
+export type ProviderDetailDTO = ProviderDTO & {
+    images: string[];
+};

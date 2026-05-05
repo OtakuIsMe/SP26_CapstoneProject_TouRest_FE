@@ -11,6 +11,18 @@ export type CreateUserPayload = {
     agencyId?:   string;   // required when roleCode = AGENCY
 };
 
+export type AdminUpdateUserPayload = {
+    username:      string;
+    fullName?:     string;
+    phone?:        string;
+    status:        string;   // Active | Inactive | Locked
+    roleCode:      string;   // CUSTOMER | ADMIN | PROVIDER | AGENCY
+    dateOfBirth?:  string;   // ISO 8601
+    addressDetail?: string;
+    cityId?:       string;
+    districtId?:   string;
+};
+
 export const userService = {
     getAll: (params?: UserQuery): Promise<ApiResponse<PagedResult<UserDTO>>> =>
         axiosClient.get("/users", { params }),
@@ -23,4 +35,10 @@ export const userService = {
 
     createUser: (data: CreateUserPayload): Promise<ApiResponse<UserDTO>> =>
         axiosClient.post("/users", data),
+
+    adminUpdateUser: (id: string, data: AdminUpdateUserPayload): Promise<ApiResponse<UserDTO>> =>
+        axiosClient.put(`/users/${id}`, data),
+
+    getAllUsers: (): Promise<ApiResponse<UserDTO[]>> =>
+        axiosClient.get("/users/all"),
 };
