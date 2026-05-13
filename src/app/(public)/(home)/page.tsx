@@ -201,7 +201,7 @@ export default function HomePage() {
                                 id={tour.id}
                                 image={tour.images?.[0]?.url ?? "/images/landing/explore_1.avif"}
                                 name={tour.name}
-                                location={tour.agencyId}
+                                location={tour.agencyName ?? "Vietnam"}
                                 rating={0}
                                 reviews={0}
                                 price={tour.price}

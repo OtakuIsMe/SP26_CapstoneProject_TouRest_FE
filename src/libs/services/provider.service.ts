@@ -39,10 +39,10 @@ export const providerService = {
         axiosClient.get("/providers/me"),
 
     getServices: (params?: ServiceQuery): Promise<ApiResponse<ServiceDTO[]>> =>
-        axiosClient.get("/service", { params }),
+        axiosClient.get("/services", { params }),
 
     createService: (payload: CreateServicePayload): Promise<ApiResponse<ServiceDTO>> =>
-        axiosClient.post("/service", payload),
+        axiosClient.post("/services", payload),
 
     getPackages: (params?: PackageQuery): Promise<ApiResponse<PackageDTO[]>> =>
         axiosClient.get("/packages", { params }),
@@ -51,13 +51,13 @@ export const providerService = {
         axiosClient.post("/packages", payload),
 
     getServicesByProvider: (providerId: string): Promise<ApiResponse<ServiceDTO[]>> =>
-        axiosClient.get(`/service/provider/${providerId}`),
+        axiosClient.get(`/services/provider/${providerId}`),
 
     getServiceById: (id: string): Promise<ApiResponse<ServiceDTO>> =>
-        axiosClient.get(`/service/${id}`),
+        axiosClient.get(`/services/${id}`),
 
     updateService: (id: string, payload: UpdateServicePayload): Promise<ApiResponse<ServiceDTO>> =>
-        axiosClient.put(`/service/${id}`, payload),
+        axiosClient.put(`/services/${id}`, payload),
 
     getPackagesByProvider: (providerId: string): Promise<ApiResponse<PackageWithServicesDTO[]>> =>
         axiosClient.get(`/packages/provider/${providerId}`),

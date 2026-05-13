@@ -30,7 +30,7 @@ axiosClient.interceptors.response.use(
     async (error) => {
         const originalRequest = error.config;
 
-        const isAuthEndpoint = originalRequest.url?.includes("/auth/");
+        const isAuthEndpoint = originalRequest.url?.includes("/auths/");
         const now = Date.now();
         const cooldownPassed = now - lastRefreshTime >= REFRESH_COOLDOWN_MS;
 
@@ -44,7 +44,7 @@ axiosClient.interceptors.response.use(
             lastRefreshTime = now;
 
             try {
-                const refreshRes = await axiosClient.get("/auth/refresh");
+                const refreshRes = await axiosClient.get("/auths/refresh");
                 // interceptor returns response.data (the JSON body)
                 // shape: { code, message, data: { accessToken, expiresIn } }
                 const newAccessToken = (refreshRes as any).data.accessToken;

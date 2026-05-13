@@ -1,0 +1,218 @@
+$primary: #4f46e5;
+$primary-hover: #4338ca;
+$green: #22c55e;
+
+.page {
+    min-height: 100vh;
+    background: #f8f9fb;
+    display: flex;
+    flex-direction: column;
+}
+
+.main {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 60px 24px;
+}
+
+/* ── Card ── */
+.card {
+    background: #fff;
+    border-radius: 24px;
+    border: 1px solid #e8eaf0;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.07);
+    padding: 56px 48px 48px;
+    max-width: 480px;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+}
+
+/* ── Animated checkmark ── */
+.iconWrap {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: #f0fdf4;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
+}
+
+.checkSvg {
+    width: 80px;
+    height: 80px;
+}
+
+.checkCircle {
+    stroke-dasharray: 226;
+    stroke-dashoffset: 226;
+    animation: drawCircle 0.5s ease forwards;
+}
+
+.checkMark {
+    stroke-dasharray: 60;
+    stroke-dashoffset: 60;
+    animation: drawCheck 0.4s ease 0.45s forwards;
+}
+
+@keyframes drawCircle {
+    to { stroke-dashoffset: 0; }
+}
+
+@keyframes drawCheck {
+    to { stroke-dashoffset: 0; }
+}
+
+.iconWrapFail {
+    width: 100px;
+    height: 100px;
+    border-radius: 50%;
+    background: #fef2f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 28px;
+}
+
+/* ── Text ── */
+.title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 10px;
+    letter-spacing: -0.5px;
+}
+
+.titleFail { color: #ef4444; }
+
+.subtitle {
+    font-size: 15px;
+    color: #64748b;
+    line-height: 1.6;
+    margin: 0 0 28px;
+    max-width: 340px;
+}
+
+/* ── Info box ── */
+.infoBox {
+    width: 100%;
+    background: #f8f9fb;
+    border: 1px solid #e8eaf0;
+    border-radius: 14px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.infoRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-size: 14px;
+}
+
+.infoLabel {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.infoValue {
+    font-weight: 700;
+    color: #0f172a;
+    font-family: monospace;
+    font-size: 15px;
+}
+
+.statusBadge {
+    background: #dcfce7;
+    color: #15803d;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 20px;
+}
+
+/* ── Redirect note ── */
+.redirectNote {
+    font-size: 13px;
+    color: #94a3b8;
+    margin: 0 0 28px;
+
+    strong { color: $primary; }
+}
+
+/* ── Actions ── */
+.actions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+}
+
+.btnPrimary {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 14px;
+    background: $primary;
+    color: #fff;
+    border: none;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 700;
+    text-decoration: none;
+    cursor: pointer;
+    transition: background 0.18s, transform 0.15s;
+    box-shadow: 0 2px 12px rgba(79, 70, 229, 0.28);
+
+    &:hover {
+        background: $primary-hover;
+        transform: translateY(-1px);
+    }
+    &:active { transform: translateY(0); }
+}
+
+.spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e5e7eb;
+    border-top-color: $primary;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin: 40px auto;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.btnOutline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    width: 100%;
+    padding: 13px;
+    background: #fff;
+    color: #374151;
+    border: 1.5px solid #d1d5db;
+    border-radius: 12px;
+    font-size: 15px;
+    font-weight: 600;
+    text-decoration: none;
+    cursor: pointer;
+    transition: border-color 0.18s, color 0.18s;
+
+    &:hover {
+        border-color: $primary;
+        color: $primary;
+    }
+}

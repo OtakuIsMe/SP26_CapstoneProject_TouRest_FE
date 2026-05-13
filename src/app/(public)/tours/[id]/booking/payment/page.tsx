@@ -12,14 +12,10 @@ import styles from "./page.module.scss";
 
 const QR_EXPIRE_SECONDS = 15 * 60;
 
-function generateTxnRef(itineraryId: string) {
-    return `TXN-${itineraryId.slice(0, 8).toUpperCase()}-${Date.now()}`;
-}
-
 function formatDate(iso: string) {
-    return new Date(iso).toLocaleDateString("vi-VN", {
+    return new Date(iso).toLocaleDateString("en-GB", {
         day: "2-digit",
-        month: "2-digit",
+        month: "short",
         year: "numeric",
     });
 }
@@ -28,24 +24,25 @@ export default function PaymentPage() {
     const params = useParams();
     const searchParams = useSearchParams();
     const tourId = params.id as string;
+    const bookingId = searchParams.get("bookingId") ?? "";
     const scheduleId = searchParams.get("scheduleId");
     const travelers = Number(searchParams.get("travelers") ?? 1);
 
     const [itinerary, setItinerary] = useState<ItineraryDTO | null>(null);
     const [qrContent, setQrContent] = useState<string>("");
+    const [checkoutUrl, setCheckoutUrl] = useState<string>("");
+    const [finalAmount, setFinalAmount] = useState<number>(0);
     const [qrStatus, setQrStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [qrError, setQrError] = useState("");
     const [secondsLeft, setSecondsLeft] = useState(QR_EXPIRE_SECONDS);
-    const [txnRef, setTxnRef] = useState("");
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+    const pollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
 
     const selectedSchedule =
         itinerary?.schedules.find((s) => s.id === scheduleId) ??
         itinerary?.schedules[0] ??
         null;
-    const totalAmount = (itinerary?.price ?? 0) * travelers;
 
-    // Fetch itinerary
     useEffect(() => {
         if (!tourId) return;
         agencyService.getItineraryById(tourId).then((res) => {
@@ -54,29 +51,20 @@ export default function PaymentPage() {
     }, [tourId]);
 
     const generateQr = useCallback(async () => {
-        if (!itinerary) return;
+        if (!bookingId) return;
         setQrStatus("loading");
         setQrError("");
         setQrContent("");
-
-        const ref = generateTxnRef(tourId);
-        setTxnRef(ref);
+        setCheckoutUrl("");
 
         try {
-            const res = await fetch("/api/payment/generate-qr", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    amount: totalAmount,
-                    orderInfo: `Thanh toan tour ${itinerary.name}`,
-                    txnRef: ref,
-                }),
-            });
+            const res = await agencyService.createPayment(bookingId);
+            const payment = res.data;
 
-            const data = await res.json();
-
-            if (data.code === "00" && data.qrcontent) {
-                setQrContent(data.qrcontent);
+            if (payment.qrCode) {
+                setQrContent(payment.qrCode);
+                setCheckoutUrl(payment.checkoutUrl ?? "");
+                setFinalAmount(payment.finalAmount);
                 setQrStatus("success");
                 setSecondsLeft(QR_EXPIRE_SECONDS);
 
@@ -94,20 +82,44 @@ export default function PaymentPage() {
                 }, 1000);
             } else {
                 setQrStatus("error");
-                setQrError(data.message ?? "Không thể tạo mã QR");
+                setQrError("No QR code received from the server.");
             }
         } catch {
             setQrStatus("error");
-            setQrError("Lỗi kết nối. Vui lòng thử lại.");
+            setQrError("Connection error. Please try again.");
         }
-    }, [itinerary, tourId, totalAmount]);
+    }, [bookingId]);
 
-    useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+    // Poll payment status every 4s while QR is displayed
+    useEffect(() => {
+        if (qrStatus !== "success" || !bookingId) {
+            if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; }
+            return;
+        }
+        pollRef.current = setInterval(async () => {
+            try {
+                const res = await agencyService.getActivePayment(bookingId);
+                if (res.data?.status === "Paid") {
+                    clearInterval(pollRef.current!); pollRef.current = null;
+                    if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+                    window.location.href = `/payment/success?orderCode=${res.data.orderCode}&status=PAID&code=00`;
+                }
+            } catch { /* ignore */ }
+        }, 4000);
+        return () => { if (pollRef.current) { clearInterval(pollRef.current); pollRef.current = null; } };
+    }, [qrStatus, bookingId]);
+
+    useEffect(() => () => {
+        if (timerRef.current) clearInterval(timerRef.current);
+        if (pollRef.current)  clearInterval(pollRef.current);
+    }, []);
 
     const minutes = Math.floor(secondsLeft / 60);
     const seconds = secondsLeft % 60;
     const expirePercent = (secondsLeft / QR_EXPIRE_SECONDS) * 100;
+    const timerColor = expirePercent > 40 ? "#2a9d8f" : expirePercent > 15 ? "#f59e0b" : "#ef4444";
 
+    const displayAmount = finalAmount || (itinerary?.price ?? 0) * travelers;
     const tourImage = itinerary?.images?.[0]?.url ?? "/images/landing/explore_1.avif";
 
     return (
@@ -124,10 +136,10 @@ export default function PaymentPage() {
                         <span>/</span>
                         <Link href={`/tours/${tourId}`}>{itinerary?.name ?? "Tour"}</Link>
                         <span>/</span>
-                        <span>Thanh toán</span>
+                        <span>Payment</span>
                     </nav>
 
-                    <h1 className={styles.pageTitle}>Thanh toán qua VNPay</h1>
+                    <h1 className={styles.pageTitle}>Pay with QR Code</h1>
 
                     <div className={styles.layout}>
 
@@ -137,13 +149,13 @@ export default function PaymentPage() {
                                 <div className={styles.qrCardHeader}>
                                     <div className={styles.vnpayLogo}>
                                         <svg width="28" height="28" viewBox="0 0 48 48" fill="none">
-                                            <rect width="48" height="48" rx="10" fill="#0066CC" />
-                                            <text x="8" y="33" fontSize="18" fontWeight="bold" fill="white" fontFamily="Arial">VN</text>
-                                            <text x="26" y="33" fontSize="18" fontWeight="bold" fill="#F5A623" fontFamily="Arial">P</text>
+                                            <rect width="48" height="48" rx="10" fill="#0866FF" />
+                                            <text x="9" y="33" fontSize="17" fontWeight="bold" fill="white" fontFamily="Arial">Pay</text>
+                                            <text x="29" y="33" fontSize="17" fontWeight="bold" fill="#FFCC00" fontFamily="Arial">OS</text>
                                         </svg>
                                         <div>
-                                            <span className={styles.vnpayTitle}>VNPay</span>
-                                            <span className={styles.vnpaySubtitle}>Quét mã QR để thanh toán</span>
+                                            <span className={styles.vnpayTitle}>PayOS</span>
+                                            <span className={styles.vnpaySubtitle}>Scan QR code to complete payment</span>
                                         </div>
                                     </div>
                                 </div>
@@ -157,14 +169,14 @@ export default function PaymentPage() {
                                                 <rect x="3" y="14" width="7" height="7" rx="1" stroke="#9ca3af" strokeWidth="1.5" />
                                                 <path d="M14 14h2v2h-2zM18 14h3v3h-3zM14 18h3v3h-3z" fill="#9ca3af" />
                                             </svg>
-                                            <p>Nhấn nút bên dưới để tạo mã QR</p>
+                                            <p>Click the button below to generate your QR code</p>
                                         </div>
                                     )}
 
                                     {qrStatus === "loading" && (
                                         <div className={styles.qrPlaceholder}>
                                             <div className={styles.spinner} />
-                                            <p>Đang tạo mã QR...</p>
+                                            <p>Generating QR code...</p>
                                         </div>
                                     )}
 
@@ -173,7 +185,7 @@ export default function PaymentPage() {
                                             {/* eslint-disable-next-line @next/next/no-img-element */}
                                             <img
                                                 src={`https://api.qrserver.com/v1/create-qr-code/?size=220x220&data=${encodeURIComponent(qrContent)}`}
-                                                alt="VNPay QR Code"
+                                                alt="Payment QR Code"
                                                 className={styles.qrImage}
                                                 width={220}
                                                 height={220}
@@ -181,18 +193,25 @@ export default function PaymentPage() {
                                             <div className={styles.timerBar}>
                                                 <div
                                                     className={styles.timerFill}
-                                                    style={{
-                                                        width: `${expirePercent}%`,
-                                                        backgroundColor: expirePercent > 40 ? "#2a9d8f" : expirePercent > 15 ? "#f59e0b" : "#ef4444",
-                                                    }}
+                                                    style={{ width: `${expirePercent}%`, backgroundColor: timerColor }}
                                                 />
                                             </div>
                                             <p className={styles.timerText}>
-                                                Mã hết hạn sau{" "}
-                                                <strong style={{ color: expirePercent > 40 ? "#2a9d8f" : expirePercent > 15 ? "#f59e0b" : "#ef4444" }}>
+                                                Expires in{" "}
+                                                <strong style={{ color: timerColor }}>
                                                     {String(minutes).padStart(2, "0")}:{String(seconds).padStart(2, "0")}
                                                 </strong>
                                             </p>
+                                            {checkoutUrl && (
+                                                <a
+                                                    href={checkoutUrl}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className={styles.checkoutLink}
+                                                >
+                                                    Or pay via browser →
+                                                </a>
+                                            )}
                                         </div>
                                     )}
 
@@ -211,7 +230,7 @@ export default function PaymentPage() {
                                     <button
                                         className={styles.generateBtn}
                                         onClick={generateQr}
-                                        disabled={!itinerary}
+                                        disabled={!bookingId}
                                     >
                                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                             <rect x="3" y="3" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
@@ -219,7 +238,7 @@ export default function PaymentPage() {
                                             <rect x="3" y="14" width="7" height="7" rx="1" stroke="currentColor" strokeWidth="1.5" />
                                             <path d="M14 14h2v2h-2zM18 14h3v3h-3zM14 18h3v3h-3z" fill="currentColor" />
                                         </svg>
-                                        {qrStatus === "error" ? "Thử lại" : "Tạo mã QR thanh toán"}
+                                        {qrStatus === "error" ? "Try Again" : "Generate QR Code"}
                                     </button>
                                 )}
 
@@ -229,17 +248,17 @@ export default function PaymentPage() {
                                             <path d="M1 4v6h6M23 20v-6h-6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                             <path d="M20.49 9A9 9 0 005.64 5.64L1 10M23 14l-4.64 4.36A9 9 0 013.51 15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
                                         </svg>
-                                        Tạo lại mã QR
+                                        Refresh QR Code
                                     </button>
                                 )}
 
                                 <div className={styles.instructions}>
-                                    <p className={styles.instructionTitle}>Hướng dẫn thanh toán</p>
+                                    <p className={styles.instructionTitle}>How to pay</p>
                                     <ol className={styles.instructionList}>
-                                        <li>Mở ứng dụng ngân hàng hoặc VNPay</li>
-                                        <li>Chọn tính năng <strong>Quét QR</strong></li>
-                                        <li>Quét mã QR ở trên</li>
-                                        <li>Xác nhận thông tin và thanh toán</li>
+                                        <li>Open your banking app or e-wallet</li>
+                                        <li>Select <strong>Scan QR</strong></li>
+                                        <li>Scan the QR code above</li>
+                                        <li>Confirm the details and complete payment</li>
                                     </ol>
                                 </div>
 
@@ -254,7 +273,7 @@ export default function PaymentPage() {
                         {/* ── RIGHT: Order Summary ── */}
                         <aside className={styles.summarySide}>
                             <div className={styles.summaryCard}>
-                                <h3 className={styles.summaryTitle}>Thông tin đơn hàng</h3>
+                                <h3 className={styles.summaryTitle}>Order Summary</h3>
 
                                 {itinerary ? (
                                     <>
@@ -283,26 +302,20 @@ export default function PaymentPage() {
                                         <div className={styles.summaryDivider} />
 
                                         <div className={styles.summaryRow}>
-                                            <span>Giá / người</span>
+                                            <span>Price / person</span>
                                             <span>{itinerary.price.toLocaleString("vi-VN")}đ</span>
                                         </div>
                                         <div className={styles.summaryRow}>
-                                            <span>Số người</span>
+                                            <span>Travelers</span>
                                             <span>× {travelers}</span>
                                         </div>
                                         <div className={styles.summaryDivider} />
                                         <div className={`${styles.summaryRow} ${styles.summaryTotal}`}>
-                                            <strong>Tổng tiền</strong>
+                                            <strong>Total</strong>
                                             <strong className={styles.summaryTotalPrice}>
-                                                {totalAmount.toLocaleString("vi-VN")}đ
+                                                {displayAmount.toLocaleString("vi-VN")}đ
                                             </strong>
                                         </div>
-
-                                        {txnRef && (
-                                            <div className={styles.txnRef}>
-                                                Mã giao dịch: <strong>{txnRef}</strong>
-                                            </div>
-                                        )}
                                     </>
                                 ) : (
                                     <div className={styles.skeletonBlock} />
@@ -314,20 +327,20 @@ export default function PaymentPage() {
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                         <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" fill="#e6f7f5" stroke="#2a9d8f" strokeWidth="1.5" />
                                     </svg>
-                                    <span>Thanh toán bảo mật SSL</span>
+                                    <span>SSL secured payment</span>
                                 </div>
                                 <div className={styles.trustItem}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                         <path d="M3 10h18M7 15h1M12 15h1" stroke="#2a9d8f" strokeWidth="1.5" strokeLinecap="round" />
                                         <rect x="2" y="5" width="20" height="14" rx="2" stroke="#2a9d8f" strokeWidth="1.5" />
                                     </svg>
-                                    <span>Hỗ trợ đa ngân hàng</span>
+                                    <span>Multi-bank support</span>
                                 </div>
                                 <div className={styles.trustItem}>
                                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none">
                                         <path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9M13.73 21a2 2 0 01-3.46 0" stroke="#2a9d8f" strokeWidth="1.5" strokeLinecap="round" />
                                     </svg>
-                                    <span>Hoàn tiền trong 24h nếu hủy</span>
+                                    <span>Full refund within 24h if cancelled</span>
                                 </div>
                             </div>
                         </aside>

@@ -10,17 +10,17 @@ import axiosClient from "../http/axios-client";
 
 export const authService = {
     login: (data: LoginRequest): Promise<ApiResponse<LoginResponse>> =>
-        axiosClient.post("/auth/login", data),
+        axiosClient.post("/auths/login", data),
 
     register: (data: RegisterRequest): Promise<ApiResponse<RegisterResponse>> =>
-        axiosClient.post("/auth/register", data),
+        axiosClient.post("/auths/register", data),
 
     refreshToken: (): Promise<ApiResponse<RefreshTokenResponse>> =>
-        axiosClient.get("/auth/refresh"),
+        axiosClient.get("/auths/refresh"),
 
     logout: (): Promise<ApiResponse<null>> =>
-        axiosClient.post("/auth/logout"),
+        axiosClient.post("/auths/logout"),
 
     getMe: (): Promise<ApiResponse<UserResponse>> =>
-        axiosClient.get("/auth/me"),
+        axiosClient.get("/auths/me"),
 };

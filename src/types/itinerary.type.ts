@@ -22,6 +22,7 @@ export interface ItineraryScheduleDTO {
 export interface ItineraryDTO {
     id: string;
     agencyId: string;
+    agencyName?: string;
     name: string;
     description?: string;
     price: number;
@@ -44,8 +45,9 @@ export interface ItineraryStopDTO {
 
 export interface StopActivityDTO {
     id: string;
-    serviceId: string;
-    serviceName: string;
+    serviceId?: string;
+    serviceName?: string;
+    customName?: string;
     serviceDescription?: string;
     activityOrder: number;
     startTime: string;
@@ -62,5 +64,7 @@ export interface ItineraryStopWithActivitiesDTO {
     latitude: number;
     longitude: number;
     providerId?: string;
+    vehicleId?: string;
+    vehicleName?: string;
     activities: StopActivityDTO[];
 }

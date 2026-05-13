@@ -3,12 +3,13 @@
 import { useEffect, useState } from "react";
 import styles from "./page.module.scss";
 import TourMapBuilder from "@/components/commons/tour-map-builder/tour-map-builder";
-import { agencyService, ProviderMarker, CreateItineraryPayload } from "@/libs/services/agency.service";
-import { userService } from "@/libs/services/user.service";
-import type { UserDTO } from "@/types/user.type";
+import { agencyService, ProviderMarker, CreateItineraryPayload, AgencyUserDTO } from "@/libs/services/agency.service";
+import type { ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
 import { providerService } from "@/libs/services/provider.service";
 import type { ServiceDTO } from "@/types/service.type";
 import type { PackageWithServicesDTO } from "@/types/package.type";
+import type { VehicleDTO } from "@/types/vehicle.type";
+import { VEHICLE_TYPE_LABELS } from "@/types/vehicle.type";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type TourStatus = "DRAFT" | "ACTIVE" | "INACTIVE";
@@ -37,6 +38,7 @@ interface ActivityItem {
 interface StopWithActivities extends TourStop {
     activities: ActivityItem[];
     providerId?: string;
+    vehicleId?: string;
 }
 
 interface TourSchedule {
@@ -88,7 +90,7 @@ export default function AgencyToursPage() {
     const [schedSpot,    setSchedSpot]    = useState("");
     const [schedGuideId, setSchedGuideId] = useState("");
     const [schedErr,     setSchedErr]     = useState("");
-    const [agencyUsers,  setAgencyUsers]  = useState<UserDTO[]>([]);
+    const [agencyUsers,  setAgencyUsers]  = useState<AgencyUserDTO[]>([]);
     const [agencyId,     setAgencyId]     = useState<string>("");
 
     // Wizard modal
@@ -100,21 +102,30 @@ export default function AgencyToursPage() {
     const [wName, setWName]         = useState("");
     const [wDesc, setWDesc]         = useState("");
     const [wDays, setWDays]         = useState("");
+    const [wPrice, setWPrice]       = useState("");
     const [wStatus, setWStatus]     = useState<TourStatus>("DRAFT");
     const [wImages, setWImages]     = useState<File[]>([]);
     const [wImagePreviews, setWImagePreviews] = useState<string[]>([]);
+    // edit wizard tracking
+    const [originalStopIds, setOriginalStopIds] = useState<string[]>([]);
     // step 2 – map itinerary
     const [wStops, setWStops]     = useState<StopWithActivities[]>([]);
     const [providerMarkers, setProviderMarkers] = useState<ProviderMarker[]>([]);
     const [confirmProvider, setConfirmProvider] = useState<ProviderMarker | null>(null);
+    const [confirmProviderVehicleId, setConfirmProviderVehicleId] = useState("");
+
+    useEffect(() => {
+        agencyService.getMyVehicles()
+            .then(res => { if (res.data) setAgencyVehicles(res.data); })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         agencyService.getMe()
             .then(meRes => {
                 if (!meRes.data) return;
                 setAgencyId(meRes.data.id);
-                // Pre-fetch all users for guide dropdown
-                userService.getAllUsers()
+                agencyService.getAgencyUsers(meRes.data.id)
                     .then(r => { if (r.data) setAgencyUsers(r.data); })
                     .catch(() => {});
                 return agencyService.getMyItineraries();
@@ -143,10 +154,14 @@ export default function AgencyToursPage() {
             if (res.data) setProviderMarkers(res.data);
         }).catch(() => {});
     }, []);
+    // vehicles for this agency
+    const [agencyVehicles, setAgencyVehicles] = useState<VehicleDTO[]>([]);
+
     // pending stop (when user clicks the map)
     const [pendingMarker, setPendingMarker]         = useState<{ lat: number; lng: number } | null>(null);
     const [pendingName, setPendingName]             = useState("");
     const [pendingAddress, setPendingAddress]       = useState("");
+    const [pendingVehicleId, setPendingVehicleId]   = useState("");
     const [pendingAddrLoading, setPendingAddrLoading] = useState(false);
     // activity sub-modal
     const [actTarget, setActTarget] = useState<string | null>(null); // stopId
@@ -164,6 +179,17 @@ export default function AgencyToursPage() {
     const [providerPackagesCache, setProviderPackagesCache] = useState<Record<string, PackageWithServicesDTO[]>>({});
     const [wizSubmitting, setWizSubmitting] = useState(false);
     const [wizError, setWizError] = useState("");
+
+    // ── Dedicated edit modal ──────────────────────────────────────────────────
+    const [editOpen, setEditOpen] = useState(false);
+    const [editTour, setEditTour] = useState<Itinerary | null>(null);
+    const [editTab, setEditTab] = useState(0); // 0=basic, 1=stops
+    const [editPrice, setEditPrice] = useState("");
+    const [editStops, setEditStops] = useState<ItineraryStopWithActivitiesDTO[]>([]);
+    const [editStopsLoading, setEditStopsLoading] = useState(false);
+    const [editExpandedStops, setEditExpandedStops] = useState<Set<string>>(new Set());
+    const [editSaving, setEditSaving] = useState(false);
+    const [editError, setEditError] = useState("");
 
     // Filtered tours
     const filtered = tours.filter(t => {
@@ -226,6 +252,7 @@ export default function AgencyToursPage() {
         setPendingMarker({ lat, lng });
         setPendingName("");
         setPendingAddress("");
+        setPendingVehicleId("");
         setPendingAddrLoading(true);
         fetch(
             `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}`,
@@ -257,10 +284,12 @@ export default function AgencyToursPage() {
             latitude: pendingMarker.lat,
             longitude: pendingMarker.lng,
             activities: [],
+            vehicleId: pendingVehicleId || undefined,
         }]);
         setPendingMarker(null);
         setPendingName("");
         setPendingAddress("");
+        setPendingVehicleId("");
     }
 
     function confirmProviderAsStop() {
@@ -273,8 +302,10 @@ export default function AgencyToursPage() {
             longitude: Number(confirmProvider.longitude),
             activities: [],
             providerId: confirmProvider.id,
+            vehicleId: confirmProviderVehicleId || undefined,
         }]);
         setConfirmProvider(null);
+        setConfirmProviderVehicleId("");
     }
 
     function removeStop(id: string) { setWStops(prev => prev.filter(s => s.id !== id)); }
@@ -460,15 +491,125 @@ export default function AgencyToursPage() {
 
 
     function openEdit(tour: Itinerary) {
-        setEditMode(true);
         setEditTargetId(tour.id);
+        setEditMode(true);
         setWName(tour.name);
         setWDesc(tour.description);
         setWDays(String(tour.durationDays));
+        setWPrice(String(tour.price));
         setWStatus(tour.status);
-        setWizStep(1);
+        setWStops([]);
+        setOriginalStopIds([]);
         setWizError("");
+        setWizSubmitting(false);
+        setWizStep(1);
         setWizOpen(true);
+        agencyService.getItineraryStops(tour.id).then(res => {
+            if (!res.data) return;
+            const converted: StopWithActivities[] = res.data.map(stop => ({
+                id: stop.id,
+                name: stop.name,
+                address: stop.address ?? "",
+                latitude: stop.latitude,
+                longitude: stop.longitude,
+                providerId: stop.providerId,
+                vehicleId: stop.vehicleId,
+                activities: stop.activities.map(act => {
+                    const isCustom = !act.serviceId;
+                    return {
+                        id: act.id,
+                        type: isCustom ? "custom" as const : "service" as const,
+                        name: isCustom ? (act.customName ?? "") : (act.serviceName ?? ""),
+                        serviceId: act.serviceId,
+                        startTime: act.startTime ? new Date(act.startTime).toISOString().slice(11, 16) : "",
+                        endTime: act.endTime ? new Date(act.endTime).toISOString().slice(11, 16) : "",
+                        price: act.price,
+                        note: act.note ?? "",
+                    };
+                }),
+            }));
+            setWStops(converted);
+            setOriginalStopIds(res.data.map(s => s.id));
+        }).catch(() => {});
+    }
+
+    function closeEdit() {
+        setEditOpen(false);
+        setEditTour(null);
+        setEditStops([]);
+    }
+
+    function openEditStopsTab() {
+        setEditTab(1);
+        if (editStops.length > 0 || !editTour) return;
+        setEditStopsLoading(true);
+        agencyService.getItineraryStops(editTour.id)
+            .then(res => setEditStops(res.data ?? []))
+            .catch(() => {})
+            .finally(() => setEditStopsLoading(false));
+    }
+
+    function toggleEditStop(stopId: string) {
+        setEditExpandedStops(prev => {
+            const next = new Set(prev);
+            next.has(stopId) ? next.delete(stopId) : next.add(stopId);
+            return next;
+        });
+    }
+
+    async function saveEditBasic() {
+        if (!editTour) return;
+        setEditSaving(true);
+        setEditError("");
+        try {
+            const res = await agencyService.updateItinerary(editTour.id, {
+                agencyId,
+                name: wName.trim(),
+                description: wDesc.trim(),
+                price: Number(editPrice) || editTour.price,
+                durationDays: Number(wDays) || 1,
+                status: wStatus,
+            });
+            if (res.data) {
+                const updated: Itinerary = {
+                    ...editTour,
+                    name: res.data.name,
+                    description: res.data.description ?? "",
+                    durationDays: res.data.durationDays,
+                    price: res.data.price,
+                    status: res.data.status.toUpperCase() as TourStatus,
+                };
+                setTours(prev => prev.map(t => t.id === updated.id ? updated : t));
+                if (detailTour?.id === updated.id) setDetailTour(prev => prev ? { ...prev, ...updated } : prev);
+                setEditTour(updated);
+            }
+            closeEdit();
+        } catch {
+            setEditError("Lưu thất bại, vui lòng thử lại");
+        } finally {
+            setEditSaving(false);
+        }
+    }
+
+    async function handleEditDeleteStop(stopId: string) {
+        try {
+            await agencyService.deleteStop(stopId);
+            setEditStops(prev => prev.filter(s => s.id !== stopId));
+            if (editTour) {
+                setTours(prev => prev.map(t =>
+                    t.id === editTour.id ? { ...t, stopCount: Math.max(0, t.stopCount - 1) } : t
+                ));
+            }
+        } catch { /* silently ignore */ }
+    }
+
+    async function handleEditDeleteActivity(stopId: string, actId: string) {
+        try {
+            await agencyService.deleteActivity(actId);
+            setEditStops(prev => prev.map(s =>
+                s.id === stopId ? { ...s, activities: s.activities.filter(a => a.id !== actId) } : s
+            ));
+        } catch { /* silently ignore */ }
     }
 
     function closeWizard() {
@@ -476,9 +617,10 @@ export default function AgencyToursPage() {
         setWizStep(1);
         setEditMode(false);
         setEditTargetId(null);
-        setWName(""); setWDesc(""); setWDays(""); setWStatus("DRAFT");
+        setWName(""); setWDesc(""); setWDays(""); setWPrice(""); setWStatus("DRAFT");
         setWImages([]); setWImagePreviews([]);
         setWStops([]);
+        setOriginalStopIds([]);
         setPendingMarker(null); setPendingName(""); setPendingAddress("");
     }
 
@@ -490,14 +632,52 @@ export default function AgencyToursPage() {
         if (editMode && editTargetId) {
             const target = tours.find(t => t.id === editTargetId)!;
             try {
+                // 1. Update basic info
                 const res = await agencyService.updateItinerary(editTargetId, {
-                    agencyId: editTargetId,
+                    agencyId,
                     name: wName.trim(),
                     description: wDesc.trim(),
-                    price: target.price,
+                    price: Number(wPrice) || target.price,
                     durationDays: Number(wDays) || 1,
                     status: wStatus,
                 });
+
+                // 2. Delete all original stops (cascade deletes their activities)
+                for (const stopId of originalStopIds) {
+                    await agencyService.deleteStop(stopId).catch(() => {});
+                }
+
+                // 3. Re-create all current stops + their activities
+                const BASE_DATE = "2000-01-01";
+                for (const [idx, stop] of wStops.entries()) {
+                    const stopRes = await agencyService.addStop(editTargetId, {
+                        stopOrder: idx,
+                        name: stop.name,
+                        longitude: stop.longitude,
+                        latitude: stop.latitude,
+                        address: stop.address,
+                        providerId: stop.providerId,
+                        vehicleId: stop.vehicleId,
+                    });
+                    const newStopId = stopRes.data?.id;
+                    if (!newStopId) continue;
+                    const saveable = stop.activities.filter(a => a.serviceId || (a.type === "custom" && a.name));
+                    for (const [jdx, act] of saveable.entries()) {
+                        const startISO = act.startTime ? `${BASE_DATE}T${act.startTime}:00Z` : `${BASE_DATE}T00:00:00Z`;
+                        const endISO   = act.endTime   ? `${BASE_DATE}T${act.endTime}:00Z`   : `${BASE_DATE}T00:00:00Z`;
+                        await agencyService.addActivity(newStopId, {
+                            itineraryStopId: newStopId,
+                            serviceId: act.serviceId || undefined,
+                            customName: act.type === "custom" ? act.name : undefined,
+                            activityOrder: jdx,
+                            startTime: startISO,
+                            endTime: endISO,
+                            price: act.price,
+                            note: act.note,
+                        }).catch(() => {});
+                    }
+                }
+
                 if (res.data) {
                     const updated: Itinerary = {
                         ...target,
@@ -506,6 +686,7 @@ export default function AgencyToursPage() {
                         durationDays: res.data.durationDays,
                         price: res.data.price,
                         status: res.data.status.toUpperCase() as TourStatus,
+                        stopCount: wStops.length,
                     };
                     setTours(prev => prev.map(t => t.id === updated.id ? updated : t));
                     if (detailTour?.id === updated.id) setDetailTour(prev => prev ? { ...prev, ...updated } : prev);
@@ -538,10 +719,12 @@ export default function AgencyToursPage() {
             latitude: stop.latitude,
             address: stop.address ?? "",
             providerId: stop.providerId,
+            vehicleId: stop.vehicleId || undefined,
             activities: stop.activities
-                .filter(a => a.serviceId)
+                .filter(a => a.serviceId || (a.type === "custom" && a.name))
                 .map((act, jdx) => ({
-                    serviceId: act.serviceId!,
+                    serviceId: act.serviceId || undefined,
+                    customName: act.type === "custom" ? act.name : undefined,
                     activityOrder: jdx,
                     startTime: act.startTime || "",
                     endTime: act.endTime || "",
@@ -1005,8 +1188,8 @@ export default function AgencyToursPage() {
                                     >
                                         <option value="">— No guide assigned —</option>
                                         {agencyUsers.map(u => (
-                                            <option key={u.id} value={u.id}>
-                                                {u.username}{u.fullName ? ` (${u.fullName})` : ""}
+                                            <option key={u.userId} value={u.userId}>
+                                                {u.userFullName || u.email}
                                             </option>
                                         ))}
                                     </select>
@@ -1034,17 +1217,181 @@ export default function AgencyToursPage() {
                 </div>
             )}
 
+            {/* ════════════════ EDIT TOUR MODAL ════════════════ */}
+            {editOpen && editTour && (
+                <div className={styles.overlay} onClick={closeEdit}>
+                    <div className={styles.editModal} onClick={e => e.stopPropagation()}>
+
+                        {/* Header */}
+                        <div className={styles.editModalHeader}>
+                            <div>
+                                <h2 className={styles.editModalTitle}>Chỉnh sửa tour</h2>
+                                <p className={styles.editModalSub}>{editTour.name}</p>
+                            </div>
+                            <button className={styles.modalCloseBtn} onClick={closeEdit}>
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                            </button>
+                        </div>
+
+                        {/* Tabs */}
+                        <div className={styles.editTabs}>
+                            <button
+                                className={`${styles.editTab} ${editTab === 0 ? styles.editTabActive : ""}`}
+                                onClick={() => setEditTab(0)}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                Thông tin chung
+                            </button>
+                            <button
+                                className={`${styles.editTab} ${editTab === 1 ? styles.editTabActive : ""}`}
+                                onClick={openEditStopsTab}
+                            >
+                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.8"/></svg>
+                                Lộ trình ({editTour.stopCount} điểm dừng)
+                            </button>
+                        </div>
+
+                        {/* Tab 0 — Basic Info */}
+                        {editTab === 0 && (
+                            <div className={styles.editBody}>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>Tên tour <span className={styles.required}>*</span></label>
+                                    <input className={styles.input} value={wName} onChange={e => setWName(e.target.value)} placeholder="Tên hành trình" />
+                                </div>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>Mô tả</label>
+                                    <textarea className={styles.textarea} rows={3} value={wDesc} onChange={e => setWDesc(e.target.value)} placeholder="Mô tả hành trình…" />
+                                </div>
+                                <div className={styles.fieldRow}>
+                                    <div className={styles.field}>
+                                        <label className={styles.label}>Thời gian (ngày) <span className={styles.required}>*</span></label>
+                                        <input className={styles.input} type="number" min="1" value={wDays} onChange={e => setWDays(e.target.value)} />
+                                    </div>
+                                    <div className={styles.field}>
+                                        <label className={styles.label}>Trạng thái</label>
+                                        <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
+                                            <option value="DRAFT">Draft</option>
+                                            <option value="ACTIVE">Active</option>
+                                            <option value="INACTIVE">Inactive</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div className={styles.field}>
+                                    <label className={styles.label}>Giá (VNĐ)</label>
+                                    <input className={styles.input} type="number" min="0" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="0" />
+                                </div>
+                                {editError && <p style={{ fontSize:12.5, color:"#ef4444", margin:0 }}>{editError}</p>}
+                            </div>
+                        )}
+
+                        {/* Tab 1 — Stops */}
+                        {editTab === 1 && (
+                            <div className={styles.editBody}>
+                                {editStopsLoading ? (
+                                    <div className={styles.editStopsLoading}>
+                                        <span className={styles.spinner} />
+                                        <span>Đang tải lộ trình…</span>
+                                    </div>
+                                ) : editStops.length === 0 ? (
+                                    <div className={styles.editStopsEmpty}>Chưa có điểm dừng nào</div>
+                                ) : (
+                                    <div className={styles.editStopsList}>
+                                        {editStops.map((stop, idx) => (
+                                            <div key={stop.id} className={styles.editStopCard}>
+                                                <div className={styles.editStopHeader}>
+                                                    <div className={styles.editStopLeft}>
+                                                        <span className={styles.editStopNum}>{idx + 1}</span>
+                                                        <div>
+                                                            <p className={styles.editStopName}>{stop.name}</p>
+                                                            {stop.address && <p className={styles.editStopAddr}>{stop.address}</p>}
+                                                        </div>
+                                                    </div>
+                                                    <div className={styles.editStopActions}>
+                                                        <button
+                                                            className={styles.editStopToggle}
+                                                            onClick={() => toggleEditStop(stop.id)}
+                                                            title="Xem hoạt động"
+                                                        >
+                                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13" style={{ transform: editExpandedStops.has(stop.id) ? "rotate(180deg)" : undefined, transition: "transform 0.2s" }}>
+                                                                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+                                                            </svg>
+                                                            {stop.activities.length} hoạt động
+                                                        </button>
+                                                        <button
+                                                            className={styles.editDeleteBtn}
+                                                            onClick={() => handleEditDeleteStop(stop.id)}
+                                                            title="Xóa điểm dừng"
+                                                        >
+                                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                                {editExpandedStops.has(stop.id) && (
+                                                    <div className={styles.editActivities}>
+                                                        {stop.activities.length === 0 ? (
+                                                            <p className={styles.editNoAct}>Không có hoạt động</p>
+                                                        ) : (
+                                                            stop.activities.map((act, ai) => (
+                                                                <div key={act.id} className={styles.editActRow}>
+                                                                    <span className={styles.editActIdx}>{ai + 1}</span>
+                                                                    <div className={styles.editActInfo}>
+                                                                        <span className={styles.editActName}>{act.serviceName ?? act.customName}</span>
+                                                                        <span className={styles.editActMeta}>
+                                                                            {act.startTime ? new Date(act.startTime).toLocaleTimeString("vi-VN", { hour:"2-digit", minute:"2-digit" }) : "—"}
+                                                                            {" – "}
+                                                                            {act.endTime ? new Date(act.endTime).toLocaleTimeString("vi-VN", { hour:"2-digit", minute:"2-digit" }) : "—"}
+                                                                            {" · "}
+                                                                            {act.price.toLocaleString("vi-VN")}đ
+                                                                        </span>
+                                                                    </div>
+                                                                    <button
+                                                                        className={styles.editDeleteBtn}
+                                                                        onClick={() => handleEditDeleteActivity(stop.id, act.id)}
+                                                                        title="Xóa hoạt động"
+                                                                    >
+                                                                        <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                                    </button>
+                                                                </div>
+                                                            ))
+                                                        )}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {/* Footer */}
+                        <div className={styles.editModalFooter}>
+                            <button className={styles.btnCancel} onClick={closeEdit}>Hủy</button>
+                            {editTab === 0 && (
+                                <button className={styles.btnSubmit} onClick={saveEditBasic} disabled={editSaving || !wName.trim()}>
+                                    {editSaving ? "Đang lưu…" : (
+                                        <>
+                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                            Lưu thay đổi
+                                        </>
+                                    )}
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                </div>
+            )}
+
             {/* ════════════════ CREATE TOUR WIZARD ════════════════ */}
             {wizOpen && (
                 <div className={styles.overlay} onClick={closeWizard}>
                     <div className={styles.wizardModal} onClick={e => e.stopPropagation()}>
 
-                        {/* Step bar — hidden in edit mode */}
-                        <div className={styles.wizardSteps} style={editMode ? { display: "none" } : undefined}>
+                        {/* Step bar */}
+                        <div className={styles.wizardSteps}>
                             {[
-                                { n:1, label:"Basic Info"    },
-                                { n:2, label:"Itinerary Map" },
-                                { n:3, label:"Review"        },
+                                { n:1, label: editMode ? "Thông tin" : "Basic Info"    },
+                                { n:2, label: editMode ? "Lộ trình"  : "Itinerary Map" },
+                                { n:3, label: editMode ? "Xem lại"   : "Review"        },
                             ].map((s, i, arr) => (
                                 <div key={s.n} className={styles.wizardStep}>
                                     <div className={`${styles.stepCircle} ${wizStep > s.n ? styles.stepCircleDone : wizStep === s.n ? styles.stepCircleActive : ""}`}>
@@ -1074,14 +1421,14 @@ export default function AgencyToursPage() {
                                     <label className={styles.label}>Description</label>
                                     <textarea className={styles.textarea} placeholder="Briefly describe this tour…" rows={3} value={wDesc} onChange={e => setWDesc(e.target.value)} />
                                 </div>
-                                <div className={`${styles.fieldRow} ${editMode ? "" : ""}`}>
+                                <div className={styles.fieldRow}>
                                     <div className={styles.field}>
                                         <label className={styles.label}>Duration (days) <span className={styles.required}>*</span></label>
                                         <input className={styles.input} type="number" min="1" placeholder="3" value={wDays} onChange={e => setWDays(e.target.value)} />
                                     </div>
                                     {editMode && (
                                         <div className={styles.field}>
-                                            <label className={styles.label}>Status</label>
+                                            <label className={styles.label}>Trạng thái</label>
                                             <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
                                                 <option value="DRAFT">Draft</option>
                                                 <option value="ACTIVE">Active</option>
@@ -1090,6 +1437,12 @@ export default function AgencyToursPage() {
                                         </div>
                                     )}
                                 </div>
+                                {editMode && (
+                                    <div className={styles.field}>
+                                        <label className={styles.label}>Giá (VNĐ)</label>
+                                        <input className={styles.input} type="number" min="0" placeholder="0" value={wPrice} onChange={e => setWPrice(e.target.value)} />
+                                    </div>
+                                )}
                                 {!editMode && (
                                     <div className={styles.field}>
                                         <label className={styles.label}>Tour Images</label>
@@ -1141,7 +1494,7 @@ export default function AgencyToursPage() {
                                             stops={wStops.map(s => ({ id: s.id, name: s.name, latitude: s.latitude, longitude: s.longitude }))}
                                             onMapClick={handleMapClick}
                                             providers={providerMarkers}
-                                            onProviderClick={p => setConfirmProvider(p)}
+                                            onProviderClick={p => { setConfirmProvider(p); setConfirmProviderVehicleId(""); }}
                                         />
 
                                         {/* Right: stops panel */}
@@ -1222,17 +1575,18 @@ export default function AgencyToursPage() {
                         {wizStep === 3 && (
                             <div className={styles.wizardBody}>
                                 <div>
-                                    <p className={styles.stepTitle}>Review & Create</p>
-                                    <p className={styles.stepSubtitle}>Double-check everything before creating the tour.</p>
+                                    <p className={styles.stepTitle}>{editMode ? "Xem lại & Lưu" : "Review & Create"}</p>
+                                    <p className={styles.stepSubtitle}>{editMode ? "Kiểm tra lại trước khi lưu thay đổi." : "Double-check everything before creating the tour."}</p>
                                 </div>
                                 <div className={styles.reviewSection}>
                                     <p className={styles.reviewSectionTitle}>
                                         <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.8"/></svg>
-                                        Basic Info
+                                        {editMode ? "Thông tin chung" : "Basic Info"}
                                     </p>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Name</span><span className={styles.reviewVal}>{wName || "—"}</span></div>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Duration</span><span className={styles.reviewVal}>{wDays || "—"} days</span></div>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Status</span><span className={styles.reviewVal}>Draft</span></div>
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Tên</span><span className={styles.reviewVal}>{wName || "—"}</span></div>
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Số ngày</span><span className={styles.reviewVal}>{wDays || "—"} ngày</span></div>
+                                    {editMode && <div className={styles.reviewRow}><span className={styles.reviewKey}>Giá</span><span className={styles.reviewVal}>{wPrice ? fmtPrice(Number(wPrice)) : "—"}</span></div>}
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Trạng thái</span><span className={styles.reviewVal}>{wStatus}</span></div>
                                 </div>
                                 <div className={styles.reviewSection}>
                                     <p className={styles.reviewSectionTitle}>
@@ -1261,34 +1615,30 @@ export default function AgencyToursPage() {
 
                         {/* Wizard footer */}
                         <div className={styles.wizardFooter}>
-                            <button className={styles.btnBack} onClick={() => { if (!editMode && wizStep > 1) setWizStep(s => s - 1); else closeWizard(); }}>
+                            <button className={styles.btnBack} onClick={() => { if (wizStep > 1) setWizStep(s => s - 1); else closeWizard(); }}>
                                 <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                {!editMode && wizStep > 1 ? "Back" : "Cancel"}
+                                {wizStep > 1 ? "Back" : "Cancel"}
                             </button>
                             <div className={styles.wizardFooterRight}>
-                                {!editMode && <span style={{ fontSize:12, color:"#9ca3af" }}>Step {wizStep} of 3</span>}
-                                {editMode
-                                    ? <button className={styles.btnNext} onClick={submitWizard} disabled={wizSubmitting}>
-                                        {wizSubmitting ? "Saving…" : (
-                                            <>
-                                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                Save Changes
-                                            </>
-                                        )}
+                                <span style={{ fontSize:12, color:"#9ca3af" }}>
+                                    {editMode ? `Bước ${wizStep}/3` : `Step ${wizStep} of 3`}
+                                </span>
+                                {wizStep < 3
+                                    ? <button className={styles.btnNext} onClick={() => { setWizError(""); setWizStep(s => s + 1); }} disabled={wizStep === 1 && !wName.trim()}>
+                                        {editMode ? "Tiếp theo" : "Next"}
+                                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                       </button>
-                                    : wizStep < 3
-                                        ? <button className={styles.btnNext} onClick={() => { setWizError(""); setWizStep(s => s + 1); }} disabled={wizStep === 1 && !wName.trim()}>
-                                            Next
-                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                          </button>
-                                        : <button className={styles.btnNext} onClick={submitWizard} disabled={wizSubmitting}>
-                                            {wizSubmitting ? "Creating…" : (
+                                    : <button className={styles.btnNext} onClick={submitWizard} disabled={wizSubmitting}>
+                                        {wizSubmitting
+                                            ? (editMode ? "Đang lưu…" : "Creating…")
+                                            : (
                                                 <>
                                                     <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                    Create Tour
+                                                    {editMode ? "Lưu thay đổi" : "Create Tour"}
                                                 </>
-                                            )}
-                                          </button>
+                                            )
+                                        }
+                                      </button>
                                 }
                                 {wizError && <p style={{ fontSize: 12, color: "#ef4444", margin: "6px 0 0", textAlign: "right" }}>{wizError}</p>}
                             </div>
@@ -1451,6 +1801,26 @@ export default function AgencyToursPage() {
                                     onChange={e => setPendingAddress(e.target.value)}
                                 />
                             </div>
+                            <div className={styles.field}>
+                                <label className={styles.label}>Phương tiện di chuyển</label>
+                                <select
+                                    className={styles.select}
+                                    value={pendingVehicleId}
+                                    onChange={e => setPendingVehicleId(e.target.value)}
+                                >
+                                    <option value="">— Chọn phương tiện —</option>
+                                    {agencyVehicles.map(v => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.name} · {VEHICLE_TYPE_LABELS[v.type as keyof typeof VEHICLE_TYPE_LABELS] ?? v.type} · {v.capacity} chỗ
+                                        </option>
+                                    ))}
+                                </select>
+                                {agencyVehicles.length === 0 && (
+                                    <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>
+                                        Chưa có phương tiện nào — thêm tại trang Vehicles
+                                    </p>
+                                )}
+                            </div>
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.btnCancel} onClick={() => setPendingMarker(null)}>Cancel</button>
@@ -1485,11 +1855,28 @@ export default function AgencyToursPage() {
                                 <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 4px" }}>{confirmProvider.address}</p>
                             )}
                             {confirmProvider.contactPhone && (
-                                <p style={{ fontSize: 13, color: "#6b7280", margin: 0 }}>{confirmProvider.contactPhone}</p>
+                                <p style={{ fontSize: 13, color: "#6b7280", margin: "0 0 12px" }}>{confirmProvider.contactPhone}</p>
                             )}
-                            <p style={{ fontSize: 13, color: "#374151", marginTop: 12 }}>
-                                Use <strong>{confirmProvider.name}</strong> as the next stop on this tour?
-                            </p>
+                            <div className={styles.field}>
+                                <label className={styles.label}>Phương tiện di chuyển</label>
+                                <select
+                                    className={styles.select}
+                                    value={confirmProviderVehicleId}
+                                    onChange={e => setConfirmProviderVehicleId(e.target.value)}
+                                >
+                                    <option value="">— Chọn phương tiện —</option>
+                                    {agencyVehicles.map(v => (
+                                        <option key={v.id} value={v.id}>
+                                            {v.name} · {VEHICLE_TYPE_LABELS[v.type as keyof typeof VEHICLE_TYPE_LABELS] ?? v.type} · {v.capacity} chỗ
+                                        </option>
+                                    ))}
+                                </select>
+                                {agencyVehicles.length === 0 && (
+                                    <p style={{ fontSize: 11, color: "#9ca3af", margin: "4px 0 0" }}>
+                                        Chưa có phương tiện — thêm tại trang Vehicles
+                                    </p>
+                                )}
+                            </div>
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.btnCancel} onClick={() => setConfirmProvider(null)}>Cancel</button>

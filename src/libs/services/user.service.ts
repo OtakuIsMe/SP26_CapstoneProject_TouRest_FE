@@ -41,4 +41,12 @@ export const userService = {
 
     getAllUsers: (): Promise<ApiResponse<UserDTO[]>> =>
         axiosClient.get("/users/all"),
+
+    uploadImage: (file: File): Promise<ApiResponse<{ url: string }>> => {
+        const fd = new FormData();
+        fd.append("file", file);
+        return axiosClient.post("/media/upload", fd, {
+            headers: { "Content-Type": "multipart/form-data" },
+        });
+    },
 };

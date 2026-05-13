@@ -22,6 +22,7 @@ const Ico = {
     Analytics: () => <svg viewBox="0 0 24 24" fill="none"><path d="M3 20h18M4 20V10l5-5 4 4 5-6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     Discounts: () => <svg viewBox="0 0 24 24" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>,
     Jobs:      () => <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2M12 12v4M10 14h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    Vehicles:  () => <svg viewBox="0 0 24 24" fill="none"><rect x="1" y="9" width="15" height="9" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 13h3l3 3v3h-6v-6z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="5.5" cy="18.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/><circle cx="18.5" cy="18.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/><path d="M1 13h15M4 9V6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Requests:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M6 1v3M10 1v3M14 1v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Packages:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Services:  () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
@@ -66,6 +67,7 @@ const MENU: Record<Role, Entry[]> = {
             { label: "Dashboard", href: "/agency/dashboard", icon: <Ico.Dashboard /> },
             { label: "Bookings",  href: "/agency/bookings",  icon: <Ico.Orders />,    badge: 8 },
             { label: "Tours",     href: "/agency/tours",     icon: <Ico.Tours />    },
+            { label: "Vehicles",  href: "/agency/vehicles",  icon: <Ico.Vehicles /> },
             { label: "Schedule",  href: "/agency/schedule",  icon: <Ico.Schedule /> },
         ]},
         { items: [

@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import styles from "./manage-layout.module.scss";
 import type { Role } from "./manage-sidebar";
 import { authService } from "@/libs/services/auth.service";
+import { notificationService, NotificationDTO, NotificationEntityType } from "@/libs/services/notification.service";
 import { StorageKeys } from "@/constants/storage";
 
 // Dùng chung cho cả 3 role — tên trang theo pathname
@@ -77,16 +78,30 @@ const ExportIcon = () => (
 const AVATAR:      Record<Role, string> = { admin: "AD", agency: "AG", provider: "PR" };
 const AVATAR_NAME: Record<Role, string> = { admin: "Admin", agency: "Agency", provider: "Provider" };
 
-// ── Mock notifications ─────────────────────────────────────────────────────────
+// ── Notification helpers ────────────────────────────────────────────────────────
 type NotifType = "booking" | "tour" | "system" | "payment";
 
-interface Notif {
-    id: string;
-    type: NotifType;
-    title: string;
-    desc: string;
-    time: string;
-    read: boolean;
+function entityTypeToNotifType(entityType: NotificationEntityType): NotifType {
+    switch (entityType) {
+        case "Booking":   return "booking";
+        case "Refund":    return "payment";
+        case "Itinerary":
+        case "Package":
+        case "Service":   return "tour";
+        default:          return "system";
+    }
+}
+
+function timeAgo(iso: string): string {
+    const diff = Date.now() - new Date(iso).getTime();
+    const m = Math.floor(diff / 60000);
+    if (m < 1)   return "Just now";
+    if (m < 60)  return `${m} min ago`;
+    const h = Math.floor(m / 60);
+    if (h < 24)  return `${h} hr ago`;
+    const d = Math.floor(h / 24);
+    if (d === 1) return "Yesterday";
+    return `${d} days ago`;
 }
 
 const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
@@ -123,37 +138,59 @@ const NOTIF_COLOR: Record<NotifType, { bg: string; color: string }> = {
     payment: { bg: "#f5f3ff", color: "#8b5cf6" },
 };
 
-const MOCK_NOTIFS: Notif[] = [
-    { id:"n1", type:"booking",  title:"New booking received",      desc:"Nguyen Van A booked Ha Long Bay Explorer for 4 pax", time:"2 min ago",  read:false },
-    { id:"n2", type:"payment",  title:"Payment confirmed",          desc:"₫12,400,000 received for booking #BK-1042",           time:"15 min ago", read:false },
-    { id:"n3", type:"tour",     title:"Tour departs tomorrow",      desc:"Sapa Cultural Trek — 12 passengers, 06:30 AM",        time:"1 hr ago",   read:false },
-    { id:"n4", type:"system",   title:"Profile verification pending", desc:"Please complete your agency verification documents", time:"3 hr ago",   read:true  },
-    { id:"n5", type:"booking",  title:"Booking cancellation",       desc:"Tran Thi B cancelled booking #BK-1041",               time:"5 hr ago",   read:true  },
-    { id:"n6", type:"payment",  title:"Payout processed",           desc:"₫45,000,000 sent to your bank account",              time:"Yesterday",  read:true  },
-    { id:"n7", type:"tour",     title:"Tour review received",       desc:"Ha Long Bay Explorer got a 5-star rating",            time:"Yesterday",  read:true  },
-];
-
 export default function ManageHeader({ role }: { role: Role }) {
     const pathname = usePathname();
     const router   = useRouter();
     const title    = TITLES[pathname] ?? "Dashboard";
     const isDashboard = pathname === "/dashboard";
 
-    const [avatarOpen, setAvatarOpen] = useState(false);
-    const [notifOpen,  setNotifOpen]  = useState(false);
-    const [notifs,     setNotifs]     = useState<Notif[]>(MOCK_NOTIFS);
+    const [avatarOpen,   setAvatarOpen]   = useState(false);
+    const [notifOpen,    setNotifOpen]    = useState(false);
+    const [notifs,       setNotifs]       = useState<NotificationDTO[]>([]);
+    const [unreadCount,  setUnreadCount]  = useState(0);
+    const [activeTab,    setActiveTab]    = useState<"all" | "unread">("all");
     const avatarRef = useRef<HTMLDivElement>(null);
     const notifRef  = useRef<HTMLDivElement>(null);
 
-    const unreadCount = notifs.filter(n => !n.read).length;
+    const fetchNotifications = useCallback(async () => {
+        try {
+            const res = await notificationService.getMyNotifications();
+            if (res.data) setNotifs(res.data);
+        } catch { /* ignore */ }
+    }, []);
 
-    function markAllRead() {
-        setNotifs(prev => prev.map(n => ({ ...n, read: true })));
+    const fetchUnreadCount = useCallback(async () => {
+        try {
+            const res = await notificationService.getUnreadCount();
+            if (res.data !== undefined) setUnreadCount(res.data);
+        } catch { /* ignore */ }
+    }, []);
+
+    useEffect(() => {
+        fetchUnreadCount();
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, [fetchUnreadCount]);
+
+    useEffect(() => {
+        if (notifOpen) fetchNotifications();
+    }, [notifOpen, fetchNotifications]);
+
+    async function markAllRead() {
+        setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
+        setUnreadCount(0);
+        try { await notificationService.markAllAsRead(); } catch { /* ignore */ }
     }
 
-    function markRead(id: string) {
-        setNotifs(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
+    async function markRead(id: string) {
+        const notif = notifs.find(n => n.id === id);
+        if (!notif || notif.isRead) return;
+        setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
+        setUnreadCount(c => Math.max(0, c - 1));
+        try { await notificationService.markAsRead(id); } catch { /* ignore */ }
     }
+
+    const displayedNotifs = activeTab === "unread" ? notifs.filter(n => !n.isRead) : notifs;
 
     useEffect(() => {
         function handler(e: MouseEvent) {
@@ -225,29 +262,40 @@ export default function ManageHeader({ role }: { role: Role }) {
 
                             {/* Tabs */}
                             <div className={styles.notifTabs}>
-                                <span className={`${styles.notifTab} ${styles.notifTabActive}`}>All</span>
-                                <span className={styles.notifTab}>Unread {unreadCount > 0 && <b>{unreadCount}</b>}</span>
+                                <span
+                                    className={`${styles.notifTab} ${activeTab === "all" ? styles.notifTabActive : ""}`}
+                                    onClick={() => setActiveTab("all")}
+                                >All</span>
+                                <span
+                                    className={`${styles.notifTab} ${activeTab === "unread" ? styles.notifTabActive : ""}`}
+                                    onClick={() => setActiveTab("unread")}
+                                >Unread {unreadCount > 0 && <b>{unreadCount}</b>}</span>
                             </div>
 
                             {/* List */}
                             <div className={styles.notifList}>
-                                {notifs.map(n => {
-                                    const cfg = NOTIF_COLOR[n.type];
+                                {displayedNotifs.length === 0 ? (
+                                    <div style={{ padding: "24px 16px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
+                                        No notifications
+                                    </div>
+                                ) : displayedNotifs.map(n => {
+                                    const type = entityTypeToNotifType(n.entityType);
+                                    const cfg  = NOTIF_COLOR[type];
                                     return (
                                         <div
                                             key={n.id}
-                                            className={`${styles.notifItem} ${!n.read ? styles.notifItemUnread : ""}`}
+                                            className={`${styles.notifItem} ${!n.isRead ? styles.notifItemUnread : ""}`}
                                             onClick={() => markRead(n.id)}
                                         >
                                             <div className={styles.notifItemIcon} style={{ background: cfg.bg, color: cfg.color }}>
-                                                {NOTIF_ICON[n.type]}
+                                                {NOTIF_ICON[type]}
                                             </div>
                                             <div className={styles.notifItemBody}>
                                                 <p className={styles.notifItemTitle}>{n.title}</p>
-                                                <p className={styles.notifItemDesc}>{n.desc}</p>
-                                                <span className={styles.notifItemTime}>{n.time}</span>
+                                                <p className={styles.notifItemDesc}>{n.message}</p>
+                                                <span className={styles.notifItemTime}>{timeAgo(n.createdAt)}</span>
                                             </div>
-                                            {!n.read && <span className={styles.notifDotSmall} />}
+                                            {!n.isRead && <span className={styles.notifDotSmall} />}
                                         </div>
                                     );
                                 })}

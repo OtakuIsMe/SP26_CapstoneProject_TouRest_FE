@@ -10,7 +10,7 @@ import styles from "./page.module.scss";
 import { agencyService } from "@/libs/services/agency.service";
 import { ItineraryDTO } from "@/types/itinerary.type";
 
-const steps = ["Your Info", "Travel Details", "Review & Pay"];
+const steps = ["Travel Details", "Review & Pay"];
 
 const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
@@ -43,14 +43,6 @@ export default function BookingPage() {
     const [step, setStep] = useState(0);
 
     const [form, setForm] = useState({
-        firstName: "",
-        lastName: "",
-        email: "",
-        phone: "",
-        nationality: "",
-        dob: "",
-        gender: "",
-        passportNumber: "",
         travelers: 1,
         specialRequests: "",
         agreeTerms: false,
@@ -58,24 +50,12 @@ export default function BookingPage() {
     });
 
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [submitting, setSubmitting] = useState(false);
 
     const set = (field: string, value: string | number | boolean) =>
         setForm((prev) => ({ ...prev, [field]: value }));
 
     const validateStep0 = () => {
-        const e: Record<string, string> = {};
-        if (!form.firstName.trim()) e.firstName = "First name is required";
-        if (!form.lastName.trim()) e.lastName = "Last name is required";
-        if (!form.email.trim()) e.email = "Email is required";
-        else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = "Invalid email";
-        if (!form.phone.trim()) e.phone = "Phone number is required";
-        if (!form.nationality.trim()) e.nationality = "Nationality is required";
-        if (!form.dob) e.dob = "Date of birth is required";
-        if (!form.gender) e.gender = "Gender is required";
-        return e;
-    };
-
-    const validateStep1 = () => {
         const e: Record<string, string> = {};
         if (form.travelers < 1) e.travelers = "At least 1 traveler required";
         return e;
@@ -84,22 +64,39 @@ export default function BookingPage() {
     const handleNext = () => {
         let e: Record<string, string> = {};
         if (step === 0) e = validateStep0();
-        if (step === 1) e = validateStep1();
         if (Object.keys(e).length > 0) { setErrors(e); return; }
         setErrors({});
         setStep((s) => s + 1);
     };
 
-    const handleSubmit = () => {
+    const handleSubmit = async () => {
         if (!form.agreeTerms) {
             setErrors({ agreeTerms: "You must agree to the terms" });
             return;
         }
+        if (!scheduleId) {
+            setErrors({ general: "Không tìm thấy lịch khởi hành. Vui lòng quay lại chọn lại." });
+            return;
+        }
         setErrors({});
-        const query = new URLSearchParams();
-        if (scheduleId) query.set("scheduleId", scheduleId);
-        query.set("travelers", String(form.travelers));
-        router.push(`/tours/${tourId}/booking/payment?${query.toString()}`);
+        setSubmitting(true);
+        try {
+            const res = await agencyService.createBooking({
+                scheduleId,
+                numberOfGuests: form.travelers,
+                customerNote: form.specialRequests || undefined,
+            });
+            const bookingId = res.data.bookingId;
+            const query = new URLSearchParams();
+            query.set("bookingId", bookingId);
+            query.set("scheduleId", scheduleId);
+            query.set("travelers", String(form.travelers));
+            router.push(`/tours/${tourId}/booking/payment?${query.toString()}`);
+        } catch {
+            setErrors({ general: "Không thể tạo đặt chỗ. Vui lòng thử lại." });
+        } finally {
+            setSubmitting(false);
+        }
     };
 
 
@@ -143,115 +140,8 @@ export default function BookingPage() {
                         {/* ── LEFT: Form ── */}
                         <div className={styles.formSide}>
 
-                            {/* Step 0 — Personal Info */}
+                            {/* Step 0 — Travel Details */}
                             {step === 0 && (
-                                <div className={styles.card}>
-                                    <h2 className={styles.cardTitle}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.5" /></svg>
-                                        Personal Information
-                                    </h2>
-
-                                    <div className={styles.formRow}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>First Name <span>*</span></label>
-                                            <input
-                                                className={`${styles.input} ${errors.firstName ? styles.inputError : ""}`}
-                                                placeholder="e.g. John"
-                                                value={form.firstName}
-                                                onChange={(e) => set("firstName", e.target.value)}
-                                            />
-                                            {errors.firstName && <span className={styles.errorMsg}>{errors.firstName}</span>}
-                                        </div>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Last Name <span>*</span></label>
-                                            <input
-                                                className={`${styles.input} ${errors.lastName ? styles.inputError : ""}`}
-                                                placeholder="e.g. Doe"
-                                                value={form.lastName}
-                                                onChange={(e) => set("lastName", e.target.value)}
-                                            />
-                                            {errors.lastName && <span className={styles.errorMsg}>{errors.lastName}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.formRow}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Email Address <span>*</span></label>
-                                            <input
-                                                className={`${styles.input} ${errors.email ? styles.inputError : ""}`}
-                                                type="email"
-                                                placeholder="john@email.com"
-                                                value={form.email}
-                                                onChange={(e) => set("email", e.target.value)}
-                                            />
-                                            {errors.email && <span className={styles.errorMsg}>{errors.email}</span>}
-                                        </div>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Phone Number <span>*</span></label>
-                                            <input
-                                                className={`${styles.input} ${errors.phone ? styles.inputError : ""}`}
-                                                placeholder="+1 234 567 8900"
-                                                value={form.phone}
-                                                onChange={(e) => set("phone", e.target.value)}
-                                            />
-                                            {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.formRow}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Date of Birth <span>*</span></label>
-                                            <input
-                                                className={`${styles.input} ${errors.dob ? styles.inputError : ""}`}
-                                                type="date"
-                                                value={form.dob}
-                                                onChange={(e) => set("dob", e.target.value)}
-                                            />
-                                            {errors.dob && <span className={styles.errorMsg}>{errors.dob}</span>}
-                                        </div>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Gender <span>*</span></label>
-                                            <select
-                                                className={`${styles.input} ${errors.gender ? styles.inputError : ""}`}
-                                                value={form.gender}
-                                                onChange={(e) => set("gender", e.target.value)}
-                                            >
-                                                <option value="">Select gender</option>
-                                                <option value="male">Male</option>
-                                                <option value="female">Female</option>
-                                                <option value="other">Other</option>
-                                                <option value="prefer_not">Prefer not to say</option>
-                                            </select>
-                                            {errors.gender && <span className={styles.errorMsg}>{errors.gender}</span>}
-                                        </div>
-                                    </div>
-
-                                    <div className={styles.formRow}>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Nationality <span>*</span></label>
-                                            <input
-                                                className={`${styles.input} ${errors.nationality ? styles.inputError : ""}`}
-                                                placeholder="e.g. American"
-                                                value={form.nationality}
-                                                onChange={(e) => set("nationality", e.target.value)}
-                                            />
-                                            {errors.nationality && <span className={styles.errorMsg}>{errors.nationality}</span>}
-                                        </div>
-                                        <div className={styles.formGroup}>
-                                            <label className={styles.label}>Passport / ID Number</label>
-                                            <input
-                                                className={styles.input}
-                                                placeholder="Optional"
-                                                value={form.passportNumber}
-                                                onChange={(e) => set("passportNumber", e.target.value)}
-                                            />
-                                        </div>
-                                    </div>
-                                </div>
-                            )}
-
-                            {/* Step 1 — Travel Details */}
-                            {step === 1 && (
                                 <div className={styles.card}>
                                     <h2 className={styles.cardTitle}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 3h-6M21 3v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
@@ -281,26 +171,13 @@ export default function BookingPage() {
                                 </div>
                             )}
 
-                            {/* Step 2 — Review */}
-                            {step === 2 && (
+                            {/* Step 1 — Review */}
+                            {step === 1 && (
                                 <div className={styles.card}>
                                     <h2 className={styles.cardTitle}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                                        Review Your Information
+                                        Review Your Booking
                                     </h2>
-
-                                    <div className={styles.reviewSection}>
-                                        <h3 className={styles.reviewHeading}>Personal Details</h3>
-                                        <div className={styles.reviewGrid}>
-                                            <div className={styles.reviewItem}><span>Full Name</span><strong>{form.firstName} {form.lastName}</strong></div>
-                                            <div className={styles.reviewItem}><span>Email</span><strong>{form.email}</strong></div>
-                                            <div className={styles.reviewItem}><span>Phone</span><strong>{form.phone}</strong></div>
-                                            <div className={styles.reviewItem}><span>Nationality</span><strong>{form.nationality}</strong></div>
-                                            <div className={styles.reviewItem}><span>Date of Birth</span><strong>{form.dob}</strong></div>
-                                            <div className={styles.reviewItem}><span>Gender</span><strong>{form.gender}</strong></div>
-                                            {form.passportNumber && <div className={styles.reviewItem}><span>Passport / ID</span><strong>{form.passportNumber}</strong></div>}
-                                        </div>
-                                    </div>
 
                                     <div className={styles.reviewSection}>
                                         <h3 className={styles.reviewHeading}>Travel Details</h3>
@@ -340,6 +217,7 @@ export default function BookingPage() {
                                             <span>Subscribe to exclusive travel deals and health travel tips</span>
                                         </label>
                                     </div>
+                                    {errors.general && <span className={styles.errorMsg}>{errors.general}</span>}
                                 </div>
                             )}
 
@@ -355,9 +233,13 @@ export default function BookingPage() {
                                         Continue →
                                     </button>
                                 ) : (
-                                    <button className={styles.submitBtn} onClick={handleSubmit}>
-                                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                        Confirm Booking
+                                    <button className={styles.submitBtn} onClick={handleSubmit} disabled={submitting}>
+                                        {submitting ? "Đang xử lý..." : (
+                                            <>
+                                                <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+                                                Xác nhận đặt tour
+                                            </>
+                                        )}
                                     </button>
                                 )}
                             </div>

@@ -216,6 +216,38 @@ $r:       12px;
     line-height: 1.4;
 }
 
+.reportDesc {
+    font-size: 13px;
+    color: $mid;
+    margin: 4px 0 0;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+// ── Loading ───────────────────────────────────────────────────────────────────
+.loadingWrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    padding: 60px 0;
+    color: $light;
+    font-size: 14px;
+}
+
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: $indigo;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 // Admin reply preview (in card)
 .replyPreview {
     display: flex;
@@ -768,7 +800,18 @@ $r:       12px;
     align-items: center;
     gap: 7px;
     transition: background 0.15s;
-    &:hover { background: #4338ca; }
+    &:hover:not(:disabled) { background: #4338ca; }
+    &:disabled { opacity: 0.7; cursor: not-allowed; }
+}
+
+.btnSpinner {
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    flex-shrink: 0;
 }
 
 // ── Lightbox ──────────────────────────────────────────────────────────────────

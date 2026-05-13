@@ -151,6 +151,17 @@
     margin: 0;
 }
 
+.checkoutLink {
+    display: inline-block;
+    margin-top: 8px;
+    font-size: 13px;
+    color: #2a9d8f;
+    text-decoration: underline;
+    text-align: center;
+
+    &:hover { color: #21867a; }
+}
+
 .qrError {
     display: flex;
     flex-direction: column;
