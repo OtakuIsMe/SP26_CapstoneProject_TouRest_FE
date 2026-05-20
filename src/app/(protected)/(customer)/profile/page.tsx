@@ -3,6 +3,29 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+
+// ── Mock bookings ─────────────────────────────────────────────────────────────
+const MOCK_BOOKINGS = [
+    { id: "bk1", code: "BK-20240415-A3F7", tourName: "Ha Long Bay Explorer — 3D2N",
+      image: "/images/landing/explore_1.avif", agencyName: "Vietnam Adventures Co.",
+      startDate: "Apr 15, 2024", endDate: "Apr 18, 2024", travelers: 2,
+      totalAmount: 8_500_000, status: "In Progress" as const },
+    { id: "bk2", code: "BK-20240520-C1E9", tourName: "Sapa Cultural Trek — 4D3N",
+      image: "/images/landing/explore_2.avif", agencyName: "Highland Tours",
+      startDate: "May 20, 2024", endDate: "May 24, 2024", travelers: 1,
+      totalAmount: 4_200_000, status: "Upcoming" as const },
+    { id: "bk3", code: "BK-20240301-B7D2", tourName: "Hoi An Ancient Town Discovery",
+      image: "/images/landing/explore_3.avif", agencyName: "Central Vietnam Travels",
+      startDate: "Mar 01, 2024", endDate: "Mar 03, 2024", travelers: 2,
+      totalAmount: 3_600_000, status: "Completed" as const },
+];
+
+const BOOKING_BADGE: Record<string, { bg: string; color: string }> = {
+    "In Progress": { bg: "#dbeafe", color: "#1d4ed8" },
+    "Upcoming":    { bg: "#fef9c3", color: "#854d0e" },
+    "Completed":   { bg: "#dcfce7", color: "#15803d" },
+    "Cancelled":   { bg: "#fee2e2", color: "#b91c1c" },
+};
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
 import { authService } from "@/libs/services/auth.service";
@@ -313,20 +336,44 @@ export default function ProfilePage() {
             {/* Content */}
             <div className={styles.content}>
                 {activeTab === "Bookings" && (
-                    <div className={styles.emptyWrap}>
-                        <div className={styles.emptyIcon}>
-                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none">
-                                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.4"/>
-                                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                                <path d="M8 14h5M8 17h3" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
-                            </svg>
-                        </div>
-                        <h3 className={styles.emptyTitle}>No bookings yet</h3>
-                        <p className={styles.emptyDesc}>
-                            You haven&apos;t booked any tours yet.<br/>
-                            Start exploring and plan your next adventure!
-                        </p>
-                        <Link href="/tours" className={styles.emptyBtn}>Browse Tours</Link>
+                    <div className={styles.bookingsList}>
+                        {MOCK_BOOKINGS.map(b => {
+                            const badge = BOOKING_BADGE[b.status];
+                            return (
+                                <div key={b.id} className={styles.bookingCard}>
+                                    <div className={styles.bookingCardImage}>
+                                        <Image src={b.image} alt={b.tourName} fill sizes="120px" style={{ objectFit: "cover" }} />
+                                    </div>
+                                    <div className={styles.bookingCardBody}>
+                                        <div className={styles.bookingCardTop}>
+                                            <span className={styles.bookingCardBadge} style={{ background: badge.bg, color: badge.color }}>
+                                                {b.status}
+                                            </span>
+                                            <span className={styles.bookingCardCode}>{b.code}</span>
+                                        </div>
+                                        <h4 className={styles.bookingCardName}>{b.tourName}</h4>
+                                        <p className={styles.bookingCardAgency}>{b.agencyName}</p>
+                                        <div className={styles.bookingCardMeta}>
+                                            <span>
+                                                <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                                {b.startDate} – {b.endDate}
+                                            </span>
+                                            <span>
+                                                <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                                {b.travelers} traveler{b.travelers > 1 ? "s" : ""}
+                                            </span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.bookingCardRight}>
+                                        <span className={styles.bookingCardPrice}>{b.totalAmount.toLocaleString("vi-VN")}đ</span>
+                                        <Link href={`/profile/bookings/${b.id}`} className={styles.bookingCardBtn}>
+                                            View Journey
+                                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                        </Link>
+                                    </div>
+                                </div>
+                            );
+                        })}
                     </div>
                 )}
 

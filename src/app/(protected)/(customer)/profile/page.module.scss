@@ -497,6 +497,130 @@ $primary-light: #eef2ff;
     &:active { transform: translateY(0); }
 }
 
+/* ── Bookings list ── */
+.bookingsList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 100%;
+}
+
+.bookingCard {
+    display: flex;
+    align-items: stretch;
+    background: #fff;
+    border-radius: 16px;
+    border: 1.5px solid #f1f5f9;
+    overflow: hidden;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.05);
+    transition: box-shadow 0.2s, transform 0.15s;
+
+    &:hover {
+        box-shadow: 0 6px 24px rgba(0,0,0,0.1);
+        transform: translateY(-1px);
+    }
+}
+
+.bookingCardImage {
+    width: 110px;
+    flex-shrink: 0;
+    position: relative;
+}
+
+.bookingCardBody {
+    flex: 1;
+    padding: 16px 18px;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.bookingCardTop {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 2px;
+}
+
+.bookingCardBadge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 9px;
+    border-radius: 20px;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.bookingCardCode {
+    font-size: 11px;
+    color: #9ca3af;
+    font-family: monospace;
+}
+
+.bookingCardName {
+    font-size: 15px;
+    font-weight: 700;
+    color: #0f172a;
+    margin: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.bookingCardAgency {
+    font-size: 12px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.bookingCardMeta {
+    display: flex;
+    gap: 16px;
+    margin-top: 6px;
+
+    span {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 12px;
+        color: #94a3b8;
+        svg { color: #cbd5e1; }
+    }
+}
+
+.bookingCardRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    justify-content: space-between;
+    padding: 16px 20px;
+    flex-shrink: 0;
+    border-left: 1px solid #f1f5f9;
+}
+
+.bookingCardPrice {
+    font-size: 17px;
+    font-weight: 800;
+    color: $primary;
+}
+
+.bookingCardBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 8px 14px;
+    background: $primary;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.18s;
+
+    &:hover { background: $primary-hover; }
+}
+
 /* ── Edit modal ── */
 .modalOverlay {
     position: fixed;

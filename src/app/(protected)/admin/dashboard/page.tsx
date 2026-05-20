@@ -1,314 +1,286 @@
 "use client";
 
-import { useState } from "react";
 import styles from "./page.module.scss";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function fmt(n: number) {
-    if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
-    if (n >= 1_000)     return `$${(n / 1_000).toFixed(1)}K`;
-    return `$${n}`;
-}
+const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 
-// ── Data ──────────────────────────────────────────────────────────────────────
+// ── Mock data ─────────────────────────────────────────────────────────────────
 const STATS = [
-    { label: "Page Views",  value: "16,431", badge: "+15.5%", up: true,  vs: "vs. 14,653 last period", icon: "👁",  iconCls: "statIconBlue"   },
-    { label: "Visitors",    value: "6,225",  badge: "+8.4%",  up: true,  vs: "vs. 5,732 last period",  icon: "👥", iconCls: "statIconGreen"  },
-    { label: "Click",       value: "2,832",  badge: "-10.5%", up: false, vs: "vs. 3,294 last period",  icon: "🖱️", iconCls: "statIconAmber"  },
-    { label: "Orders",      value: "1,224",  badge: "+4.4%",  up: true,  vs: "vs. 1,186 last period",  icon: "📦", iconCls: "statIconPurple" },
+    {
+        label: "Registered Agencies",
+        value: "23",
+        delta: "+2 this month",
+        up: true,
+        iconBg: "#eff6ff",
+        iconColor: "#3b82f6",
+        icon: (
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <path d="M3 21V7l9-4 9 4v14" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+                <path d="M9 21v-6h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+            </svg>
+        ),
+    },
+    {
+        label: "Registered Providers",
+        value: "18",
+        delta: "+1 this month",
+        up: true,
+        iconBg: "#f0fdf4",
+        iconColor: "#22c55e",
+        icon: (
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2z" stroke="currentColor" strokeWidth="1.8"/>
+                <path d="M9 12l2 2 4-4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+        ),
+    },
+    {
+        label: "Platform Bookings",
+        value: "3,847",
+        delta: "+284 this month",
+        up: true,
+        iconBg: "#fffbeb",
+        iconColor: "#f59e0b",
+        icon: (
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/>
+                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M8 14l2.5 2.5L16 11" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+            </svg>
+        ),
+    },
+    {
+        label: "Platform Revenue",
+        value: "₫2.8B",
+        delta: "+18.4% vs last month",
+        up: true,
+        iconBg: "#f5f3ff",
+        iconColor: "#8b5cf6",
+        icon: (
+            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+            </svg>
+        ),
+    },
 ];
 
-// SVG line chart data — normalised 0‒100 coords for an 11-point series
-const CHART_W = 400;
-const CHART_H = 100;
-const THIS_M = [20, 35, 25, 45, 38, 60, 55, 72, 65, 80, 88];
-const LAST_M = [18, 28, 32, 38, 50, 42, 48, 58, 52, 60, 65];
+const PENDING_APPROVALS = [
+    { id: "a1", name: "Saigon Medical Tours",    type: "Agency",   submitted: "1 day ago",  bg: "#3b82f6" },
+    { id: "a2", name: "Hanoi Wellness Retreat",   type: "Agency",   submitted: "2 days ago", bg: "#8b5cf6" },
+    { id: "p1", name: "VN Dental Care Ltd.",      type: "Provider", submitted: "3 hours ago",bg: "#f59e0b" },
+    { id: "p2", name: "Mekong Spa & Rehab",       type: "Provider", submitted: "3 days ago", bg: "#22c55e" },
+];
 
-function pts(data: number[]): string {
+const TYPE_CFG: Record<string, { bg: string; color: string }> = {
+    Agency:   { bg: "#eff6ff", color: "#2563eb" },
+    Provider: { bg: "#f0fdf4", color: "#16a34a" },
+};
+
+const TOP_AGENCIES = [
+    { name: "Ha Long Medical Tours",   tours: 12, bookings: 284, revenue: "₫842M", active: true  },
+    { name: "Sapa Adventure Health",   tours: 8,  bookings: 196, revenue: "₫621M", active: true  },
+    { name: "Hoi An Wellness Agency",  tours: 10, bookings: 174, revenue: "₫539M", active: true  },
+    { name: "Mekong Delta Care",       tours: 6,  bookings: 142, revenue: "₫428M", active: true  },
+    { name: "Phu Quoc Medical Escape", tours: 9,  bookings: 128, revenue: "₫384M", active: false },
+];
+
+const MONTHS = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+const BOOKING_DATA  = [32, 45, 38, 56, 48, 65, 58, 74, 68, 88, 78, 94];
+const REVENUE_DATA  = [28, 42, 36, 62, 44, 70, 64, 82, 76, 96, 86, 110];
+
+const CW = 400, CH = 100;
+const maxVal = Math.max(...BOOKING_DATA, ...REVENUE_DATA);
+
+function pts(data: number[]) {
     return data.map((v, i) => {
-        const x = (i / (data.length - 1)) * CHART_W;
-        const y = CHART_H - (v / 100) * CHART_H;
+        const x = (i / (data.length - 1)) * CW;
+        const y = CH - (v / maxVal) * CH * 0.9;
         return `${x},${y}`;
     }).join(" ");
 }
 
-function areaPath(data: number[]): string {
+function areaPath(data: number[]) {
     const top = data.map((v, i) => {
-        const x = (i / (data.length - 1)) * CHART_W;
-        const y = CHART_H - (v / 100) * CHART_H;
+        const x = (i / (data.length - 1)) * CW;
+        const y = CH - (v / maxVal) * CH * 0.9;
         return `${i === 0 ? "M" : "L"}${x},${y}`;
     }).join(" ");
-    return `${top} L${CHART_W},${CHART_H} L0,${CHART_H} Z`;
+    return `${top} L${CW},${CH} L0,${CH} Z`;
 }
 
-const X_LABELS = ["1 Jan","8 Jan","15 Jan","22 Jan","29 Jan"];
-
-const DAYS = [
-    { day: "Sun", val: 5200,  active: false },
-    { day: "Mon", val: 7400,  active: false },
-    { day: "Tue", val: 8162,  active: true  },
-    { day: "Wed", val: 6300,  active: false },
-    { day: "Thu", val: 5800,  active: false },
-    { day: "Fri", val: 4900,  active: false },
-    { day: "Sat", val: 5500,  active: false },
+const PLATFORM_HEALTH = [
+    { label: "System Uptime",      value: "99.8%",  color: "#22c55e", pct: 99 },
+    { label: "API Response",       value: "142ms",  color: "#3b82f6", pct: 85 },
+    { label: "Pending Reviews",    value: "4",      color: "#f59e0b", pct: 40 },
+    { label: "Failed Payments",    value: "0.3%",   color: "#22c55e", pct: 97 },
 ];
-const MAX_DAY = Math.max(...DAYS.map(d => d.val));
-
-const PRODUCTS = [
-    { id:"#83009", name:"Hybrid Active Noise Cance...", icon:"🎧", sold:"2,310 sold", revenue: 124839, rating:5.0, rev:"green"  },
-    { id:"#83001", name:"Casio G-Shock Shock Resi...",  icon:"⌚", sold:"1,230 sold", revenue:  92662, rating:4.8, rev:"red"    },
-    { id:"#83004", name:"SAMSUNG Galaxy S25 Ultr...",   icon:"📱", sold:"812 sold",   revenue:  74048, rating:4.7, rev:"amber"  },
-    { id:"#83002", name:"Xbox Wireless Gaming Co...",   icon:"🎮", sold:"645 sold",   revenue:  62820, rating:4.5, rev:"green"  },
-    { id:"#83002", name:"Timex Men's Easy Reader...",   icon:"⌚", sold:"572 sold",   revenue:  48724, rating:4.5, rev:"green"  },
-];
-
-// Gauge — semicircle from -180 to 0 deg, value = 68%
-function GaugePath({ pct, color }: { pct: number; color: string }) {
-    const R = 70;
-    const cx = 85, cy = 85;
-    const start = { x: cx - R, y: cy };           // -180°
-    const angle = Math.PI * (pct / 100);
-    const end   = { x: cx - R * Math.cos(angle), y: cy - R * Math.sin(angle) };
-    const large = angle > Math.PI / 2 ? 1 : 0;
-    return (
-        <path
-            d={`M${start.x},${start.y} A${R},${R} 0 ${large} 1 ${end.x},${end.y}`}
-            fill="none"
-            stroke={color}
-            strokeWidth="12"
-            strokeLinecap="round"
-        />
-    );
-}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AdminDashboard() {
-    const [aiMsg, setAiMsg] = useState("");
-
     return (
         <div className={styles.page}>
-            {/* ── Stat Cards ── */}
+
+            {/* ── Welcome banner ── */}
+            <div className={styles.welcome}>
+                <div className={styles.welcomeText}>
+                    <h2>Platform Overview</h2>
+                    <p>TouRest Admin · {today}</p>
+                </div>
+                <div className={styles.welcomeActions}>
+                    <button className={`${styles.welcomeBtn} ${styles.outline}`}>
+                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 12l2 2 4-4M21 12a9 9 0 11-18 0 9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                        Pending Reviews
+                        <span className={styles.welcomeBadge}>4</span>
+                    </button>
+                    <button className={`${styles.welcomeBtn} ${styles.primary}`}>Platform Reports</button>
+                </div>
+            </div>
+
+            {/* ── Stat cards ── */}
             <div className={styles.statsRow}>
                 {STATS.map(s => (
                     <div key={s.label} className={styles.statCard}>
-                        <div className={styles.statTop}>
-                            <p className={styles.statLabel}>{s.label}</p>
-                            <div className={`${styles.statIcon} ${styles[s.iconCls as keyof typeof styles]}`}>
-                                <span style={{ fontSize: 16 }}>{s.icon}</span>
-                            </div>
+                        <div className={styles.statIcon} style={{ background: s.iconBg, color: s.iconColor }}>
+                            {s.icon}
                         </div>
-                        <p className={styles.statValue}>{s.value}</p>
-                        <div className={styles.statFooter}>
-                            <span className={`${styles.statBadge} ${s.up ? styles.badgeUp : styles.badgeDown}`}>
-                                {s.up ? "▲" : "▼"} {s.badge}
+                        <div className={styles.statBody}>
+                            <p className={styles.statLabel}>{s.label}</p>
+                            <p className={styles.statValue}>{s.value}</p>
+                            <span className={`${styles.statDelta} ${s.up ? styles.deltaUp : styles.deltaDown}`}>
+                                {s.up
+                                    ? <svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M18 15l-6-6-6 6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    : <svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                }
+                                {s.delta}
                             </span>
-                            <span className={styles.statSub}>{s.vs}</span>
                         </div>
                     </div>
                 ))}
             </div>
 
-            {/* ── Mid Row ── */}
+            {/* ── Mid row ── */}
             <div className={styles.midRow}>
-                <div className={styles.midLeft}>
-                    {/* Total Profit chart */}
-                    <div className={styles.card}>
-                        <div className={styles.cardHeader}>
-                            <p className={styles.cardTitle}>Total Profit</p>
-                            <button className={styles.cardMenu}>···</button>
-                        </div>
-                        <div className={styles.profitBody}>
-                            <div className={styles.profitLeft}>
-                                <p className={styles.profitValue}>$446.7K</p>
-                                <div className={styles.profitBadge}>▲ 24.4%</div>
-                                <p className={styles.profitVs}>vs. last period</p>
-                            </div>
-                            <div style={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                                <div className={styles.chartWrap}>
-                                    <svg
-                                        viewBox={`0 0 ${CHART_W} ${CHART_H}`}
-                                        className={styles.chartSvg}
-                                        preserveAspectRatio="none"
-                                    >
-                                        <defs>
-                                            <linearGradient id="areaGrad" x1="0" y1="0" x2="0" y2="1">
-                                                <stop offset="0%" stopColor="#3b82f6" stopOpacity="0.18"/>
-                                                <stop offset="100%" stopColor="#3b82f6" stopOpacity="0"/>
-                                            </linearGradient>
-                                        </defs>
-                                        {/* Grid lines */}
-                                        {[0,33,66,100].map(v => (
-                                            <line key={v}
-                                                x1="0" y1={CHART_H - (v/100)*CHART_H}
-                                                x2={CHART_W} y2={CHART_H - (v/100)*CHART_H}
-                                                stroke="#e5e7eb" strokeWidth="1"
-                                            />
-                                        ))}
-                                        {/* Area fill */}
-                                        <path d={areaPath(THIS_M)} fill="url(#areaGrad)" />
-                                        {/* Last month dashed */}
-                                        <polyline
-                                            points={pts(LAST_M)}
-                                            fill="none"
-                                            stroke="#d1d5db"
-                                            strokeWidth="1.5"
-                                            strokeDasharray="4 3"
-                                        />
-                                        {/* This month solid */}
-                                        <polyline
-                                            points={pts(THIS_M)}
-                                            fill="none"
-                                            stroke="#3b82f6"
-                                            strokeWidth="2"
-                                        />
-                                        {/* Tooltip dot */}
-                                        <circle
-                                            cx={(6/(THIS_M.length-1))*CHART_W}
-                                            cy={CHART_H - (THIS_M[6]/100)*CHART_H}
-                                            r="4" fill="#3b82f6"
-                                        />
-                                    </svg>
-                                    {/* Tooltip */}
-                                    <div className={styles.chartTooltip}>
-                                        <p className={styles.tooltipDate}>Jan 18, 2026</p>
-                                        <p className={styles.tooltipThis}>
-                                            <span className={styles.tooltipDot} style={{ background:"#3b82f6" }}/>
-                                            $12,324 this month
-                                        </p>
-                                        <p className={styles.tooltipLast}>
-                                            <span className={styles.tooltipDot} style={{ background:"#d1d5db" }}/>
-                                            $5,563 last month
-                                        </p>
-                                    </div>
-                                </div>
-                                <div className={styles.chartXAxis}>
-                                    {X_LABELS.map(l => <span key={l}>{l}</span>)}
-                                </div>
-                            </div>
-                        </div>
-                    </div>
 
-                    {/* Customers breakdown */}
-                    <div className={styles.card}>
-                        <div className={styles.cardHeader}>
-                            <p className={styles.cardTitle}>Customers</p>
-                            <button className={styles.cardMenu}>···</button>
+                {/* Booking volume trend */}
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.cardTitle}>Booking & Revenue Trend</h3>
+                        <button className={styles.cardLink}>2026 ▾</button>
+                    </div>
+                    <div className={styles.chartBody}>
+                        <div className={styles.chartMeta}>
+                            <div>
+                                <p className={styles.chartMetaNum} style={{ color: "#6366f1" }}>3,847</p>
+                                <p className={styles.chartMetaSub}>Total bookings YTD</p>
+                            </div>
+                            <div className={styles.chartLegend}>
+                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#6366f1" }}/>Bookings</span>
+                                <span className={styles.legendItem}><span className={styles.legendDot} style={{ background: "#f59e0b" }}/>Revenue (×10M₫)</span>
+                            </div>
                         </div>
-                        <div className={styles.breakdownRows}>
-                            {[
-                                { label:"Retailers",     value:"2,884", color:"#3b82f6", pct: 52 },
-                                { label:"Distributors",  value:"1,432", color:"#10b981", pct: 26 },
-                                { label:"Wholesalers",   value:"562",   color:"#f59e0b", pct: 22 },
-                            ].map(b => (
-                                <div key={b.label} className={styles.breakdownItem}>
-                                    <div className={styles.breakdownValue}>
-                                        <span className={styles.breakdownDot} style={{ background: b.color }} />
-                                        {b.value}
-                                    </div>
-                                    <span className={styles.breakdownLabel}>{b.label}</span>
-                                </div>
-                            ))}
+                        <div className={styles.chartWrap}>
+                            <svg viewBox={`0 0 ${CW} ${CH}`} className={styles.chartSvg} preserveAspectRatio="none">
+                                <defs>
+                                    <linearGradient id="admGrad1" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#6366f1" stopOpacity="0.15"/>
+                                        <stop offset="100%" stopColor="#6366f1" stopOpacity="0"/>
+                                    </linearGradient>
+                                    <linearGradient id="admGrad2" x1="0" y1="0" x2="0" y2="1">
+                                        <stop offset="0%" stopColor="#f59e0b" stopOpacity="0.12"/>
+                                        <stop offset="100%" stopColor="#f59e0b" stopOpacity="0"/>
+                                    </linearGradient>
+                                </defs>
+                                {[25, 50, 75].map(v => (
+                                    <line key={v} x1="0" y1={CH - (v/100)*CH*0.9} x2={CW} y2={CH - (v/100)*CH*0.9}
+                                        stroke="#f3f4f6" strokeWidth="1"/>
+                                ))}
+                                <path d={areaPath(REVENUE_DATA)} fill="url(#admGrad2)"/>
+                                <path d={areaPath(BOOKING_DATA)} fill="url(#admGrad1)"/>
+                                <polyline points={pts(REVENUE_DATA)} fill="none" stroke="#f59e0b" strokeWidth="1.8" strokeDasharray="5 3"/>
+                                <polyline points={pts(BOOKING_DATA)} fill="none" stroke="#6366f1" strokeWidth="2.2"/>
+                            </svg>
                         </div>
-                        <div className={styles.breakdownBar}>
-                            <div className={styles.barSegment} style={{ width:"52%", background:"#3b82f6" }} />
-                            <div className={styles.barSegment} style={{ width:"26%", background:"#10b981" }} />
-                            <div className={styles.barSegment} style={{ width:"22%", background:"#f59e0b" }} />
+                        <div className={styles.chartXAxis}>
+                            {MONTHS.map(m => <span key={m}>{m}</span>)}
                         </div>
                     </div>
                 </div>
 
-                <div className={styles.midRight}>
-                    {/* Most Day Active bar chart */}
-                    <div className={styles.card}>
-                        <div className={styles.cardHeader}>
-                            <p className={styles.cardTitle}>Most Day Active</p>
-                            <button className={styles.cardMenu}>···</button>
-                        </div>
-                        <div className={styles.barChart}>
-                            {DAYS.map(d => (
-                                <div key={d.day} className={styles.barCol}>
-                                    {d.active && (
-                                        <span className={styles.barTopVal}>
-                                            {(d.val/1000).toFixed(1)}k
-                                        </span>
-                                    )}
-                                    <div
-                                        className={`${styles.bar} ${d.active ? styles.barActive : ""}`}
-                                        style={{ height: `${(d.val / MAX_DAY) * 80}%` }}
-                                    />
-                                    <span className={styles.barLabel}>{d.day}</span>
-                                </div>
-                            ))}
-                        </div>
+                {/* Pending approvals */}
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.cardTitle}>Pending Approvals</h3>
+                        <span className={styles.pendingCount}>{PENDING_APPROVALS.length}</span>
                     </div>
-
-                    {/* Repeat Customer Rate gauge */}
-                    <div className={styles.card}>
-                        <div className={styles.cardHeader}>
-                            <p className={styles.cardTitle}>Repeat Customer Rate</p>
-                            <button className={styles.cardMenu}>···</button>
-                        </div>
-                        <div className={styles.gaugeWrap}>
-                            <div className={styles.gaugeSvgWrap}>
-                                <svg viewBox="0 0 170 96" className={styles.gaugeSvg}>
-                                    {/* Background segments */}
-                                    {[
-                                        { pct: 100, color: "#e5e7eb" },
-                                        { pct: 68,  color: "#10b981" },
-                                    ].map((s, i) => (
-                                        <GaugePath key={i} pct={s.pct} color={s.color} />
-                                    ))}
-                                </svg>
-                                <div className={styles.gaugeOverlay}>
-                                    <span className={styles.gaugeNum}>68%</span>
-                                    <span className={styles.gaugeSub}>On track for 80% target</span>
+                    <div className={styles.pendingList}>
+                        {PENDING_APPROVALS.map(item => {
+                            const cfg = TYPE_CFG[item.type];
+                            return (
+                                <div key={item.id} className={styles.pendingItem}>
+                                    <div className={styles.pendingAvatar} style={{ background: item.bg }}>
+                                        {item.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                                    </div>
+                                    <div className={styles.pendingInfo}>
+                                        <p className={styles.pendingName}>{item.name}</p>
+                                        <div className={styles.pendingMeta}>
+                                            <span className={styles.pendingType} style={{ background: cfg.bg, color: cfg.color }}>{item.type}</span>
+                                            <span className={styles.pendingTime}>{item.submitted}</span>
+                                        </div>
+                                    </div>
+                                    <div className={styles.pendingActions}>
+                                        <button className={styles.approveBtn}>✓</button>
+                                        <button className={styles.rejectBtn}>✕</button>
+                                    </div>
                                 </div>
-                            </div>
-                            <button className={styles.gaugeDetailsBtn}>Show details</button>
-                        </div>
+                            );
+                        })}
+                    </div>
+                    <div className={styles.pendingFooter}>
+                        <button className={styles.cardLink}>View all requests →</button>
                     </div>
                 </div>
             </div>
 
-            {/* ── Bottom Row ── */}
+            {/* ── Bottom row ── */}
             <div className={styles.bottomRow}>
-                {/* Best Selling Products table */}
+
+                {/* Top agencies table */}
                 <div className={styles.card}>
                     <div className={styles.cardHeader}>
-                        <p className={styles.cardTitle}>Best Selling Products</p>
-                        <button className={styles.cardMenu}>···</button>
+                        <h3 className={styles.cardTitle}>Top Agencies by Revenue</h3>
+                        <button className={styles.cardLink}>View all</button>
                     </div>
                     <table className={styles.table}>
-                        <thead className={styles.thead}>
+                        <thead>
                             <tr>
-                                <th>ID</th>
-                                <th>Name</th>
-                                <th>Sold</th>
-                                <th>Revenue</th>
-                                <th>Rating</th>
+                                <th className={styles.th}>Agency</th>
+                                <th className={styles.th}>Tours</th>
+                                <th className={styles.th}>Bookings</th>
+                                <th className={styles.th}>Revenue</th>
+                                <th className={styles.th}>Status</th>
                             </tr>
                         </thead>
-                        <tbody className={styles.tbody}>
-                            {PRODUCTS.map((p, i) => (
-                                <tr key={i}>
-                                    <td className={styles.tdId}>{p.id}</td>
-                                    <td>
-                                        <div className={styles.productCell}>
-                                            <div className={styles.productIcon}>{p.icon}</div>
-                                            <span className={styles.productName}>{p.name}</span>
+                        <tbody>
+                            {TOP_AGENCIES.map((a, i) => (
+                                <tr key={i} className={styles.tr}>
+                                    <td className={styles.td}>
+                                        <div className={styles.agencyCell}>
+                                            <div className={styles.agencyRank}>{i + 1}</div>
+                                            <span className={styles.agencyName}>{a.name}</span>
                                         </div>
                                     </td>
-                                    <td className={styles.tdSold}>{p.sold}</td>
-                                    <td>
-                                        <span className={`${styles.revenue} ${styles[p.rev as keyof typeof styles]}`}>
-                                            {p.revenue.toLocaleString("vi-VN")}đ
+                                    <td className={styles.td} style={{ color: "#6b7280" }}>{a.tours}</td>
+                                    <td className={styles.td} style={{ fontWeight: 600 }}>{a.bookings}</td>
+                                    <td className={styles.td} style={{ fontWeight: 700, color: "#6366f1" }}>{a.revenue}</td>
+                                    <td className={styles.td}>
+                                        <span className={styles.badge} style={{
+                                            background: a.active ? "#d1fae5" : "#fee2e2",
+                                            color: a.active ? "#065f46" : "#991b1b",
+                                        }}>
+                                            {a.active ? "Active" : "Suspended"}
                                         </span>
-                                    </td>
-                                    <td>
-                                        <div className={styles.tdRating}>
-                                            <span className={styles.star}>★</span>
-                                            ({p.rating.toFixed(1)})
-                                        </div>
                                     </td>
                                 </tr>
                             ))}
@@ -316,24 +288,41 @@ export default function AdminDashboard() {
                     </table>
                 </div>
 
-                {/* AI Assistant */}
-                <div className={styles.aiCard}>
-                    <div className={styles.aiHeader}>
-                        <p className={styles.aiTitle}>AI Assistant</p>
-                        <button className={styles.aiExpandBtn}>⤢</button>
+                {/* Platform health */}
+                <div className={styles.card}>
+                    <div className={styles.cardHeader}>
+                        <h3 className={styles.cardTitle}>Platform Health</h3>
+                        <span className={styles.healthDot}/>
                     </div>
-                    <div className={styles.aiBody}>
-                        <div className={styles.aiOrb} />
+                    <div className={styles.healthList}>
+                        {PLATFORM_HEALTH.map(h => (
+                            <div key={h.label} className={styles.healthItem}>
+                                <div className={styles.healthTop}>
+                                    <span className={styles.healthLabel}>{h.label}</span>
+                                    <span className={styles.healthVal} style={{ color: h.color }}>{h.value}</span>
+                                </div>
+                                <div className={styles.healthBar}>
+                                    <div className={styles.healthFill} style={{ width: `${h.pct}%`, background: h.color }}/>
+                                </div>
+                            </div>
+                        ))}
                     </div>
-                    <div className={styles.aiInput}>
-                        <input
-                            className={styles.aiInputField}
-                            placeholder="Ask me anything..."
-                            value={aiMsg}
-                            onChange={e => setAiMsg(e.target.value)}
-                        />
-                        <button className={styles.aiVoiceBtn} title="Voice input">🎙️</button>
-                        <button className={styles.aiSendBtn} title="Send">↑</button>
+
+                    <div className={styles.healthDivider}/>
+
+                    <div className={styles.quickActions}>
+                        <p className={styles.quickTitle}>Quick Actions</p>
+                        {[
+                            { label: "Review Agency Applications",   count: 2, color: "#3b82f6" },
+                            { label: "Review Provider Applications", count: 2, color: "#22c55e" },
+                            { label: "Flagged Bookings",             count: 1, color: "#ef4444" },
+                        ].map(q => (
+                            <button key={q.label} className={styles.quickItem}>
+                                <span className={styles.quickDot} style={{ background: q.color }}/>
+                                <span className={styles.quickLabel}>{q.label}</span>
+                                <span className={styles.quickCount} style={{ background: q.color + "20", color: q.color }}>{q.count}</span>
+                            </button>
+                        ))}
                     </div>
                 </div>
             </div>

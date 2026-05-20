@@ -670,3 +670,236 @@
 .formSide {
     min-width: 0;
 }
+
+/* ── Schedule alert (expired / sold out / not found / loading) ── */
+.scheduleAlert {
+    max-width: 520px;
+    margin: 0 auto 48px;
+    background: #fff;
+    border-radius: 16px;
+    padding: 48px 40px;
+    text-align: center;
+    box-shadow: 0 2px 12px rgba(0,0,0,.07);
+    border: 1.5px solid #fde68a;
+}
+
+.alertLoading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+@keyframes alertSpin {
+    to { transform: rotate(360deg); }
+}
+
+.alertSpinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #2a9d8f;
+    border-radius: 50%;
+    animation: alertSpin 0.8s linear infinite;
+}
+
+.alertIconWrap {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    background: #fef3c7;
+    color: #d97706;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto 20px;
+}
+
+.alertTitle {
+    font-size: 20px;
+    font-weight: 800;
+    color: #1a1a2e;
+    margin: 0 0 10px;
+}
+
+.alertSub {
+    font-size: 14px;
+    color: #6b7280;
+    line-height: 1.7;
+    margin: 0 0 28px;
+}
+
+.alertBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 12px 28px;
+    border-radius: 10px;
+    background: #2a9d8f;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 700;
+    border: none;
+    cursor: pointer;
+    transition: background 0.2s;
+
+    &:hover { background: #21867a; }
+}
+
+/* ── Counter row ── */
+.counterRow {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+}
+
+.counterHint {
+    font-size: 12.5px;
+    color: #9ca3af;
+}
+
+/* ── Traveler list ── */
+.travelerList {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 4px;
+}
+
+.travelerCard {
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    overflow: hidden;
+    transition: border-color 0.15s;
+
+    &:focus-within { border-color: #2a9d8f; }
+}
+
+.travelerCardErr {
+    border-color: #fca5a5;
+    background: #fffafa;
+}
+
+.travelerCardHead {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 12px 16px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.travelerBadge {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #2a9d8f;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.travelerCardTitle {
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #1a1a2e;
+    flex: 1;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.travelerErrBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 10.5px;
+    font-weight: 700;
+    padding: 2px 8px;
+    border-radius: 10px;
+    background: #fee2e2;
+    color: #b91c1c;
+    flex-shrink: 0;
+}
+
+.travelerFields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px 16px;
+    padding: 16px;
+}
+
+.travelerFieldGroup {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+/* ── Traveler review table ── */
+.travelerTable {
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+.travelerTableHead {
+    display: grid;
+    grid-template-columns: 28px 1fr 60px 140px 130px;
+    gap: 0;
+    padding: 9px 14px;
+    background: #f9fafb;
+    border-bottom: 1px solid #e5e7eb;
+
+    span {
+        font-size: 11px;
+        font-weight: 700;
+        color: #9ca3af;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+    }
+}
+
+.travelerTableRow {
+    display: grid;
+    grid-template-columns: 28px 1fr 60px 140px 130px;
+    gap: 0;
+    padding: 10px 14px;
+    border-bottom: 1px solid #f3f4f6;
+    font-size: 13px;
+    color: #374151;
+    align-items: center;
+    transition: background 0.1s;
+
+    &:last-child { border-bottom: none; }
+    &:hover { background: #f9fafb; }
+}
+
+.travelerTableNum {
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: #e6f7f5;
+    color: #2a9d8f;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.travelerTableName {
+    font-weight: 600;
+    color: #1a1a2e;
+}
+
+.travelerTableMono {
+    font-family: monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.3px;
+}

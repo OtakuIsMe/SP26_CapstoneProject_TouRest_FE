@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import FormField from "@/components/commons/form-field/form-field";
 import { authService } from "@/libs/services/auth.service";
@@ -10,6 +10,8 @@ import styles from "./page.module.scss";
 
 export default function SignInPage() {
     const router = useRouter();
+    const searchParams = useSearchParams();
+    const redirectAfterLogin = searchParams.get("redirect");
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
@@ -26,14 +28,30 @@ export default function SignInPage() {
             localStorage.setItem(StorageKeys.ACCESS_TOKEN, res.data.accessToken);
 
             const me = await authService.getMe();
-            const role = me.data.role;
+            const role    = me.data.role;
+            const subRole = me.data.subRole ?? null;
+            document.cookie = `role=${role}; path=/`;
+            // Persist sub-role so the RBAC hook and middleware can read it
+            if (subRole) {
+                localStorage.setItem("sub_role", subRole);
+                document.cookie = `sub_role=${subRole}; path=/`;
+            } else {
+                localStorage.removeItem("sub_role");
+                document.cookie = "sub_role=; path=/; max-age=0";
+            }
+
+            // For customers, honour the ?redirect= param (e.g. came from booking page)
+            if (role === "customer" && redirectAfterLogin) {
+                router.push(redirectAfterLogin);
+                return;
+            }
+
             const roleRedirect: Record<string, string> = {
                 customer: "/",
                 admin: "/admin/dashboard",
                 agency: "/agency/dashboard",
                 provider: "/provider/dashboard",
             };
-            document.cookie = `role=${role}; path=/`;
             router.push(roleRedirect[role] ?? "/");
         } catch (err: any) {
             const msg = err?.response?.data?.message || "Login failed. Please try again.";

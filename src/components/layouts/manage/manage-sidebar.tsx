@@ -5,6 +5,8 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authService } from "@/libs/services/auth.service";
 import { StorageKeys } from "@/constants/storage";
+import { useSubRole } from "@/hooks/useSubRole";
+import type { Permission } from "@/libs/rbac/types";
 import styles from "./manage-layout.module.scss";
 
 export type Role = "admin" | "agency" | "provider";
@@ -23,6 +25,8 @@ const Ico = {
     Discounts: () => <svg viewBox="0 0 24 24" fill="none"><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="7" cy="7" r="1.5" fill="currentColor"/></svg>,
     Jobs:      () => <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2M12 12v4M10 14h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     Vehicles:  () => <svg viewBox="0 0 24 24" fill="none"><rect x="1" y="9" width="15" height="9" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 13h3l3 3v3h-6v-6z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="5.5" cy="18.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/><circle cx="18.5" cy="18.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/><path d="M1 13h15M4 9V6" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
+    Guides:    () => <svg viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.7"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M19 8l2 2 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    Results:   () => <svg viewBox="0 0 24 24" fill="none"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M9 13h6M9 17h4M9 9h1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><circle cx="17" cy="17" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M19.5 19.5l1.5 1.5" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Requests:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M6 1v3M10 1v3M14 1v3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Packages:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Services:  () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
@@ -33,9 +37,9 @@ const Ico = {
 };
 
 // ─── Menu config — tất cả dùng /dashboard/* ───────────────────────────────────
-type NavItem  = { label: string; href: string; icon: React.ReactNode; badge?: number };
+type NavItem  = { label: string; href: string; icon: React.ReactNode; badge?: number; permission?: Permission };
 type NavGroup = { items: NavItem[] };
-type FinGroup = { isFinance: true; sub: { label: string; href: string }[] };
+type FinGroup = { isFinance: true; sub: { label: string; href: string }[]; permission?: Permission };
 type Entry    = NavGroup | FinGroup;
 
 const isFin = (e: Entry): e is FinGroup => "isFinance" in e;
@@ -64,32 +68,39 @@ const MENU: Record<Role, Entry[]> = {
     ],
     agency: [
         { items: [
-            { label: "Dashboard", href: "/agency/dashboard", icon: <Ico.Dashboard /> },
-            { label: "Bookings",  href: "/agency/bookings",  icon: <Ico.Orders />,    badge: 8 },
-            { label: "Tours",     href: "/agency/tours",     icon: <Ico.Tours />    },
-            { label: "Vehicles",  href: "/agency/vehicles",  icon: <Ico.Vehicles /> },
-            { label: "Schedule",  href: "/agency/schedule",  icon: <Ico.Schedule /> },
+            { label: "Dashboard", href: "/agency/dashboard", icon: <Ico.Dashboard />, permission: "agency.dashboard.view" },
+            { label: "Bookings",  href: "/agency/bookings",  icon: <Ico.Orders />,    badge: 8, permission: "agency.bookings.view" },
+            { label: "Tours",     href: "/agency/tours",     icon: <Ico.Tours />,     permission: "agency.tours.view"     },
+            { label: "Vehicles",  href: "/agency/vehicles",  icon: <Ico.Vehicles />,  permission: "agency.vehicles.view"  },
+            { label: "Schedule",  href: "/agency/schedule",  icon: <Ico.Schedule />,  permission: "agency.schedule.view"  },
+            { label: "Guides",    href: "/agency/guides",    icon: <Ico.Guides />,    permission: "agency.guides.view"    },
+        ]},
+        { isFinance: true, permission: "agency.finance.view", sub: [
+            { label: "Invoices",     href: "/agency/invoices"     },
+            { label: "Transactions", href: "/agency/transactions" },
+            { label: "Reports",      href: "/agency/reports"      },
         ]},
         { items: [
-            { label: "Analytics", href: "/agency/analytics", icon: <Ico.Analytics /> },
+            { label: "Analytics", href: "/agency/analytics", icon: <Ico.Analytics />, permission: "agency.analytics.view" },
         ]},
     ],
     provider: [
         { items: [
-            { label: "Dashboard", href: "/provider/dashboard", icon: <Ico.Dashboard /> },
-            { label: "Bookings",  href: "/provider/bookings",  icon: <Ico.Orders />, badge: 5 },
-            { label: "Services",  href: "/provider/services",  icon: <Ico.Services /> },
-            { label: "Packages",  href: "/provider/packages",  icon: <Ico.Packages /> },
-            { label: "Customers", href: "/provider/customers", icon: <Ico.Customers /> },
-            { label: "Jobs",      href: "/provider/jobs",      icon: <Ico.Jobs />    },
+            { label: "Dashboard", href: "/provider/dashboard", icon: <Ico.Dashboard />, permission: "provider.dashboard.view" },
+            { label: "Bookings",  href: "/provider/bookings",  icon: <Ico.Orders />,    badge: 5, permission: "provider.bookings.view"  },
+            { label: "Services",  href: "/provider/services",  icon: <Ico.Services />,  permission: "provider.services.view"  },
+            { label: "Packages",  href: "/provider/packages",  icon: <Ico.Packages />,  permission: "provider.packages.view"  },
+            { label: "Customers", href: "/provider/customers", icon: <Ico.Customers />, permission: "provider.customers.view" },
+            { label: "Results",   href: "/provider/results",   icon: <Ico.Results />,   permission: "provider.results.view"   },
+            { label: "Jobs",      href: "/provider/jobs",      icon: <Ico.Jobs />,      permission: "provider.jobs.view"      },
         ]},
-        { isFinance: true, sub: [
+        { isFinance: true, permission: "provider.finance.view", sub: [
             { label: "Invoices",     href: "/provider/invoices"     },
             { label: "Transactions", href: "/provider/transactions" },
             { label: "Reports",      href: "/provider/reports"      },
         ]},
         { items: [
-            { label: "Analytics", href: "/provider/analytics", icon: <Ico.Analytics /> },
+            { label: "Analytics", href: "/provider/analytics", icon: <Ico.Analytics />, permission: "provider.analytics.view" },
         ]},
     ],
 };
@@ -112,10 +123,20 @@ export default function ManageSidebar({ role }: { role: Role }) {
     const router = useRouter();
     const base = BASE[role];
 
+    // Sub-role filtering: only applies to provider and agency.
+    // While ready===false (one render before localStorage is read) show everything
+    // to avoid a jarring nav jump.
+    const subRoleMain = (role === "provider" || role === "agency") ? role : undefined;
+    const { can, ready } = useSubRole(subRoleMain);
+    const allowed = (permission?: Permission) =>
+        !permission || !ready || can(permission);
+
     async function handleLogout() {
         try { await authService.logout(); } catch { }
         localStorage.removeItem(StorageKeys.ACCESS_TOKEN);
+        localStorage.removeItem(StorageKeys.SUB_ROLE);
         document.cookie = "role=; path=/; max-age=0";
+        document.cookie = "sub_role=; path=/; max-age=0";
         router.push("/signin");
     }
     const [finOpen, setFinOpen] = useState(() =>
@@ -141,6 +162,7 @@ export default function ManageSidebar({ role }: { role: Role }) {
             <nav className={styles.sidebarNav}>
                 {MENU[role].map((entry, i) => {
                     if (isFin(entry)) {
+                        if (!allowed(entry.permission)) return null;
                         const active = isFinActive(entry.sub);
                         return (
                             <div key={i}>
@@ -170,9 +192,11 @@ export default function ManageSidebar({ role }: { role: Role }) {
                             </div>
                         );
                     }
+                    const visibleItems = entry.items.filter(item => allowed(item.permission));
+                    if (visibleItems.length === 0) return null;
                     return (
                         <div key={i}>
-                            {entry.items.map(item => (
+                            {visibleItems.map(item => (
                                 <Link
                                     key={item.href}
                                     href={item.href}

@@ -15,6 +15,38 @@ const steps = ["Travel Details", "Review & Pay"];
 const formatDate = (iso: string) =>
     new Date(iso).toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
 
+// ── Traveler info ──────────────────────────────────────────────────────────────
+interface TravelerInfo {
+    fullName:  string;
+    idNumber:  string;  // CCCD / CMND
+    phone:     string;
+    age:       string;
+}
+
+function emptyTraveler(): TravelerInfo {
+    return { fullName: "", idNumber: "", phone: "", age: "" };
+}
+
+function validateTravelerList(list: TravelerInfo[]): Record<number, Record<string, string>> {
+    const errs: Record<number, Record<string, string>> = {};
+    list.forEach((t, i) => {
+        const e: Record<string, string> = {};
+        if (!t.fullName.trim())  e.fullName  = "Vui lòng nhập họ tên";
+        if (!t.idNumber.trim())  e.idNumber  = "Vui lòng nhập số CCCD/CMND";
+        else if (!/^\d{9}$|^\d{12}$/.test(t.idNumber))
+                                 e.idNumber  = "CCCD phải có 9 hoặc 12 chữ số";
+        if (!t.phone.trim())     e.phone     = "Vui lòng nhập số điện thoại";
+        else if (!/^0\d{9}$/.test(t.phone.replace(/\s/g, "")))
+                                 e.phone     = "Số điện thoại không hợp lệ (VD: 0912345678)";
+        const ageNum = parseInt(t.age, 10);
+        if (!t.age)              e.age       = "Vui lòng nhập tuổi";
+        else if (isNaN(ageNum) || ageNum < 1 || ageNum > 120)
+                                 e.age       = "Tuổi phải từ 1 đến 120";
+        if (Object.keys(e).length) errs[i] = e;
+    });
+    return errs;
+}
+
 export default function BookingPage() {
     const params = useParams();
     const searchParams = useSearchParams();
@@ -23,22 +55,53 @@ export default function BookingPage() {
     const scheduleId = searchParams.get("scheduleId");
 
     const [itinerary, setItinerary] = useState<ItineraryDTO | null>(null);
+    const [authChecked, setAuthChecked] = useState(false);
+
+    // Client-side auth guard — middleware handles the common case, this is a
+    // fallback for when the role cookie is missing but localStorage still has a token.
+    useEffect(() => {
+        const token = localStorage.getItem("access_token");
+        if (!token) {
+            const current = window.location.pathname + window.location.search;
+            router.replace(`/signin?redirect=${encodeURIComponent(current)}`);
+            return;
+        }
+        setAuthChecked(true);
+    }, [router]);
 
     useEffect(() => {
-        if (!tourId) return;
+        if (!authChecked || !tourId) return;
         agencyService.getItineraryById(tourId).then((res) => {
             if (res.data) setItinerary(res.data);
         });
-    }, [tourId]);
+    }, [authChecked, tourId]);
 
-    const selectedSchedule = itinerary?.schedules.find((s) => s.id === scheduleId) ?? itinerary?.schedules[0] ?? null;
+    // Never silently fall back to a random schedule — require an explicit match.
+    // Fall back to schedules[0] only when no scheduleId was provided at all.
+    const selectedSchedule = scheduleId
+        ? (itinerary?.schedules.find((s) => s.id === scheduleId) ?? null)
+        : (itinerary?.schedules[0] ?? null);
 
-    const tourName = itinerary?.name ?? "Tour";
-    const tourImage = itinerary?.images?.[0]?.url ?? "/images/landing/explore_1.avif";
-    const tourPrice = itinerary?.price ?? 0;
+    const tourName     = itinerary?.name ?? "Tour";
+    const tourImage    = itinerary?.images?.[0]?.url ?? "/images/landing/explore_1.avif";
+    const tourPrice    = itinerary?.price ?? 0;
     const tourDuration = itinerary?.durationDays ?? 0;
-    const checkIn = selectedSchedule ? formatDate(selectedSchedule.startTime) : "—";
-    const checkOut = selectedSchedule ? formatDate(selectedSchedule.endTime) : "—";
+    const checkIn  = selectedSchedule ? formatDate(selectedSchedule.startTime) : "—";
+    const checkOut = selectedSchedule ? formatDate(selectedSchedule.endTime)   : "—";
+
+    // ── Schedule validity ──────────────────────────────────────────────────────
+    type ScheduleProblem = "loading" | "not_found" | "expired" | "sold_out" | null;
+
+    function getScheduleProblem(): ScheduleProblem {
+        if (!itinerary) return "loading";
+        if (!selectedSchedule) return "not_found";
+        if (selectedSchedule.spotLeft <= 0) return "sold_out";
+        if (new Date(selectedSchedule.startTime) < new Date()) return "expired";
+        return null;
+    }
+
+    const scheduleProblem = getScheduleProblem();
+    const canBook = scheduleProblem === null;
 
     const [step, setStep] = useState(0);
 
@@ -49,22 +112,47 @@ export default function BookingPage() {
         agreeNewsletter: false,
     });
 
+    const [travelerInfos, setTravelerInfos] = useState<TravelerInfo[]>([emptyTraveler()]);
+    const [travelerErrors, setTravelerErrors] = useState<Record<number, Record<string, string>>>({});
+
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
 
     const set = (field: string, value: string | number | boolean) =>
         setForm((prev) => ({ ...prev, [field]: value }));
 
-    const validateStep0 = () => {
-        const e: Record<string, string> = {};
-        if (form.travelers < 1) e.travelers = "At least 1 traveler required";
-        return e;
-    };
+    // Keep travelerInfos in sync when count changes
+    function setTravelerCount(n: number) {
+        const count = Math.max(1, n);
+        set("travelers", count);
+        setTravelerInfos(prev => {
+            if (prev.length === count) return prev;
+            if (prev.length < count)
+                return [...prev, ...Array.from({ length: count - prev.length }, emptyTraveler)];
+            return prev.slice(0, count);
+        });
+    }
+
+    function updateTraveler(idx: number, field: keyof TravelerInfo, value: string) {
+        setTravelerInfos(prev => prev.map((t, i) => i === idx ? { ...t, [field]: value } : t));
+        // Clear error for this field on change
+        setTravelerErrors(prev => {
+            if (!prev[idx]?.[field]) return prev;
+            const next = { ...prev };
+            const iErrs = { ...next[idx] };
+            delete iErrs[field];
+            if (Object.keys(iErrs).length === 0) delete next[idx];
+            else next[idx] = iErrs;
+            return next;
+        });
+    }
 
     const handleNext = () => {
-        let e: Record<string, string> = {};
-        if (step === 0) e = validateStep0();
-        if (Object.keys(e).length > 0) { setErrors(e); return; }
+        if (step === 0) {
+            const tErrs = validateTravelerList(travelerInfos);
+            setTravelerErrors(tErrs);
+            if (Object.keys(tErrs).length > 0) return;
+        }
         setErrors({});
         setStep((s) => s + 1);
     };
@@ -99,6 +187,7 @@ export default function BookingPage() {
         }
     };
 
+    if (!authChecked) return null;
 
     return (
         <>
@@ -136,7 +225,53 @@ export default function BookingPage() {
                         ))}
                     </div>
 
-                    <div className={styles.layout}>
+                    {/* ── Schedule problem: loading / not found / expired / sold out ── */}
+                    {!canBook && (
+                        <div className={styles.scheduleAlert}>
+                            {scheduleProblem === "loading" ? (
+                                <div className={styles.alertLoading}>
+                                    <div className={styles.alertSpinner} />
+                                    <p>Đang tải thông tin lịch khởi hành…</p>
+                                </div>
+                            ) : (
+                                <>
+                                    <div className={styles.alertIconWrap}>
+                                        {scheduleProblem === "sold_out" ? (
+                                            <svg viewBox="0 0 24 24" fill="none" width="32" height="32">
+                                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7"/>
+                                                <path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                                            </svg>
+                                        ) : (
+                                            <svg viewBox="0 0 24 24" fill="none" width="32" height="32">
+                                                <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
+                                                <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                                                <path d="M8 15l2 2 4-4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" opacity="0.3"/>
+                                                <path d="M9 14l6 0M12 14v4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" opacity="0.3"/>
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <h2 className={styles.alertTitle}>
+                                        {scheduleProblem === "sold_out"  && "Lịch khởi hành đã hết chỗ"}
+                                        {scheduleProblem === "expired"   && "Lịch khởi hành đã qua"}
+                                        {scheduleProblem === "not_found" && "Không tìm thấy lịch này"}
+                                    </h2>
+                                    <p className={styles.alertSub}>
+                                        {scheduleProblem === "sold_out"  && "Tất cả chỗ trên lịch này đã được đặt. Hãy chọn một lịch khác còn chỗ trống."}
+                                        {scheduleProblem === "expired"   && "Ngày khởi hành của lịch này đã qua. Vui lòng chọn một lịch khởi hành sắp tới."}
+                                        {scheduleProblem === "not_found" && "Lịch khởi hành bạn chọn không còn tồn tại hoặc đã bị xoá."}
+                                    </p>
+                                    <button
+                                        className={styles.alertBtn}
+                                        onClick={() => router.push(`/tours/${tourId}`)}
+                                    >
+                                        ← Xem lịch khởi hành khác
+                                    </button>
+                                </>
+                            )}
+                        </div>
+                    )}
+
+                    {canBook && <div className={styles.layout}>
                         {/* ── LEFT: Form ── */}
                         <div className={styles.formSide}>
 
@@ -144,26 +279,111 @@ export default function BookingPage() {
                             {step === 0 && (
                                 <div className={styles.card}>
                                     <h2 className={styles.cardTitle}>
-                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M3 17l6-6 4 4 8-8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /><path d="M21 3h-6M21 3v6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" /></svg>
-                                        Travel Details
+                                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
+                                        Thông tin hành khách
                                     </h2>
 
+                                    {/* Counter */}
                                     <div className={styles.formGroup}>
-                                        <label className={styles.label}>Number of Travelers <span>*</span></label>
-                                        <div className={styles.counter}>
-                                            <button type="button" className={styles.counterBtn} onClick={() => set("travelers", Math.max(1, form.travelers - 1))}>−</button>
-                                            <span className={styles.counterVal}>{form.travelers}</span>
-                                            <button type="button" className={styles.counterBtn} onClick={() => set("travelers", form.travelers + 1)}>+</button>
+                                        <label className={styles.label}>Số lượng hành khách <span>*</span></label>
+                                        <div className={styles.counterRow}>
+                                            <div className={styles.counter}>
+                                                <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers - 1)}>−</button>
+                                                <span className={styles.counterVal}>{form.travelers}</span>
+                                                <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers + 1)}>+</button>
+                                            </div>
+                                            <span className={styles.counterHint}>Tối đa {form.travelers} người trong đoàn</span>
                                         </div>
-                                        {errors.travelers && <span className={styles.errorMsg}>{errors.travelers}</span>}
                                     </div>
 
-                                    <div className={styles.formGroup}>
-                                        <label className={styles.label}>Special Requests / Medical Notes</label>
+                                    {/* Per-traveler forms */}
+                                    <div className={styles.travelerList}>
+                                        {travelerInfos.map((t, idx) => {
+                                            const tErr = travelerErrors[idx] ?? {};
+                                            const hasErr = Object.keys(tErr).length > 0;
+                                            return (
+                                                <div key={idx} className={`${styles.travelerCard} ${hasErr ? styles.travelerCardErr : ""}`}>
+                                                    <div className={styles.travelerCardHead}>
+                                                        <div className={styles.travelerBadge}>{idx + 1}</div>
+                                                        <span className={styles.travelerCardTitle}>
+                                                            {t.fullName.trim() || `Hành khách ${idx + 1}`}
+                                                        </span>
+                                                        {hasErr && (
+                                                            <span className={styles.travelerErrBadge}>
+                                                                <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                                                Thiếu thông tin
+                                                            </span>
+                                                        )}
+                                                    </div>
+
+                                                    <div className={styles.travelerFields}>
+                                                        {/* Row 1: Họ tên + Tuổi */}
+                                                        <div className={styles.travelerFieldGroup}>
+                                                            <label className={styles.label}>Họ và tên <span>*</span></label>
+                                                            <input
+                                                                className={`${styles.input} ${tErr.fullName ? styles.inputError : ""}`}
+                                                                type="text"
+                                                                placeholder="Nguyễn Văn A"
+                                                                value={t.fullName}
+                                                                onChange={e => updateTraveler(idx, "fullName", e.target.value)}
+                                                            />
+                                                            {tErr.fullName && <span className={styles.errorMsg}>{tErr.fullName}</span>}
+                                                        </div>
+
+                                                        <div className={styles.travelerFieldGroup}>
+                                                            <label className={styles.label}>Tuổi <span>*</span></label>
+                                                            <input
+                                                                className={`${styles.input} ${tErr.age ? styles.inputError : ""}`}
+                                                                type="number"
+                                                                placeholder="25"
+                                                                min={1}
+                                                                max={120}
+                                                                value={t.age}
+                                                                onChange={e => updateTraveler(idx, "age", e.target.value)}
+                                                            />
+                                                            {tErr.age && <span className={styles.errorMsg}>{tErr.age}</span>}
+                                                        </div>
+
+                                                        {/* Row 2: CCCD + SĐT */}
+                                                        <div className={styles.travelerFieldGroup}>
+                                                            <label className={styles.label}>Số CCCD / CMND <span>*</span></label>
+                                                            <input
+                                                                className={`${styles.input} ${tErr.idNumber ? styles.inputError : ""}`}
+                                                                type="text"
+                                                                placeholder="001234567890"
+                                                                inputMode="numeric"
+                                                                maxLength={12}
+                                                                value={t.idNumber}
+                                                                onChange={e => updateTraveler(idx, "idNumber", e.target.value.replace(/\D/g, ""))}
+                                                            />
+                                                            {tErr.idNumber && <span className={styles.errorMsg}>{tErr.idNumber}</span>}
+                                                        </div>
+
+                                                        <div className={styles.travelerFieldGroup}>
+                                                            <label className={styles.label}>Số điện thoại <span>*</span></label>
+                                                            <input
+                                                                className={`${styles.input} ${tErr.phone ? styles.inputError : ""}`}
+                                                                type="tel"
+                                                                placeholder="0912 345 678"
+                                                                inputMode="tel"
+                                                                value={t.phone}
+                                                                onChange={e => updateTraveler(idx, "phone", e.target.value)}
+                                                            />
+                                                            {tErr.phone && <span className={styles.errorMsg}>{tErr.phone}</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+
+                                    {/* Special requests */}
+                                    <div className={styles.formGroup} style={{ marginTop: 20 }}>
+                                        <label className={styles.label}>Yêu cầu đặc biệt / Ghi chú sức khỏe</label>
                                         <textarea
                                             className={styles.textarea}
-                                            rows={4}
-                                            placeholder="Any dietary restrictions, mobility needs, medical conditions, or special requests..."
+                                            rows={3}
+                                            placeholder="Dị ứng thực phẩm, bệnh nền, yêu cầu phòng đặc biệt hoặc nhu cầu hỗ trợ…"
                                             value={form.specialRequests}
                                             onChange={(e) => set("specialRequests", e.target.value)}
                                         />
@@ -180,17 +400,40 @@ export default function BookingPage() {
                                     </h2>
 
                                     <div className={styles.reviewSection}>
-                                        <h3 className={styles.reviewHeading}>Travel Details</h3>
+                                        <h3 className={styles.reviewHeading}>Chi tiết chuyến đi</h3>
                                         <div className={styles.reviewGrid}>
-                                            <div className={styles.reviewItem}><span>Travelers</span><strong>{form.travelers} person{form.travelers > 1 ? "s" : ""}</strong></div>
-                                            <div className={styles.reviewItem}><span>Check-in</span><strong>{checkIn}</strong></div>
-                                            <div className={styles.reviewItem}><span>Check-out</span><strong>{checkOut}</strong></div>
+                                            <div className={styles.reviewItem}><span>Số hành khách</span><strong>{form.travelers} người</strong></div>
+                                            <div className={styles.reviewItem}><span>Ngày đi</span><strong>{checkIn}</strong></div>
+                                            <div className={styles.reviewItem}><span>Ngày về</span><strong>{checkOut}</strong></div>
                                         </div>
                                         {form.specialRequests && (
                                             <div className={styles.reviewNote}>
-                                                <span>Special Requests:</span> {form.specialRequests}
+                                                <span>Yêu cầu:</span> {form.specialRequests}
                                             </div>
                                         )}
+                                    </div>
+
+                                    {/* Traveler table */}
+                                    <div className={styles.reviewSection}>
+                                        <h3 className={styles.reviewHeading}>Danh sách hành khách</h3>
+                                        <div className={styles.travelerTable}>
+                                            <div className={styles.travelerTableHead}>
+                                                <span>#</span>
+                                                <span>Họ và tên</span>
+                                                <span>Tuổi</span>
+                                                <span>CCCD / CMND</span>
+                                                <span>Số điện thoại</span>
+                                            </div>
+                                            {travelerInfos.map((t, i) => (
+                                                <div key={i} className={styles.travelerTableRow}>
+                                                    <span className={styles.travelerTableNum}>{i + 1}</span>
+                                                    <span className={styles.travelerTableName}>{t.fullName}</span>
+                                                    <span>{t.age} tuổi</span>
+                                                    <span className={styles.travelerTableMono}>{t.idNumber}</span>
+                                                    <span className={styles.travelerTableMono}>{t.phone}</span>
+                                                </div>
+                                            ))}
+                                        </div>
                                     </div>
 
                                     <div className={styles.divider} />
@@ -304,7 +547,7 @@ export default function BookingPage() {
                                 </div>
                             </div>
                         </aside>
-                    </div>
+                    </div>}
                 </div>
             </main>
             <Footer />
