@@ -7,6 +7,25 @@
     min-height: 0;
 }
 
+.loadingState {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    min-height: 300px;
+}
+
+.spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 // ── Summary pills ─────────────────────────────────────────────────────────────
 .summaryRow {
     display: flex;
@@ -738,4 +757,40 @@
     gap: 7px;
     transition: background 0.15s;
     &:hover { background: #4f46e5; }
+}
+
+.detailBtnAccept {
+    height: 36px;
+    padding: 0 18px;
+    background: #059669;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s;
+    &:hover:not(:disabled) { background: #047857; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
+}
+
+.detailBtnReject {
+    height: 36px;
+    padding: 0 18px;
+    background: #fff;
+    border: 1.5px solid #ef4444;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 700;
+    color: #ef4444;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    transition: background 0.15s, color 0.15s;
+    &:hover:not(:disabled) { background: #fee2e2; }
+    &:disabled { opacity: 0.6; cursor: not-allowed; }
 }

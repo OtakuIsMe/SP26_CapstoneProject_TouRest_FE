@@ -2,6 +2,8 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import JobCard from "@/components/commons/job-card/job-card";
+import { providerService } from "@/libs/services/provider.service";
+import type { ProviderScheduleDTO } from "@/types/itinerary.type";
 import styles from "./page.module.scss";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -28,52 +30,72 @@ const STATUS_CFG: Record<JobStatus, { label: string; color: string; bg: string; 
     cancelled: { label: "cancelled", color: "#991b1b", bg: "#fee2e2", border: "#ef4444" },
 };
 
-const CATEGORY_OPTIONS = ["All Categories", "Medical", "Wellness", "Dental", "Cosmetic"];
 const MONTHS   = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WEEKDAYS = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","SATURDAY"];
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const now = new Date();
-const Y = now.getFullYear();
-const M = now.getMonth() + 1;
-const TD = now.getDate();
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const parseDate = (s: string) => new Date(s + "T00:00:00");
+const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
+const inRange   = (d: Date, s: Date, e: Date) => d >= s && d <= e;
 
-function mkd(day: number, m = M) {
-    return `${Y}-${String(m).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+function toDateStr(dt: string): string {
+    const d = new Date(dt);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
 }
 
-const MOCK_JOBS: TourJob[] = [
-    { id:"j1", groupName:"Hanoi Golden Group", agency:"Vietnam Travel", arrivalDate:mkd(TD),   departureDate:mkd(TD+3),  arrivalTime:"08:00 AM", people:24, services:["Full Body Checkup","Dental"], status:"confirmed" },
-    { id:"j2", groupName:"HCM Wellness Retreat", agency:"Saigon Tours", arrivalDate:mkd(TD),   departureDate:mkd(TD+2),  arrivalTime:"10:30 AM", people:12, services:["Spa & Massage","Blood Panel"], status:"pending" },
-    { id:"j3", groupName:"Hue Heritage Group", agency:"Imperial Tours", arrivalDate:mkd(TD),   departureDate:mkd(TD+1),  arrivalTime:"02:00 PM", people:15, services:["Traditional Medicine"], status:"confirmed" },
-    { id:"j4", groupName:"Da Nang Senior Care", agency:"Central Travel", arrivalDate:mkd(TD+2), departureDate:mkd(TD+5),  arrivalTime:"09:00 AM", people:30, services:["Cardiac Screening"], status:"confirmed", notes:"Need wheelchair access" },
-    { id:"j5", groupName:"Korea Medical Tour", agency:"Seoul Medica", arrivalDate:mkd(TD+2), departureDate:mkd(TD+3),  arrivalTime:"11:00 AM", people:8,  services:["Cosmetic Consult"], status:"pending" },
-    { id:"j6", groupName:"Mekong Delta Health", agency:"Delta Agency", arrivalDate:mkd(TD+5), departureDate:mkd(TD+7),  arrivalTime:"08:30 AM", people:18, services:["General Screening"], status:"pending" },
-    { id:"j7", groupName:"Nha Trang Beach Tour", agency:"Coastal Journeys", arrivalDate:mkd(TD+5), departureDate:mkd(TD+6),  arrivalTime:"01:00 PM", people:10, services:["Dermatology"], status:"confirmed" },
-    { id:"j8", groupName:"Sapa Mountain Retreat", agency:"Northern Trails", arrivalDate:mkd(TD+10), departureDate:mkd(TD+13), arrivalTime:"07:00 AM", people:20, services:["Respiratory Check"], status:"confirmed" },
-    { id:"j9", groupName:"Phu Quoc Wellness", agency:"Island Tours", arrivalDate:mkd(TD+10), departureDate:mkd(TD+12), arrivalTime:"09:30 AM", people:14, services:["Spa & Massage","Eye Exam"], status:"pending" },
-    { id:"j10",groupName:"Old Quarter Med Tour", agency:"Hanoi Heritage", arrivalDate:mkd(TD-3), departureDate:mkd(TD-1), arrivalTime:"10:00 AM", people:9,  services:["Dental Care"], status:"completed" },
-];
+function fmtTime(dt: string): string {
+    const d = new Date(dt);
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+    return `${h}:${m}`;
+}
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-const parseDate  = (s: string) => new Date(s + "T00:00:00");
-const isSameDay  = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-const inRange    = (d: Date, s: Date, e: Date) => d >= s && d <= e;
+function deriveStatus(startTime: string, endTime: string): JobStatus {
+    const now   = new Date();
+    const end   = new Date(endTime);
+    const start = new Date(startTime);
+    if (end < now) return "completed";
+    if (start <= now && end >= now) return "confirmed";
+    return "confirmed";
+}
+
+function mapToTourJob(s: ProviderScheduleDTO): TourJob {
+    return {
+        id:           s.id,
+        groupName:    s.itineraryName,
+        agency:       s.agencyName,
+        arrivalDate:  toDateStr(s.startTime),
+        departureDate:toDateStr(s.endTime),
+        arrivalTime:  fmtTime(s.startTime),
+        people:       s.spot,
+        services:     [],
+        status:       deriveStatus(s.startTime, s.endTime),
+    };
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProviderJobsPage() {
     const today = useMemo(() => new Date(), []);
 
-    const [curYear,   setCurYear]   = useState(today.getFullYear());
-    const [curMonth,  setCurMonth]  = useState(today.getMonth());
-    const [category,  setCategory]  = useState("All Categories");
-    const [catOpen,   setCatOpen]   = useState(false);
-    const [filter,    setFilter]    = useState<"all"|JobStatus>("all");
-    const [popup,     setPopup]     = useState<{ date: Date; jobs: TourJob[]; x: number; y: number } | null>(null);
-    const catRef  = useRef<HTMLDivElement>(null);
+    const [curYear,  setCurYear]  = useState(today.getFullYear());
+    const [curMonth, setCurMonth] = useState(today.getMonth());
+    const [filter,   setFilter]   = useState<"all" | JobStatus>("all");
+    const [catOpen,  setCatOpen]  = useState(false);
+    const [popup,    setPopup]    = useState<{ date: Date; jobs: TourJob[]; x: number; y: number } | null>(null);
+    const [jobs,     setJobs]     = useState<TourJob[]>([]);
+    const [loading,  setLoading]  = useState(true);
+    const catRef   = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
 
-    // Close dropdown on outside click
+    // Fetch schedules for this provider
+    useEffect(() => {
+        providerService.getJobSchedules()
+            .then(res => { if (res?.data) setJobs(res.data.map(mapToTourJob)); })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, []);
+
+    // Close category dropdown on outside click
     useEffect(() => {
         function handler(e: MouseEvent) {
             if (catRef.current && !catRef.current.contains(e.target as Node)) setCatOpen(false);
@@ -109,55 +131,36 @@ export default function ProviderJobsPage() {
         else setCurMonth(m => m + 1);
     }
 
-    // Today's column index (0-6)
-    const todayColIndex = today.getDay();
+    const todayColIndex      = today.getDay();
     const isCurrentMonthView = curYear === today.getFullYear() && curMonth === today.getMonth();
 
     function jobsOnDate(date: Date): TourJob[] {
-        return MOCK_JOBS.filter(j => inRange(date, parseDate(j.arrivalDate), parseDate(j.departureDate)));
+        return jobs.filter(j => inRange(date, parseDate(j.arrivalDate), parseDate(j.departureDate)));
     }
 
-    // Right panel: unconfirmed / pending groups
+    // Right panel: pending/unconfirmed groups
     const unconfirmed = useMemo(() =>
-        MOCK_JOBS.filter(j => {
-            const statusOk = filter === "all" || j.status === filter;
-            return j.status === "pending" && statusOk;
-        }).sort((a, b) => parseDate(a.arrivalDate).getTime() - parseDate(b.arrivalDate).getTime())
-    , [filter]);
+        jobs
+            .filter(j => filter === "all" ? j.status === "pending" : j.status === filter)
+            .sort((a, b) => parseDate(a.arrivalDate).getTime() - parseDate(b.arrivalDate).getTime()),
+    [jobs, filter]);
 
-    // ─────────────────────────────────────────────────────────────────────────
+    if (loading) {
+        return (
+            <div className={styles.page}>
+                <div className={styles.loadingState}>
+                    <div className={styles.spinner} />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={styles.page}>
 
             {/* ── Top bar ── */}
             <div className={styles.topBar}>
                 <div className={styles.topLeft}>
-                    {/* Category dropdown */}
-                    <div className={styles.catWrap} ref={catRef}>
-                        <button
-                            className={styles.catBtn}
-                            onClick={e => { e.stopPropagation(); setCatOpen(o => !o); }}
-                        >
-                            {category}
-                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-                                <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-                            </svg>
-                        </button>
-                        {catOpen && (
-                            <div className={styles.catDropdown}>
-                                {CATEGORY_OPTIONS.map(opt => (
-                                    <button
-                                        key={opt}
-                                        className={`${styles.catOpt} ${category === opt ? styles.catOptActive : ""}`}
-                                        onClick={() => { setCategory(opt); setCatOpen(false); }}
-                                    >
-                                        {opt}
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-
                     {/* Month nav */}
                     <div className={styles.monthNav}>
                         <button className={styles.arrowBtn} onClick={prevMonth}>
@@ -202,7 +205,6 @@ export default function ProviderJobsPage() {
 
                 {/* ══ Calendar ══ */}
                 <div className={styles.calWrap}>
-
                     {/* Weekday headers */}
                     <div className={styles.weekRow}>
                         {WEEKDAYS.map((w, i) => {
@@ -221,12 +223,12 @@ export default function ProviderJobsPage() {
                     {/* Grid */}
                     <div className={styles.grid}>
                         {cells.map((cell, idx) => {
-                            const colIndex  = idx % 7;
-                            const isToday   = isSameDay(cell.date, today);
-                            const isTodayCol= isCurrentMonthView && colIndex === todayColIndex;
-                            const jobs      = jobsOnDate(cell.date);
-                            const visible    = jobs.slice(0, 1);
-                            const more       = jobs.length - 1;
+                            const colIndex   = idx % 7;
+                            const isToday    = isSameDay(cell.date, today);
+                            const isTodayCol = isCurrentMonthView && colIndex === todayColIndex;
+                            const dayJobs    = jobsOnDate(cell.date);
+                            const visible    = dayJobs.slice(0, 1);
+                            const more       = dayJobs.length - 1;
 
                             return (
                                 <div
@@ -237,7 +239,6 @@ export default function ProviderJobsPage() {
                                         isTodayCol      ? styles.cellTodayCol : "",
                                     ].join(" ")}
                                 >
-                                    {/* Cell header */}
                                     <div className={styles.cellHead}>
                                         <span className={styles.addNew}>Add New</span>
                                         <span className={`${styles.dayNum} ${isToday ? styles.dayNumToday : ""}`}>
@@ -245,7 +246,6 @@ export default function ProviderJobsPage() {
                                         </span>
                                     </div>
 
-                                    {/* Events */}
                                     <div className={styles.events}>
                                         {visible.map(job => {
                                             const isArrival = isSameDay(cell.date, parseDate(job.arrivalDate));
@@ -258,14 +258,13 @@ export default function ProviderJobsPage() {
                                                 />
                                             );
                                         })}
-
                                         {more > 0 && (
                                             <button
                                                 className={styles.viewMore}
                                                 onClick={e => {
                                                     e.stopPropagation();
                                                     const rect = (e.currentTarget as HTMLElement).closest(`.${styles.cell}`)?.getBoundingClientRect();
-                                                    setPopup({ date: cell.date, jobs, x: rect?.left ?? 0, y: rect?.top ?? 0 });
+                                                    setPopup({ date: cell.date, jobs: dayJobs, x: rect?.left ?? 0, y: rect?.top ?? 0 });
                                                 }}
                                             >
                                                 View {more} More
@@ -281,11 +280,11 @@ export default function ProviderJobsPage() {
                     {popup && (
                         <div className={styles.popupOverlay} onClick={() => setPopup(null)}>
                             <div
-                            className={styles.popup}
-                            ref={popupRef}
-                            onClick={e => e.stopPropagation()}
-                            style={{ left: popup.x, top: popup.y }}
-                        >
+                                className={styles.popup}
+                                ref={popupRef}
+                                onClick={e => e.stopPropagation()}
+                                style={{ left: popup.x, top: popup.y }}
+                            >
                                 <div className={styles.popupHeader}>
                                     <span className={styles.popupDay}>{popup.date.getDate()}</span>
                                     <button className={styles.popupClose} onClick={() => setPopup(null)}>
@@ -319,7 +318,6 @@ export default function ProviderJobsPage() {
                         <h3 className={styles.rpTitle}>Unconfirmed Groups</h3>
                     </div>
 
-                    {/* Filter select */}
                     <div className={styles.rpSelect}>
                         <select
                             className={styles.rpSelectInput}
@@ -336,7 +334,6 @@ export default function ProviderJobsPage() {
                         </svg>
                     </div>
 
-                    {/* List */}
                     <div className={styles.rpList}>
                         {unconfirmed.length === 0 ? (
                             <p className={styles.rpEmpty}>No pending groups</p>
@@ -368,7 +365,6 @@ export default function ProviderJobsPage() {
                         })}
                     </div>
 
-                    {/* Add button */}
                     <button className={styles.addDraftBtn}>
                         <svg viewBox="0 0 24 24" fill="none" width="15" height="15">
                             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>

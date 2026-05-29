@@ -1,6 +1,7 @@
-import { AgencyDTO } from "@/types/agency.type";
+import { AgencyDTO, AgencyDetailDTO } from "@/types/agency.type";
 import { ProviderDTO } from "@/types/provider.type";
-import { ItineraryDTO, ItineraryScheduleDTO, ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
+import { AgencyScheduleDTO, ItineraryDTO, ItineraryProviderDTO, ItineraryScheduleDTO, ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
+import { AgencyDashboardStats, GuideWorkload, RecentBooking, UpcomingSchedule } from "@/types/dashboard.type";
 import { PagedResult } from "@/types/common.type";
 import { VehicleDTO, VehicleCreateRequest, VehicleUpdateRequest } from "@/types/vehicle.type";
 import axiosClient from "../http/axios-client";
@@ -53,6 +54,11 @@ export const agencyService = {
         lowPrice?: number;
         highPrice?: number;
         name?: string;
+        destination?: string;
+        agencyId?: string;
+        lowDurationDay?: number;
+        highDurationDay?: number;
+        vehicleType?: string;
     }): Promise<ApiResponse<PagedResult<ItineraryDTO>>> =>
         axiosClient.get("/itineraries", { params }),
 
@@ -72,6 +78,9 @@ export const agencyService = {
     getMe: (): Promise<ApiResponse<AgencyDTO>> =>
         axiosClient.get("/agencies/me"),
 
+    getById: (id: string): Promise<ApiResponse<AgencyDetailDTO>> =>
+        axiosClient.get(`/agencies/${id}/detail`),
+
     getItinerariesByAgency: (agencyId: string): Promise<ApiResponse<ItineraryDTO[]>> =>
         axiosClient.get("/itineraries", { params: { agencyId } }),
 
@@ -88,6 +97,9 @@ export const agencyService = {
 
     getItineraryStops: (itineraryId: string): Promise<ApiResponse<ItineraryStopWithActivitiesDTO[]>> =>
         axiosClient.get(`/itineraries/${itineraryId}/stops`),
+
+    getItineraryProviders: (itineraryId: string): Promise<ApiResponse<ItineraryProviderDTO[]>> =>
+        axiosClient.get(`/itineraries/${itineraryId}/providers`),
 
     getSchedules: (itineraryId: string): Promise<ApiResponse<ItineraryScheduleDTO[]>> =>
         axiosClient.get(`/itineraries/${itineraryId}/schedules`),
@@ -112,6 +124,17 @@ export const agencyService = {
     getAgencyUsers: (agencyId: string): Promise<ApiResponse<AgencyUserDTO[]>> =>
         axiosClient.get("/agencies/user-list", { params: { agencyId } }),
 
+    getTourGuides: (agencyId: string): Promise<ApiResponse<AgencyUserDTO[]>> =>
+        axiosClient.get("/agencies/tour-guides", { params: { agencyId } }),
+
+    createGuideAccount: (agencyId: string, payload: {
+        email: string; fullName: string; password: string; phone?: string;
+    }): Promise<ApiResponse<AgencyUserDTO>> =>
+        axiosClient.post(`/agencies/${agencyId}/create-guide`, payload),
+
+    removeAgencyUser: (agencyId: string, userId: string): Promise<ApiResponse<void>> =>
+        axiosClient.post(`/agencies/${agencyId}/remove-user`, { userId }),
+
     getMyVehicles: (): Promise<ApiResponse<VehicleDTO[]>> =>
         axiosClient.get("/vehicles/my"),
 
@@ -129,6 +152,30 @@ export const agencyService = {
 
     deleteActivity: (activityId: string): Promise<ApiResponse<void>> =>
         axiosClient.delete(`/itinerary-activities/${activityId}`),
+
+    getAgencySchedules: (): Promise<ApiResponse<AgencyScheduleDTO[]>> =>
+        axiosClient.get("/itineraries/schedules/agency"),
+
+    getMyGuideSchedules: (): Promise<ApiResponse<AgencyScheduleDTO[]>> =>
+        axiosClient.get("/itineraries/schedules/my-guide"),
+
+    acceptSchedule: (scheduleId: string): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/itineraries/schedules/${scheduleId}/accept`),
+
+    rejectSchedule: (scheduleId: string): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/itineraries/schedules/${scheduleId}/reject`),
+
+    getDashboardStats: (): Promise<ApiResponse<AgencyDashboardStats>> =>
+        axiosClient.get("/agencies/dashboard/stats"),
+
+    getUpcomingSchedules: (): Promise<ApiResponse<UpcomingSchedule[]>> =>
+        axiosClient.get("/agencies/dashboard/schedules/upcoming"),
+
+    getRecentBookings: (): Promise<ApiResponse<RecentBooking[]>> =>
+        axiosClient.get("/agencies/dashboard/bookings/recent"),
+
+    getGuideWorkload: (): Promise<ApiResponse<GuideWorkload[]>> =>
+        axiosClient.get("/agencies/dashboard/guides/workload"),
 
     getFeedbacksByItinerary: (itineraryId: string): Promise<ApiResponse<{
         bookingItineraryId: string;
@@ -149,6 +196,7 @@ export const agencyService = {
         scheduleId: string;
         numberOfGuests: number;
         customerNote?: string;
+        passengers: { fullName: string; idNumber: string; phone: string; age: number }[];
     }): Promise<ApiResponse<{ bookingId: string; code: string; totalAmount: number; finalAmount: number; discountAmount: number }>> =>
         axiosClient.post("/bookings", payload),
 
@@ -173,6 +221,18 @@ export const agencyService = {
         finalAmount: number;
     }>> =>
         axiosClient.get(`/payment/active/${bookingId}`),
+
+    getLatestPayment: (bookingId: string): Promise<ApiResponse<{
+        id: string;
+        bookingId: string;
+        orderCode: number;
+        status: string;
+        finalAmount: number;
+    }>> =>
+        axiosClient.get(`/payment/latest/${bookingId}`),
+
+    finalizePayment: (orderCode: string | number): Promise<ApiResponse<string>> =>
+        axiosClient.post(`/payment/finalize/${orderCode}`),
 
     addStop: (itineraryId: string, payload: {
         stopOrder?: number;

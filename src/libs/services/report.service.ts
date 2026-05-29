@@ -8,9 +8,11 @@ export type ReportStatus   = "Pending" | "Reviewed" | "Resolved" | "Rejected";
 export interface ReportDTO {
     id?: string;
     userId: string;
+    userName?: string;
     title: string;
     description: string;
     itemId: string;
+    itemName?: string;
     itemType: ReportItemType;
     status: ReportStatus;
     imageUrls?: string[];

@@ -13,6 +13,7 @@ export type Role = "admin" | "agency" | "provider";
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 const Ico = {
+    Payout:    () => <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M2 10h20M7 15h3M14 15h3" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Dashboard: () => <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7"/><rect x="14" y="3" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7"/><rect x="3" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7"/><rect x="14" y="14" width="7" height="7" rx="1.5" stroke="currentColor" strokeWidth="1.7"/></svg>,
     Orders:    () => <svg viewBox="0 0 24 24" fill="none"><path d="M6 2 3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Tours:     () => <svg viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><circle cx="12" cy="9" r="2.5" stroke="currentColor" strokeWidth="1.7"/></svg>,
@@ -32,6 +33,9 @@ const Ico = {
     Services:  () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Settings:  () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.7"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z" stroke="currentColor" strokeWidth="1.7"/></svg>,
     Schedule:  () => <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
+    Tracking:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
+    Inbox:     () => <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 12v.01M8 12v.01M16 12v.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M2 13h20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
+    Flag:      () => <svg viewBox="0 0 24 24" fill="none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><line x1="4" y1="22" x2="4" y2="15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Help:      () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Logout:    () => <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
 };
@@ -54,6 +58,8 @@ const MENU: Record<Role, Entry[]> = {
             { label: "Providers", href: "/admin/providers", icon: <Ico.Providers /> },
             { label: "Requests",  href: "/admin/requests",  icon: <Ico.Requests />  },
             { label: "Users",     href: "/admin/users",     icon: <Ico.Customers /> },
+            { label: "Reports",   href: "/admin/reports",   icon: <Ico.Flag />      },
+            { label: "Payouts",   href: "/admin/payouts",   icon: <Ico.Payout />    },
             { label: "Content",   href: "/admin/content",   icon: <Ico.Content />   },
         ]},
         { isFinance: true, sub: [
@@ -63,7 +69,7 @@ const MENU: Record<Role, Entry[]> = {
         ]},
         { items: [
             { label: "Analytics", href: "/admin/analytics", icon: <Ico.Analytics /> },
-            { label: "Discounts", href: "/admin/discounts", icon: <Ico.Discounts /> },
+            { label: "Vouchers",  href: "/admin/vouchers",  icon: <Ico.Discounts /> },
         ]},
     ],
     agency: [
@@ -74,6 +80,8 @@ const MENU: Record<Role, Entry[]> = {
             { label: "Vehicles",  href: "/agency/vehicles",  icon: <Ico.Vehicles />,  permission: "agency.vehicles.view"  },
             { label: "Schedule",  href: "/agency/schedule",  icon: <Ico.Schedule />,  permission: "agency.schedule.view"  },
             { label: "Guides",    href: "/agency/guides",    icon: <Ico.Guides />,    permission: "agency.guides.view"    },
+            { label: "Jobs",      href: "/agency/jobs",      icon: <Ico.Inbox />,     permission: "agency.jobs.view"      },
+            { label: "Tracking",  href: "/agency/tracking",  icon: <Ico.Tracking />,  permission: "agency.tracking.view"  },
         ]},
         { isFinance: true, permission: "agency.finance.view", sub: [
             { label: "Invoices",     href: "/agency/invoices"     },
@@ -93,6 +101,7 @@ const MENU: Record<Role, Entry[]> = {
             { label: "Customers", href: "/provider/customers", icon: <Ico.Customers />, permission: "provider.customers.view" },
             { label: "Results",   href: "/provider/results",   icon: <Ico.Results />,   permission: "provider.results.view"   },
             { label: "Jobs",      href: "/provider/jobs",      icon: <Ico.Jobs />,      permission: "provider.jobs.view"      },
+            { label: "Groups",    href: "/provider/groups",    icon: <Ico.Customers />, permission: "provider.groups.view"    },
         ]},
         { isFinance: true, permission: "provider.finance.view", sub: [
             { label: "Invoices",     href: "/provider/invoices"     },

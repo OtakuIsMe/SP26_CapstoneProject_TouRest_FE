@@ -1,5 +1,7 @@
 import { AgencyDetailDTO, AgencyDTO } from "@/types/agency.type";
 import { ProviderDetailDTO, ProviderDTO } from "@/types/provider.type";
+import { AdminDashboardStats, AdminTrend, PendingApproval, TopAgency } from "@/types/dashboard.type";
+import { VoucherDTO, VoucherCreateRequest, VoucherUpdateRequest } from "@/types/voucher.type";
 import axiosClient from "../http/axios-client";
 
 export type PagedResult<T> = {
@@ -54,4 +56,32 @@ export const adminService = {
 
     getAgencyDetail: (id: string): Promise<ApiResponse<AgencyDetailDTO>> =>
         axiosClient.get(`/agencies/${id}/detail`),
+
+    getDashboardStats: (): Promise<ApiResponse<AdminDashboardStats>> =>
+        axiosClient.get("/admins/stats"),
+
+    getDashboardTrend: (year: number): Promise<ApiResponse<AdminTrend>> =>
+        axiosClient.get("/admins/bookings/trend", { params: { year } }),
+
+    getPendingApprovals: (): Promise<ApiResponse<PendingApproval[]>> =>
+        axiosClient.get("/admins/requests"),
+
+    getTopAgencies: (limit = 5): Promise<ApiResponse<TopAgency[]>> =>
+        axiosClient.get("/admins/agencies", { params: { limit } }),
+
+    // ── Vouchers ──────────────────────────────────────────────────────────────
+    getVouchers: (): Promise<ApiResponse<VoucherDTO[]>> =>
+        axiosClient.get("/vouchers"),
+
+    getVoucherById: (id: string): Promise<ApiResponse<VoucherDTO>> =>
+        axiosClient.get(`/vouchers/${id}`),
+
+    createVoucher: (payload: VoucherCreateRequest): Promise<ApiResponse<VoucherDTO>> =>
+        axiosClient.post("/vouchers", payload),
+
+    updateVoucher: (id: string, payload: VoucherUpdateRequest): Promise<ApiResponse<VoucherDTO>> =>
+        axiosClient.put(`/vouchers/${id}`, payload),
+
+    deleteVoucher: (id: string): Promise<ApiResponse<void>> =>
+        axiosClient.delete(`/vouchers/${id}`),
 };

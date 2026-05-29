@@ -2,6 +2,9 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import JobCard from "@/components/commons/job-card/job-card";
+import { agencyService } from "@/libs/services/agency.service";
+import { useSubRole } from "@/hooks/useSubRole";
+import type { AgencyScheduleDTO } from "@/types/itinerary.type";
 import styles from "./page.module.scss";
 
 // ── Types ──────────────────────────────────────────────────────────────────────
@@ -33,148 +36,49 @@ const STATUS_CFG: Record<RunStatus, { label: string; color: string; bg: string; 
 const MONTHS   = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WEEKDAYS = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const now = new Date();
-const Y = now.getFullYear();
-const M = now.getMonth() + 1;
-const TD = now.getDate();
-
-function mkd(day: number, m = M, y = Y) {
-    const d = new Date(y, m - 1, day);
-    return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-}
-
-const MOCK_RUNS: TourRun[] = [
-    {
-        id: "r1",
-        tourName: "Ha Long Bay & Wellness Retreat",
-        tourCode: "HLBW-01",
-        startDate: mkd(TD),
-        endDate:   mkd(TD + 3),
-        departureTime: "07:00 AM",
-        guide: "Nguyễn Văn Hùng",
-        slots: 20, booked: 18,
-        status: "confirmed",
-        destination: "Ha Long Bay, Quảng Ninh",
-        notes: "VIP shuttle from Hà Nội",
-    },
-    {
-        id: "r2",
-        tourName: "Sapa Mountain Health Trek",
-        tourCode: "SMHT-02",
-        startDate: mkd(TD),
-        endDate:   mkd(TD + 2),
-        departureTime: "06:30 AM",
-        guide: "Trần Thị Lan",
-        slots: 15, booked: 9,
-        status: "confirmed",
-        destination: "Sapa, Lào Cai",
-    },
-    {
-        id: "r3",
-        tourName: "Hoi An Heritage & Spa Tour",
-        tourCode: "HHAS-03",
-        startDate: mkd(TD + 2),
-        endDate:   mkd(TD + 5),
-        departureTime: "08:00 AM",
-        guide: "Phạm Minh Đức",
-        slots: 12, booked: 12,
-        status: "confirmed",
-        destination: "Hội An, Quảng Nam",
-    },
-    {
-        id: "r4",
-        tourName: "Phu Quoc Island Medical Escape",
-        tourCode: "PQIM-04",
-        startDate: mkd(TD + 2),
-        endDate:   mkd(TD + 6),
-        departureTime: "09:30 AM",
-        guide: "Lê Thị Hoa",
-        slots: 20, booked: 7,
-        status: "pending",
-        destination: "Phú Quốc, Kiên Giang",
-        notes: "Waiting for medical facility confirmation",
-    },
-    {
-        id: "r5",
-        tourName: "Hanoi Cultural Dental Tour",
-        tourCode: "HCDT-05",
-        startDate: mkd(TD + 5),
-        endDate:   mkd(TD + 7),
-        departureTime: "07:30 AM",
-        guide: "Hoàng Văn Nam",
-        slots: 10, booked: 4,
-        status: "pending",
-        destination: "Hà Nội",
-    },
-    {
-        id: "r6",
-        tourName: "Ha Long Bay & Wellness Retreat",
-        tourCode: "HLBW-06",
-        startDate: mkd(TD + 8),
-        endDate:   mkd(TD + 11),
-        departureTime: "07:00 AM",
-        guide: "Nguyễn Văn Hùng",
-        slots: 20, booked: 14,
-        status: "confirmed",
-        destination: "Ha Long Bay, Quảng Ninh",
-    },
-    {
-        id: "r7",
-        tourName: "Sapa Mountain Health Trek",
-        tourCode: "SMHT-07",
-        startDate: mkd(TD + 10),
-        endDate:   mkd(TD + 12),
-        departureTime: "06:30 AM",
-        guide: "Vũ Thị Mai",
-        slots: 15, booked: 0,
-        status: "pending",
-        destination: "Sapa, Lào Cai",
-    },
-    {
-        id: "r8",
-        tourName: "Phu Quoc Island Medical Escape",
-        tourCode: "PQIM-08",
-        startDate: mkd(TD - 5),
-        endDate:   mkd(TD - 2),
-        departureTime: "09:30 AM",
-        guide: "Lê Thị Hoa",
-        slots: 20, booked: 20,
-        status: "completed",
-        destination: "Phú Quốc, Kiên Giang",
-    },
-    {
-        id: "r9",
-        tourName: "Hoi An Heritage & Spa Tour",
-        tourCode: "HHAS-09",
-        startDate: mkd(TD - 8),
-        endDate:   mkd(TD - 6),
-        departureTime: "08:00 AM",
-        guide: "Bùi Thị Thu",
-        slots: 12, booked: 12,
-        status: "completed",
-        destination: "Hội An, Quảng Nam",
-    },
-    {
-        id: "r10",
-        tourName: "Hanoi Cultural Dental Tour",
-        tourCode: "HCDT-10",
-        startDate: mkd(TD + 15),
-        endDate:   mkd(TD + 17),
-        departureTime: "07:30 AM",
-        guide: "Đỗ Quang Minh",
-        slots: 10, booked: 2,
-        status: "pending",
-        destination: "Hà Nội",
-    },
-];
-
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const parseDate  = (s: string) => new Date(s + "T00:00:00");
 const isSameDay  = (a: Date, b: Date) => a.toDateString() === b.toDateString();
 const inRange    = (d: Date, s: Date, e: Date) => d >= s && d <= e;
+
 function fmtDate(s: string) {
     return new Date(s + "T00:00:00").toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function toDateStr(dt: string): string {
+    const d = new Date(dt);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
+function fmtTime(dt: string): string {
+    const d = new Date(dt);
+    const h = String(d.getHours()).padStart(2, "0");
+    const m = String(d.getMinutes()).padStart(2, "0");
+    return `${h}:${m}`;
+}
+
+function normalizeStatus(s: string): RunStatus {
+    const lower = s?.toLowerCase() ?? "pending";
+    if (lower === "ongoing") return "confirmed";
+    if (lower === "confirmed" || lower === "pending" || lower === "completed" || lower === "cancelled")
+        return lower as RunStatus;
+    return "pending";
+}
+
+function mapToTourRun(s: AgencyScheduleDTO): TourRun {
+    return {
+        id:            s.id,
+        tourName:      s.itineraryName,
+        tourCode:      s.id.slice(0, 8).toUpperCase(),
+        startDate:     toDateStr(s.startTime),
+        endDate:       toDateStr(s.endTime),
+        departureTime: fmtTime(s.startTime),
+        guide:         s.guideName ?? "Chưa phân công",
+        slots:         s.spot,
+        booked:        s.spot - s.spotLeft,
+        status:        normalizeStatus(s.status),
+        destination:   "",
+    };
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -186,7 +90,26 @@ export default function AgencySchedulePage() {
     const [statusFilter, setStatusFilter] = useState<"all" | RunStatus>("all");
     const [popup,    setPopup]    = useState<{ date: Date; runs: TourRun[]; x: number; y: number } | null>(null);
     const [detail,   setDetail]   = useState<TourRun | null>(null);
+    const [runs,     setRuns]     = useState<TourRun[]>([]);
+    const [loading,  setLoading]  = useState(true);
+    const [actionLoading, setActionLoading] = useState(false);
     const popupRef  = useRef<HTMLDivElement>(null);
+
+    const { is: isRole, ready: roleReady } = useSubRole("agency");
+
+    // Fetch schedules based on sub-role
+    useEffect(() => {
+        if (!roleReady) return;
+        setLoading(true);
+        const fetch = isRole("tour_guide")
+            ? agencyService.getMyGuideSchedules()
+            : agencyService.getAgencySchedules();
+
+        fetch
+            .then(res => { if (res?.data) setRuns(res.data.map(mapToTourRun)); })
+            .catch(() => {})
+            .finally(() => setLoading(false));
+    }, [roleReady, isRole]);
 
     // Close popup on outside click
     useEffect(() => {
@@ -197,6 +120,32 @@ export default function AgencySchedulePage() {
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
     }, []);
+
+    // ── Guide accept / reject ─────────────────────────────────────────────────
+    async function handleAccept(scheduleId: string) {
+        setActionLoading(true);
+        try {
+            await agencyService.acceptSchedule(scheduleId);
+            setRuns(prev => prev.map(r =>
+                r.id === scheduleId ? { ...r, status: "confirmed" } : r
+            ));
+            setDetail(prev => prev?.id === scheduleId ? { ...prev, status: "confirmed" } : prev);
+        } catch { /* ignore */ } finally {
+            setActionLoading(false);
+        }
+    }
+
+    async function handleReject(scheduleId: string) {
+        setActionLoading(true);
+        try {
+            await agencyService.rejectSchedule(scheduleId);
+            // Schedule gets unassigned — remove it from the guide's list
+            setRuns(prev => prev.filter(r => r.id !== scheduleId));
+            setDetail(null);
+        } catch { /* ignore */ } finally {
+            setActionLoading(false);
+        }
+    }
 
     // ── Calendar grid ──────────────────────────────────────────────────────────
     const cells = useMemo(() => {
@@ -229,31 +178,40 @@ export default function AgencySchedulePage() {
     const isCurrentMonthView = curYear === today.getFullYear() && curMonth === today.getMonth();
 
     function runsOnDate(date: Date): TourRun[] {
-        return MOCK_RUNS.filter(r => inRange(date, parseDate(r.startDate), parseDate(r.endDate)));
+        return runs.filter(r => inRange(date, parseDate(r.startDate), parseDate(r.endDate)));
     }
 
     // ── Right panel: upcoming runs ─────────────────────────────────────────────
     const upcomingRuns = useMemo(() => {
-        return MOCK_RUNS
+        return runs
             .filter(r => {
                 if (statusFilter === "all") return r.status !== "completed" && r.status !== "cancelled";
                 return r.status === statusFilter;
             })
             .sort((a, b) => parseDate(a.startDate).getTime() - parseDate(b.startDate).getTime());
-    }, [statusFilter]);
+    }, [runs, statusFilter]);
 
-    // Stats for summary row
     const stats = useMemo(() => ({
-        total:     MOCK_RUNS.length,
-        confirmed: MOCK_RUNS.filter(r => r.status === "confirmed").length,
-        pending:   MOCK_RUNS.filter(r => r.status === "pending").length,
-        thisMonth: MOCK_RUNS.filter(r => {
+        total:     runs.length,
+        confirmed: runs.filter(r => r.status === "confirmed").length,
+        pending:   runs.filter(r => r.status === "pending").length,
+        thisMonth: runs.filter(r => {
             const s = parseDate(r.startDate);
             return s.getFullYear() === today.getFullYear() && s.getMonth() === today.getMonth();
         }).length,
-    }), [today]);
+    }), [runs, today]);
 
     // ── Render ─────────────────────────────────────────────────────────────────
+    if (loading) {
+        return (
+            <div className={styles.page}>
+                <div className={styles.loadingState}>
+                    <div className={styles.spinner} />
+                </div>
+            </div>
+        );
+    }
+
     return (
         <div className={styles.page}>
 
@@ -275,7 +233,6 @@ export default function AgencySchedulePage() {
             {/* ── Top bar ── */}
             <div className={styles.topBar}>
                 <div className={styles.topLeft}>
-                    {/* Month nav */}
                     <div className={styles.monthNav}>
                         <button className={styles.arrowBtn} onClick={prevMonth}>
                             <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
@@ -290,7 +247,6 @@ export default function AgencySchedulePage() {
                         </button>
                     </div>
 
-                    {/* Status legend */}
                     <div className={styles.legend}>
                         {(Object.entries(STATUS_CFG) as [RunStatus, typeof STATUS_CFG[RunStatus]][]).map(([k, v]) => (
                             <span key={k} className={styles.legendItem}>
@@ -316,7 +272,6 @@ export default function AgencySchedulePage() {
 
                 {/* ══ Calendar ══ */}
                 <div className={styles.calWrap}>
-                    {/* Weekday headers */}
                     <div className={styles.weekRow}>
                         {WEEKDAYS.map((w, i) => {
                             const isToday = isCurrentMonthView && i === todayColIndex;
@@ -331,15 +286,14 @@ export default function AgencySchedulePage() {
                         })}
                     </div>
 
-                    {/* Grid */}
                     <div className={styles.grid}>
                         {cells.map((cell, idx) => {
-                            const colIndex  = idx % 7;
-                            const isToday   = isSameDay(cell.date, today);
+                            const colIndex   = idx % 7;
+                            const isToday    = isSameDay(cell.date, today);
                             const isTodayCol = isCurrentMonthView && colIndex === todayColIndex;
-                            const runs       = runsOnDate(cell.date);
-                            const visible    = runs.slice(0, 2);
-                            const more       = runs.length - 2;
+                            const dayRuns    = runsOnDate(cell.date);
+                            const visible    = dayRuns.slice(0, 2);
+                            const more       = dayRuns.length - 2;
 
                             return (
                                 <div
@@ -376,7 +330,7 @@ export default function AgencySchedulePage() {
                                                     e.stopPropagation();
                                                     const rect = (e.currentTarget as HTMLElement)
                                                         .closest(`.${styles.cell}`)?.getBoundingClientRect();
-                                                    setPopup({ date: cell.date, runs, x: rect?.left ?? 0, y: rect?.bottom ?? 0 });
+                                                    setPopup({ date: cell.date, runs: dayRuns, x: rect?.left ?? 0, y: rect?.bottom ?? 0 });
                                                 }}
                                             >
                                                 +{more} more
@@ -452,7 +406,7 @@ export default function AgencySchedulePage() {
                             <p className={styles.rpEmpty}>No runs found</p>
                         ) : upcomingRuns.map(run => {
                             const cfg = STATUS_CFG[run.status];
-                            const pct = Math.round(run.booked / run.slots * 100);
+                            const pct = run.slots > 0 ? Math.round(run.booked / run.slots * 100) : 0;
                             return (
                                 <div
                                     key={run.id}
@@ -471,7 +425,6 @@ export default function AgencySchedulePage() {
                                         <svg viewBox="0 0 24 24" fill="none" width="10" height="10"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                         {fmtDate(run.startDate)} → {fmtDate(run.endDate)}
                                     </div>
-                                    {/* Occupancy mini bar */}
                                     <div className={styles.rpOccupancy}>
                                         <div className={styles.rpOccBar}>
                                             <div
@@ -495,7 +448,6 @@ export default function AgencySchedulePage() {
             {detail && (
                 <div className={styles.detailOverlay} onClick={() => setDetail(null)}>
                     <div className={styles.detailModal} onClick={e => e.stopPropagation()}>
-                        {/* Header */}
                         <div className={styles.detailHeader}>
                             <div className={styles.detailHeaderLeft}>
                                 <span className={styles.detailCode}>{detail.tourCode}</span>
@@ -541,13 +493,6 @@ export default function AgencySchedulePage() {
                                 </div>
                                 <div className={styles.detailItem}>
                                     <span className={styles.detailKey}>
-                                        <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="10" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
-                                        Destination
-                                    </span>
-                                    <span className={styles.detailVal}>{detail.destination}</span>
-                                </div>
-                                <div className={styles.detailItem}>
-                                    <span className={styles.detailKey}>
                                         <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/></svg>
                                         Tour Guide
                                     </span>
@@ -562,9 +507,8 @@ export default function AgencySchedulePage() {
                                 </div>
                             </div>
 
-                            {/* Occupancy bar */}
                             {(() => {
-                                const pct = Math.round(detail.booked / detail.slots * 100);
+                                const pct = detail.slots > 0 ? Math.round(detail.booked / detail.slots * 100) : 0;
                                 return (
                                     <div className={styles.detailOccupancy}>
                                         <div className={styles.detailOccHeader}>
@@ -598,11 +542,43 @@ export default function AgencySchedulePage() {
                         </div>
 
                         <div className={styles.detailFooter}>
-                            <button className={styles.detailBtnSecondary} onClick={() => setDetail(null)}>Close</button>
-                            <button className={styles.detailBtnPrimary}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                Edit Run
-                            </button>
+                            {isRole("tour_guide") && detail.status === "pending" ? (
+                                <>
+                                    <button
+                                        className={styles.detailBtnSecondary}
+                                        onClick={() => setDetail(null)}
+                                        disabled={actionLoading}
+                                    >
+                                        Đóng
+                                    </button>
+                                    <button
+                                        className={styles.detailBtnReject}
+                                        onClick={() => handleReject(detail.id)}
+                                        disabled={actionLoading}
+                                    >
+                                        {actionLoading ? "..." : (
+                                            <>
+                                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                                                Từ chối
+                                            </>
+                                        )}
+                                    </button>
+                                    <button
+                                        className={styles.detailBtnAccept}
+                                        onClick={() => handleAccept(detail.id)}
+                                        disabled={actionLoading}
+                                    >
+                                        {actionLoading ? "..." : (
+                                            <>
+                                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M5 12l5 5L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                Chấp nhận
+                                            </>
+                                        )}
+                                    </button>
+                                </>
+                            ) : (
+                                <button className={styles.detailBtnSecondary} onClick={() => setDetail(null)}>Đóng</button>
+                            )}
                         </div>
                     </div>
                 </div>

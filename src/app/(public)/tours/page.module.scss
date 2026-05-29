@@ -1,3 +1,91 @@
+// ── Search bar ────────────────────────────────────────────────────────────────
+.searchBarWrap {
+    background: #fff;
+    border-bottom: 1px solid #e5e7eb;
+    padding: 0 24px;
+}
+
+.searchBarInner {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 0;
+    height: 72px;
+}
+
+.sbField {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 20px;
+    height: 100%;
+    cursor: text;
+
+    &:hover { background: #f9fafb; }
+}
+
+.sbIcon {
+    color: #4f46e5;
+    flex-shrink: 0;
+}
+
+.sbFieldBody {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    flex: 1;
+    min-width: 0;
+}
+
+.sbLabel {
+    font-size: 11px;
+    font-weight: 600;
+    color: #111827;
+    text-transform: uppercase;
+    letter-spacing: 0.3px;
+}
+
+.sbInput {
+    font-size: 13px;
+    color: #6b7280;
+    border: none;
+    outline: none;
+    background: transparent;
+    width: 100%;
+
+    &::placeholder { color: #9ca3af; }
+}
+
+.sbDivider {
+    width: 1px;
+    height: 36px;
+    background: #e5e7eb;
+    flex-shrink: 0;
+}
+
+.sbBtn {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 10px;
+    padding: 12px 24px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+    margin-left: 16px;
+    flex-shrink: 0;
+    transition: background 0.2s;
+
+    &:hover { background: #4338ca; }
+}
+
+// ── Container ─────────────────────────────────────────────────────────────────
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -314,4 +402,65 @@
     text-align: center;
 
     p { font-size: 15px; margin: 0; }
+}
+
+/* Skeleton bottom row */
+.cardSkeletonBottom {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+    padding-top: 8px;
+}
+
+/* Filter sidebar — label row with clear button */
+.filtersLabelRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+}
+
+.clearFiltersBtn {
+    font-size: 12px;
+    font-weight: 600;
+    color: #4f46e5;
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+
+    &:hover { color: #4338ca; text-decoration: underline; }
+}
+
+/* Radio filter options */
+.filterOpts {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding-bottom: 4px;
+}
+
+.filterOpt {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none;
+
+    &:hover .filterOptLabel { color: #1a1a2e; }
+}
+
+.filterRadio {
+    accent-color: #4f46e5;
+    width: 15px;
+    height: 15px;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.filterOptLabel {
+    font-size: 13px;
+    color: #374151;
+    line-height: 1.4;
 }

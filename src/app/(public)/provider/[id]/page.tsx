@@ -1,348 +1,326 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useParams } from "next/navigation";
 import Image from "next/image";
+import Link from "next/link";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
-import ProfileHero, { StarRating } from "@/components/features/profile-page/ProfileHero";
-import ProfileHighlights from "@/components/features/profile-page/ProfileHighlights";
-import ProfileTabNav from "@/components/features/profile-page/ProfileTabNav";
-import ProfileGallery from "@/components/features/profile-page/ProfileGallery";
-import ReviewsList from "@/components/features/profile-page/ReviewsList";
-import ProfileSideCard from "@/components/features/profile-page/ProfileSideCard";
-import StatsCard from "@/components/features/profile-page/StatsCard";
-import QuickPickList from "@/components/features/profile-page/QuickPickList";
-import sharedStyles from "@/components/features/profile-page/profile-page.module.scss";
+import { providerService } from "@/libs/services/provider.service";
+import { useWishlist } from "@/hooks/useWishlist";
+import { WishlistItemType } from "@/libs/services/wishlist.service";
+import type { ProviderDetailDTO } from "@/types/provider.type";
+import type { ServiceDTO } from "@/types/service.type";
 import styles from "./page.module.scss";
 
-// ── Mock data ──────────────────────────────────────────────────────────────
-const PROVIDER = {
-  id: "1",
-  name: "Trạm Y Tế & Nghỉ Dưỡng Sapa Highland",
-  type: "Trạm Y Tế Du Lịch",
-  tagline: "Chăm sóc sức khỏe toàn diện giữa lòng thiên nhiên",
-  coverImage: "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=1600&q=80",
-  avatar: "https://images.unsplash.com/photo-1538108149393-fbbd81895907?w=200&q=80",
-  rating: 4.8,
-  reviewCount: 312,
-  location: "Thị trấn Sa Pa, Lào Cai, Việt Nam",
-  phone: "+84 214 387 1234",
-  email: "contact@sapahighland-medical.vn",
-  openHours: "07:00 – 22:00 (T2–CN)",
-  established: "2018",
-  licenseNo: "YT-LC-2018-0042",
-  description:
-    "Trạm Y Tế & Nghỉ Dưỡng Sapa Highland được thành lập với sứ mệnh cung cấp dịch vụ y tế và chăm sóc sức khỏe chất lượng cao cho du khách và cư dân địa phương. Nằm ở độ cao 1.500m, chúng tôi kết hợp y học hiện đại với liệu pháp thiên nhiên truyền thống, mang đến trải nghiệm phục hồi toàn diện giữa không khí trong lành của núi rừng Tây Bắc.",
-  highlights: [
-    { icon: "🏥", label: "Đội ngũ y bác sĩ chuyên nghiệp" },
-    { icon: "🌿", label: "Liệu pháp thảo dược tự nhiên" },
-    { icon: "🚑", label: "Cấp cứu 24/7" },
-    { icon: "🏨", label: "Phòng nghỉ cao cấp" },
-  ],
-  gallery: [
-    "https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?w=800&q=80",
-    "https://images.unsplash.com/photo-1516549655169-df83a0774514?w=800&q=80",
-    "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=800&q=80",
-    "https://images.unsplash.com/photo-1584467735871-8e85353a8413?w=800&q=80",
-    "https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=800&q=80",
-    "https://images.unsplash.com/photo-1551190822-a9333d879b1f?w=800&q=80",
-  ],
-  facilities: [
-    "Phòng khám đa khoa", "Phòng vật lý trị liệu",
-    "Spa & Massage thư giãn", "Phòng xét nghiệm cơ bản",
-    "Nhà thuốc đầy đủ", "Phòng nghỉ đơn & đôi",
-    "Khu vực thiền định ngoài trời", "Nhà bếp dinh dưỡng",
-    "Wifi miễn phí", "Bãi đỗ xe",
-  ],
-  staff: [
-    { name: "BS. Nguyễn Minh Tuấn", role: "Bác sĩ trưởng", avatar: "https://i.pravatar.cc/80?img=12" },
-    { name: "Điều dưỡng Lê Thị Hoa", role: "Trưởng nhóm điều dưỡng", avatar: "https://i.pravatar.cc/80?img=47" },
-    { name: "KTV. Phạm Văn An", role: "Kỹ thuật viên phục hồi", avatar: "https://i.pravatar.cc/80?img=33" },
-  ],
-};
-
-const TOP_SERVICES = [
-  {
-    id: "s1",
-    name: "Gói Khám Sức Khỏe Tổng Quát",
-    category: "Khám chữa bệnh",
-    description: "Kiểm tra toàn diện các chỉ số sức khỏe, đo huyết áp, đường huyết, xét nghiệm máu cơ bản và tư vấn dinh dưỡng.",
-    image: "https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=400&q=80",
-    price: 350000,
-    duration: "90 phút",
-    bookedCount: 1240,
-    rating: 4.9,
-    badge: "Phổ biến nhất",
-    badgeColor: "#ef4444",
-  },
-  {
-    id: "s2",
-    name: "Liệu Pháp Massage Thảo Dược",
-    category: "Spa & Thư giãn",
-    description: "Massage toàn thân kết hợp tinh dầu thảo dược địa phương, giúp thư giãn cơ bắp sau các chuyến leo núi dài.",
-    image: "https://images.unsplash.com/photo-1600334129128-685c5582fd35?w=400&q=80",
-    price: 480000,
-    duration: "60 phút",
-    bookedCount: 987,
-    rating: 4.8,
-    badge: "Được yêu thích",
-    badgeColor: "#f97316",
-  },
-  {
-    id: "s3",
-    name: "Phục Hồi Chức Năng Cơ Xương Khớp",
-    category: "Vật lý trị liệu",
-    description: "Chương trình phục hồi chuyên biệt cho các chấn thương nhẹ, đau lưng, đau khớp với thiết bị hiện đại.",
-    image: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=400&q=80",
-    price: 650000,
-    duration: "120 phút",
-    bookedCount: 734,
-    rating: 4.7,
-    badge: "Chuyên gia khuyên dùng",
-    badgeColor: "#2a9d8f",
-  },
-  {
-    id: "s4",
-    name: "Nghỉ Dưỡng Phục Hồi 2 Ngày 1 Đêm",
-    category: "Gói nghỉ dưỡng",
-    description: "Gói nghỉ dưỡng trọn gói bao gồm phòng nghỉ, 3 bữa ăn dinh dưỡng, 1 buổi khám, 1 buổi spa và tham quan.",
-    image: "https://images.unsplash.com/photo-1584467735871-8e85353a8413?w=400&q=80",
-    price: 2200000,
-    duration: "2 ngày 1 đêm",
-    bookedCount: 521,
-    rating: 4.9,
-    badge: "Giá trị tốt nhất",
-    badgeColor: "#7c3aed",
-  },
-];
-
-const REVIEWS = [
-  {
-    id: "r1",
-    author: "Trần Thị Lan",
-    avatar: "https://i.pravatar.cc/60?img=5",
-    rating: 5,
-    date: "Tháng 2, 2026",
-    comment: "Dịch vụ tuyệt vời! Sau chuyến leo núi Fansipan mệt mỏi, chúng tôi ghé vào đây và được chăm sóc rất chu đáo. Đội ngũ bác sĩ nhiệt tình, cơ sở vật chất sạch sẽ và hiện đại.",
-    tag: "Dịch vụ: Gói Khám Sức Khỏe Tổng Quát",
-  },
-  {
-    id: "r2",
-    author: "Nguyễn Hoàng Nam",
-    avatar: "https://i.pravatar.cc/60?img=15",
-    rating: 5,
-    date: "Tháng 1, 2026",
-    comment: "Gói nghỉ dưỡng 2 ngày 1 đêm hoàn toàn xứng đáng với mức giá. Phòng nghỉ thoáng đãng, đồ ăn ngon và lành mạnh.",
-    tag: "Dịch vụ: Nghỉ Dưỡng Phục Hồi 2N1Đ",
-  },
-  {
-    id: "r3",
-    author: "Phạm Minh Châu",
-    avatar: "https://i.pravatar.cc/60?img=29",
-    rating: 4,
-    date: "Tháng 12, 2025",
-    comment: "Vật lý trị liệu rất hiệu quả, đau lưng của tôi giảm hẳn sau 2 buổi. Kỹ thuật viên chuyên nghiệp và giải thích kỹ càng từng bài tập.",
-    tag: "Dịch vụ: Phục Hồi Chức Năng",
-  },
-];
-
 const TABS = [
-  { key: "about", label: "Giới thiệu" },
-  { key: "services", label: "Dịch vụ nổi bật" },
-  { key: "gallery", label: "Hình ảnh" },
-  { key: "reviews", label: "Đánh giá" },
+    { key: "about", label: "Giới thiệu" },
+    { key: "services", label: "Dịch vụ" },
+    { key: "gallery", label: "Hình ảnh" },
 ];
 
-function formatPrice(p: number) {
-  return p.toLocaleString("vi-VN") + "đ";
+function formatDuration(minutes: number): string {
+    if (minutes < 60) return `${minutes} phút`;
+    const h = Math.floor(minutes / 60);
+    const m = minutes % 60;
+    return m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`;
 }
 
-// ── Page ───────────────────────────────────────────────────────────────────
 export default function ProviderDetailPage() {
-  const [activeTab, setActiveTab] = useState("about");
+    const { id } = useParams<{ id: string }>();
+    const [provider, setProvider] = useState<ProviderDetailDTO | null>(null);
+    const [pageLoading, setPageLoading] = useState(true);
+    const [activeTab, setActiveTab] = useState("about");
+    const [services, setServices] = useState<ServiceDTO[]>([]);
+    const [servicesLoading, setServicesLoading] = useState(false);
+    const [servicesLoaded, setServicesLoaded] = useState(false);
+    const { liked: wishlisted, loading: wishlistLoading, toggle: toggleWishlist } = useWishlist(
+        provider?.id, WishlistItemType.Provider, { checkOnMount: true },
+    );
 
-  return (
-    <>
-      <Header variant="solid" />
+    useEffect(() => {
+        if (!id) return;
+        providerService.getById(id)
+            .then(res => { if (res?.data) setProvider(res.data); })
+            .catch(() => {})
+            .finally(() => setPageLoading(false));
+    }, [id]);
 
-      <main className={sharedStyles.main}>
-        <ProfileHero
-          coverImage={PROVIDER.coverImage}
-          name={PROVIDER.name}
-          badge={PROVIDER.type}
-          badgeVariant="teal"
-          tagline={PROVIDER.tagline}
-          breadcrumbs={[
-            { label: "Trang chủ", href: "/" },
-            { label: "Nhà cung cấp", href: "/providers" },
-            { label: PROVIDER.name },
-          ]}
-          meta={[
-            { icon: "📍", content: PROVIDER.location },
-            {
-              icon: "",
-              content: (
-                <>
-                  <StarRating value={PROVIDER.rating} size={14} />
-                  <b>{PROVIDER.rating}</b>
-                  <span>({PROVIDER.reviewCount} đánh giá)</span>
-                </>
-              ),
-            },
-            { icon: "🕐", content: PROVIDER.openHours },
-          ]}
-        />
+    useEffect(() => {
+        if (activeTab !== "services" || servicesLoaded || !id) return;
+        setServicesLoading(true);
+        providerService.getServicesByProvider(id)
+            .then(res => { if (res?.data) setServices(res.data); })
+            .catch(() => {})
+            .finally(() => { setServicesLoading(false); setServicesLoaded(true); });
+    }, [activeTab, servicesLoaded, id]);
 
-        <div className={sharedStyles.layout}>
-          {/* ── LEFT ── */}
-          <div>
-            <ProfileHighlights items={PROVIDER.highlights} />
-            <ProfileTabNav tabs={TABS} active={activeTab} accent="teal" onChange={setActiveTab} />
+    if (pageLoading) {
+        return (
+            <>
+                <Header variant="solid" />
+                <div className={styles.pageLoading}><div className={styles.spinner} /></div>
+                <Footer />
+            </>
+        );
+    }
 
-            {/* About */}
-            {activeTab === "about" && (
-              <div className={sharedStyles.tabContent}>
-                <h2 className={sharedStyles.sectionTitle}>Về chúng tôi</h2>
-                <p className={styles.description}>{PROVIDER.description}</p>
+    if (!provider) {
+        return (
+            <>
+                <Header variant="solid" />
+                <div className={styles.notFound}>Không tìm thấy nhà cung cấp dịch vụ.</div>
+                <Footer />
+            </>
+        );
+    }
 
-                <h3 className={styles.subTitle}>Cơ sở vật chất</h3>
-                <div className={styles.facilitiesGrid}>
-                  {PROVIDER.facilities.map((f) => (
-                    <div key={f} className={styles.facilityItem}>
-                      <span className={styles.checkIcon}>✓</span>
-                      {f}
+    const coverImg = provider.images?.[0];
+
+    return (
+        <>
+            <Header variant="solid" />
+            <main className={styles.main}>
+                {/* ── Hero ── */}
+                <div className={styles.hero}>
+                    {coverImg ? (
+                        <Image src={coverImg} alt={provider.name} fill sizes="100vw" style={{ objectFit: "cover" }} priority />
+                    ) : (
+                        <div className={styles.heroFallback} />
+                    )}
+                    <div className={styles.heroOverlay} />
+                    <div className={styles.heroInner}>
+                        <nav className={styles.breadcrumbs} aria-label="breadcrumb">
+                            <Link href="/">Trang chủ</Link>
+                            <span className={styles.breadSep}>/</span>
+                            <Link href="/providers">Nhà cung cấp</Link>
+                            <span className={styles.breadSep}>/</span>
+                            <span>{provider.name}</span>
+                        </nav>
+                        <span className={styles.heroBadge}>Nhà cung cấp dịch vụ</span>
+                        <div className={styles.heroTitleRow}>
+                            <h1 className={styles.heroName}>{provider.name}</h1>
+                            <button
+                                className={`${styles.wishlistBtn} ${wishlisted ? styles.wishlistBtnActive : ""}`}
+                                onClick={toggleWishlist}
+                                disabled={wishlistLoading}
+                                aria-label={wishlisted ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
+                            >
+                                <svg width="22" height="22" viewBox="0 0 24 24" fill={wishlisted ? "currentColor" : "none"} xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            </button>
+                        </div>
+                        <div className={styles.heroMeta}>
+                            {provider.address && (
+                                <span className={styles.heroMetaItem}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/></svg>
+                                    {provider.address}
+                                </span>
+                            )}
+                            {provider.contactPhone && (
+                                <span className={styles.heroMetaItem}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 11.5 19.79 19.79 0 01.1 2.82 2 2 0 012.1 1h3a2 2 0 012 1.72 13 13 0 00.7 2.81 2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45 13 13 0 002.81.7A2 2 0 0122 16.92z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    {provider.contactPhone}
+                                </span>
+                            )}
+                            {provider.contactEmail && (
+                                <span className={styles.heroMetaItem}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/><polyline points="22,6 12,13 2,6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    {provider.contactEmail}
+                                </span>
+                            )}
+                            {provider.startTime && provider.endTime && (
+                                <span className={styles.heroMetaItem}>
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                    {provider.startTime} – {provider.endTime}
+                                </span>
+                            )}
+                        </div>
                     </div>
-                  ))}
                 </div>
 
-                <h3 className={styles.subTitle}>Đội ngũ chuyên gia</h3>
-                <div className={styles.staffGrid}>
-                  {PROVIDER.staff.map((s) => (
-                    <div key={s.name} className={styles.staffCard}>
-                      <div className={styles.staffAvatar}>
-                        <Image src={s.avatar} alt={s.name} fill style={{ objectFit: "cover" }} />
-                      </div>
-                      <div>
-                        <p className={styles.staffName}>{s.name}</p>
-                        <p className={styles.staffRole}>{s.role}</p>
-                      </div>
+                {/* ── Body ── */}
+                <div className={styles.body}>
+                    <div className={styles.layout}>
+                        {/* ── Main content ── */}
+                        <div className={styles.content}>
+                            <div className={styles.tabNav}>
+                                {TABS.map(t => (
+                                    <button
+                                        key={t.key}
+                                        className={`${styles.tabBtn} ${activeTab === t.key ? styles.tabBtnActive : ""}`}
+                                        onClick={() => setActiveTab(t.key)}
+                                    >
+                                        {t.label}
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* About */}
+                            {activeTab === "about" && (
+                                <div className={styles.tabPane}>
+                                    <h2 className={styles.sectionTitle}>Về {provider.name}</h2>
+                                    {provider.description ? (
+                                        <p className={styles.description}>{provider.description}</p>
+                                    ) : (
+                                        <p className={styles.emptyText}>Chưa có thông tin giới thiệu.</p>
+                                    )}
+                                    <div className={styles.infoGrid}>
+                                        {provider.address && (
+                                            <div className={styles.infoChip}>
+                                                <span className={styles.infoChipIcon}>📍</span>
+                                                <div>
+                                                    <p className={styles.infoChipLabel}>Địa chỉ</p>
+                                                    <p className={styles.infoChipValue}>{provider.address}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {provider.contactPhone && (
+                                            <div className={styles.infoChip}>
+                                                <span className={styles.infoChipIcon}>📞</span>
+                                                <div>
+                                                    <p className={styles.infoChipLabel}>Điện thoại</p>
+                                                    <a href={`tel:${provider.contactPhone}`} className={styles.infoChipValue}>{provider.contactPhone}</a>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {provider.contactEmail && (
+                                            <div className={styles.infoChip}>
+                                                <span className={styles.infoChipIcon}>✉️</span>
+                                                <div>
+                                                    <p className={styles.infoChipLabel}>Email</p>
+                                                    <a href={`mailto:${provider.contactEmail}`} className={styles.infoChipValue}>{provider.contactEmail}</a>
+                                                </div>
+                                            </div>
+                                        )}
+                                        {provider.startTime && provider.endTime && (
+                                            <div className={styles.infoChip}>
+                                                <span className={styles.infoChipIcon}>🕐</span>
+                                                <div>
+                                                    <p className={styles.infoChipLabel}>Giờ làm việc</p>
+                                                    <p className={styles.infoChipValue}>{provider.startTime} – {provider.endTime}</p>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Services */}
+                            {activeTab === "services" && (
+                                <div className={styles.tabPane}>
+                                    <h2 className={styles.sectionTitle}>Dịch vụ của {provider.name}</h2>
+                                    {servicesLoading ? (
+                                        <div className={styles.loadingCenter}><div className={styles.spinner} /></div>
+                                    ) : services.length === 0 ? (
+                                        <div className={styles.emptyState}>
+                                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none"><path d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                            <p>Nhà cung cấp chưa có dịch vụ nào.</p>
+                                        </div>
+                                    ) : (
+                                        <div className={styles.servicesList}>
+                                            {services.map(svc => (
+                                                <div key={svc.id} className={styles.serviceCard}>
+                                                    <div className={styles.serviceCardBody}>
+                                                        <div className={styles.serviceCardTop}>
+                                                            <h3 className={styles.serviceName}>{svc.name}</h3>
+                                                            <span className={`${styles.statusBadge} ${svc.status === "Active" ? styles.statusActive : styles.statusInactive}`}>
+                                                                {svc.status === "Active" ? "Đang hoạt động" : svc.status === "Discontinued" ? "Ngừng hoạt động" : "Tạm dừng"}
+                                                            </span>
+                                                        </div>
+                                                        {svc.description && (
+                                                            <p className={styles.serviceDesc}>{svc.description}</p>
+                                                        )}
+                                                        <div className={styles.serviceMeta}>
+                                                            <span className={styles.serviceMetaItem}>
+                                                                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                                {formatDuration(svc.durationMinutes)}
+                                                            </span>
+                                                        </div>
+                                                    </div>
+                                                    <div className={styles.serviceCardPrice}>
+                                                        <span className={styles.priceLabel}>Giá từ</span>
+                                                        <span className={styles.priceValue}>{svc.price.toLocaleString("vi-VN")}đ</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Gallery */}
+                            {activeTab === "gallery" && (
+                                <div className={styles.tabPane}>
+                                    <h2 className={styles.sectionTitle}>Hình ảnh</h2>
+                                    {provider.images?.length > 0 ? (
+                                        <div className={styles.gallery}>
+                                            {provider.images.map((img, i) => (
+                                                <div key={i} className={styles.galleryItem}>
+                                                    <Image src={img} alt={`${provider.name} ${i + 1}`} fill sizes="300px" style={{ objectFit: "cover" }} />
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (
+                                        <div className={styles.emptyState}>
+                                            <p>Chưa có hình ảnh.</p>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* ── Sidebar ── */}
+                        <aside className={styles.sidebar}>
+                            <div className={styles.sideCard}>
+                                <div className={styles.sideAvatarWrap}>
+                                    {coverImg ? (
+                                        <Image src={coverImg} alt={provider.name} fill sizes="80px" style={{ objectFit: "cover" }} />
+                                    ) : (
+                                        <div className={styles.sideAvatarFallback}>
+                                            {provider.name.charAt(0).toUpperCase()}
+                                        </div>
+                                    )}
+                                </div>
+                                <p className={styles.sideName}>{provider.name}</p>
+                                <span className={styles.sideBadge}>Nhà cung cấp dịch vụ</span>
+                                <div className={styles.sideInfoList}>
+                                    {provider.address && (
+                                        <div className={styles.sideInfoRow}>
+                                            <span>📍</span><span>{provider.address}</span>
+                                        </div>
+                                    )}
+                                    {provider.contactPhone && (
+                                        <div className={styles.sideInfoRow}>
+                                            <span>📞</span>
+                                            <a href={`tel:${provider.contactPhone}`}>{provider.contactPhone}</a>
+                                        </div>
+                                    )}
+                                    {provider.contactEmail && (
+                                        <div className={styles.sideInfoRow}>
+                                            <span>✉️</span>
+                                            <a href={`mailto:${provider.contactEmail}`}>{provider.contactEmail}</a>
+                                        </div>
+                                    )}
+                                    {provider.startTime && provider.endTime && (
+                                        <div className={styles.sideInfoRow}>
+                                            <span>🕐</span><span>{provider.startTime} – {provider.endTime}</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <button
+                                    className={styles.sidePrimaryBtn}
+                                    onClick={() => setActiveTab("services")}
+                                >
+                                    Xem tất cả dịch vụ
+                                </button>
+                            </div>
+                        </aside>
                     </div>
-                  ))}
                 </div>
-              </div>
-            )}
-
-            {/* Services */}
-            {activeTab === "services" && (
-              <div className={sharedStyles.tabContent}>
-                <h2 className={sharedStyles.sectionTitle}>Dịch vụ được đặt nhiều nhất</h2>
-                <p className={sharedStyles.sectionSub}>
-                  Những dịch vụ được du khách tin chọn và đánh giá cao nhất tại {PROVIDER.name}
-                </p>
-
-                <div className={styles.servicesList}>
-                  {TOP_SERVICES.map((svc, idx) => (
-                    <div key={svc.id} className={styles.serviceCard}>
-                      <div className={styles.serviceRank}>#{idx + 1}</div>
-
-                      <div className={styles.serviceImage}>
-                        <Image src={svc.image} alt={svc.name} fill style={{ objectFit: "cover" }} />
-                        <span className={styles.serviceBadge} style={{ background: svc.badgeColor }}>
-                          {svc.badge}
-                        </span>
-                      </div>
-
-                      <div className={styles.serviceBody}>
-                        <div className={styles.serviceHeader}>
-                          <span className={styles.serviceCategory}>{svc.category}</span>
-                          <div className={styles.serviceRating}>
-                            <StarRating value={svc.rating} size={13} />
-                            <span>{svc.rating}</span>
-                          </div>
-                        </div>
-                        <h3 className={styles.serviceName}>{svc.name}</h3>
-                        <p className={styles.serviceDesc}>{svc.description}</p>
-                        <div className={styles.serviceMeta}>
-                          <span>⏱ {svc.duration}</span>
-                          <span>🔥 {svc.bookedCount.toLocaleString()} lượt đặt</span>
-                        </div>
-                        <div className={styles.serviceFooter}>
-                          <div className={styles.servicePrice}>
-                            <span className={styles.priceLabel}>Từ</span>
-                            <span className={styles.priceValue}>{formatPrice(svc.price)}</span>
-                          </div>
-                          <button className={styles.bookBtn}>Đặt ngay</button>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Gallery */}
-            {activeTab === "gallery" && (
-              <div className={sharedStyles.tabContent}>
-                <ProfileGallery images={PROVIDER.gallery} title="Hình ảnh thực tế" />
-              </div>
-            )}
-
-            {/* Reviews */}
-            {activeTab === "reviews" && (
-              <div className={sharedStyles.tabContent}>
-                <ReviewsList
-                  rating={PROVIDER.rating}
-                  reviewCount={PROVIDER.reviewCount}
-                  reviews={REVIEWS}
-                  tagVariant="teal"
-                />
-              </div>
-            )}
-          </div>
-
-          {/* ── SIDEBAR ── */}
-          <aside className={sharedStyles.sidebar}>
-            <ProfileSideCard
-              avatar={PROVIDER.avatar}
-              name={PROVIDER.name}
-              type={PROVIDER.type}
-              avatarVariant="circle"
-              accentVariant="teal"
-              infoRows={[
-                { icon: "📍", content: PROVIDER.location },
-                { icon: "📞", content: <a href={`tel:${PROVIDER.phone}`}>{PROVIDER.phone}</a> },
-                { icon: "✉️", content: <a href={`mailto:${PROVIDER.email}`}>{PROVIDER.email}</a> },
-                { icon: "🕐", content: PROVIDER.openHours },
-                { icon: "📋", content: `Giấy phép: ${PROVIDER.licenseNo}` },
-              ]}
-              primaryLabel="Liên hệ ngay"
-              secondaryLabel="Xem tất cả dịch vụ"
-            />
-
-            <StatsCard
-              accentVariant="teal"
-              stats={[
-                { value: PROVIDER.rating, label: "Điểm đánh giá" },
-                { value: `${PROVIDER.reviewCount}+`, label: "Lượt đánh giá" },
-                { value: PROVIDER.established, label: "Thành lập" },
-                { value: "24/7", label: "Hỗ trợ" },
-              ]}
-            />
-
-            <QuickPickList
-              title="🔥 Dịch vụ đặt nhiều nhất"
-              items={TOP_SERVICES.slice(0, 3).map((s) => ({
-                id: s.id,
-                image: s.image,
-                name: s.name,
-                price: formatPrice(s.price),
-              }))}
-            />
-          </aside>
-        </div>
-      </main>
-
-      <Footer />
-    </>
-  );
+            </main>
+            <Footer />
+        </>
+    );
 }

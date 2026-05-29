@@ -31,17 +31,17 @@ function validateTravelerList(list: TravelerInfo[]): Record<number, Record<strin
     const errs: Record<number, Record<string, string>> = {};
     list.forEach((t, i) => {
         const e: Record<string, string> = {};
-        if (!t.fullName.trim())  e.fullName  = "Vui lòng nhập họ tên";
-        if (!t.idNumber.trim())  e.idNumber  = "Vui lòng nhập số CCCD/CMND";
+        if (!t.fullName.trim())  e.fullName  = "Please enter full name";
+        if (!t.idNumber.trim())  e.idNumber  = "Please enter ID number";
         else if (!/^\d{9}$|^\d{12}$/.test(t.idNumber))
-                                 e.idNumber  = "CCCD phải có 9 hoặc 12 chữ số";
-        if (!t.phone.trim())     e.phone     = "Vui lòng nhập số điện thoại";
+                                 e.idNumber  = "ID number must be 9 or 12 digits";
+        if (!t.phone.trim())     e.phone     = "Please enter phone number";
         else if (!/^0\d{9}$/.test(t.phone.replace(/\s/g, "")))
-                                 e.phone     = "Số điện thoại không hợp lệ (VD: 0912345678)";
+                                 e.phone     = "Invalid phone number (e.g. 0912345678)";
         const ageNum = parseInt(t.age, 10);
-        if (!t.age)              e.age       = "Vui lòng nhập tuổi";
+        if (!t.age)              e.age       = "Please enter age";
         else if (isNaN(ageNum) || ageNum < 1 || ageNum > 120)
-                                 e.age       = "Tuổi phải từ 1 đến 120";
+                                 e.age       = "Age must be between 1 and 120";
         if (Object.keys(e).length) errs[i] = e;
     });
     return errs;
@@ -117,6 +117,7 @@ export default function BookingPage() {
 
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [submitting, setSubmitting] = useState(false);
+    const [toast, setToast] = useState<string | null>(null);
 
     const set = (field: string, value: string | number | boolean) =>
         setForm((prev) => ({ ...prev, [field]: value }));
@@ -163,7 +164,7 @@ export default function BookingPage() {
             return;
         }
         if (!scheduleId) {
-            setErrors({ general: "Không tìm thấy lịch khởi hành. Vui lòng quay lại chọn lại." });
+            setErrors({ general: "Departure schedule not found. Please go back and try again." });
             return;
         }
         setErrors({});
@@ -173,6 +174,12 @@ export default function BookingPage() {
                 scheduleId,
                 numberOfGuests: form.travelers,
                 customerNote: form.specialRequests || undefined,
+                passengers: travelerInfos.map(t => ({
+                    fullName: t.fullName.trim(),
+                    idNumber: t.idNumber.trim(),
+                    phone:    t.phone.trim(),
+                    age:      parseInt(t.age, 10),
+                })),
             });
             const bookingId = res.data.bookingId;
             const query = new URLSearchParams();
@@ -180,8 +187,12 @@ export default function BookingPage() {
             query.set("scheduleId", scheduleId);
             query.set("travelers", String(form.travelers));
             router.push(`/tours/${tourId}/booking/payment?${query.toString()}`);
-        } catch {
-            setErrors({ general: "Không thể tạo đặt chỗ. Vui lòng thử lại." });
+        } catch (err: unknown) {
+            const apiMsg =
+                (err as { response?: { data?: { message?: string } } })
+                    ?.response?.data?.message;
+            const msg = apiMsg ?? "Failed to create booking. Please try again.";
+            setToast(msg);
         } finally {
             setSubmitting(false);
         }
@@ -231,7 +242,7 @@ export default function BookingPage() {
                             {scheduleProblem === "loading" ? (
                                 <div className={styles.alertLoading}>
                                     <div className={styles.alertSpinner} />
-                                    <p>Đang tải thông tin lịch khởi hành…</p>
+                                    <p>Loading departure schedule…</p>
                                 </div>
                             ) : (
                                 <>
@@ -251,20 +262,20 @@ export default function BookingPage() {
                                         )}
                                     </div>
                                     <h2 className={styles.alertTitle}>
-                                        {scheduleProblem === "sold_out"  && "Lịch khởi hành đã hết chỗ"}
-                                        {scheduleProblem === "expired"   && "Lịch khởi hành đã qua"}
-                                        {scheduleProblem === "not_found" && "Không tìm thấy lịch này"}
+                                        {scheduleProblem === "sold_out"  && "Departure Schedule Fully Booked"}
+                                        {scheduleProblem === "expired"   && "Departure Schedule Has Passed"}
+                                        {scheduleProblem === "not_found" && "Schedule Not Found"}
                                     </h2>
                                     <p className={styles.alertSub}>
-                                        {scheduleProblem === "sold_out"  && "Tất cả chỗ trên lịch này đã được đặt. Hãy chọn một lịch khác còn chỗ trống."}
-                                        {scheduleProblem === "expired"   && "Ngày khởi hành của lịch này đã qua. Vui lòng chọn một lịch khởi hành sắp tới."}
-                                        {scheduleProblem === "not_found" && "Lịch khởi hành bạn chọn không còn tồn tại hoặc đã bị xoá."}
+                                        {scheduleProblem === "sold_out"  && "All spots on this schedule have been booked. Please choose a different departure."}
+                                        {scheduleProblem === "expired"   && "The departure date for this schedule has passed. Please choose an upcoming departure."}
+                                        {scheduleProblem === "not_found" && "The selected departure schedule no longer exists or has been removed."}
                                     </p>
                                     <button
                                         className={styles.alertBtn}
                                         onClick={() => router.push(`/tours/${tourId}`)}
                                     >
-                                        ← Xem lịch khởi hành khác
+                                        ← View Other Departures
                                     </button>
                                 </>
                             )}
@@ -280,19 +291,19 @@ export default function BookingPage() {
                                 <div className={styles.card}>
                                     <h2 className={styles.cardTitle}>
                                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/></svg>
-                                        Thông tin hành khách
+                                        Passenger Information
                                     </h2>
 
                                     {/* Counter */}
                                     <div className={styles.formGroup}>
-                                        <label className={styles.label}>Số lượng hành khách <span>*</span></label>
+                                        <label className={styles.label}>Number of Passengers <span>*</span></label>
                                         <div className={styles.counterRow}>
                                             <div className={styles.counter}>
                                                 <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers - 1)}>−</button>
                                                 <span className={styles.counterVal}>{form.travelers}</span>
                                                 <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers + 1)}>+</button>
                                             </div>
-                                            <span className={styles.counterHint}>Tối đa {form.travelers} người trong đoàn</span>
+                                            <span className={styles.counterHint}>Up to {selectedSchedule?.spotLeft ?? "—"} spots available</span>
                                         </div>
                                     </div>
 
@@ -306,24 +317,24 @@ export default function BookingPage() {
                                                     <div className={styles.travelerCardHead}>
                                                         <div className={styles.travelerBadge}>{idx + 1}</div>
                                                         <span className={styles.travelerCardTitle}>
-                                                            {t.fullName.trim() || `Hành khách ${idx + 1}`}
+                                                            {t.fullName.trim() || `Passenger ${idx + 1}`}
                                                         </span>
                                                         {hasErr && (
                                                             <span className={styles.travelerErrBadge}>
                                                                 <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
-                                                                Thiếu thông tin
+                                                                Missing info
                                                             </span>
                                                         )}
                                                     </div>
 
                                                     <div className={styles.travelerFields}>
-                                                        {/* Row 1: Họ tên + Tuổi */}
+                                                        {/* Row 1: Full Name + Age */}
                                                         <div className={styles.travelerFieldGroup}>
-                                                            <label className={styles.label}>Họ và tên <span>*</span></label>
+                                                            <label className={styles.label}>Full Name <span>*</span></label>
                                                             <input
                                                                 className={`${styles.input} ${tErr.fullName ? styles.inputError : ""}`}
                                                                 type="text"
-                                                                placeholder="Nguyễn Văn A"
+                                                                placeholder="John Doe"
                                                                 value={t.fullName}
                                                                 onChange={e => updateTraveler(idx, "fullName", e.target.value)}
                                                             />
@@ -331,7 +342,7 @@ export default function BookingPage() {
                                                         </div>
 
                                                         <div className={styles.travelerFieldGroup}>
-                                                            <label className={styles.label}>Tuổi <span>*</span></label>
+                                                            <label className={styles.label}>Age <span>*</span></label>
                                                             <input
                                                                 className={`${styles.input} ${tErr.age ? styles.inputError : ""}`}
                                                                 type="number"
@@ -344,9 +355,9 @@ export default function BookingPage() {
                                                             {tErr.age && <span className={styles.errorMsg}>{tErr.age}</span>}
                                                         </div>
 
-                                                        {/* Row 2: CCCD + SĐT */}
+                                                        {/* Row 2: ID + Phone */}
                                                         <div className={styles.travelerFieldGroup}>
-                                                            <label className={styles.label}>Số CCCD / CMND <span>*</span></label>
+                                                            <label className={styles.label}>ID Number <span>*</span></label>
                                                             <input
                                                                 className={`${styles.input} ${tErr.idNumber ? styles.inputError : ""}`}
                                                                 type="text"
@@ -360,7 +371,7 @@ export default function BookingPage() {
                                                         </div>
 
                                                         <div className={styles.travelerFieldGroup}>
-                                                            <label className={styles.label}>Số điện thoại <span>*</span></label>
+                                                            <label className={styles.label}>Phone Number <span>*</span></label>
                                                             <input
                                                                 className={`${styles.input} ${tErr.phone ? styles.inputError : ""}`}
                                                                 type="tel"
@@ -379,11 +390,11 @@ export default function BookingPage() {
 
                                     {/* Special requests */}
                                     <div className={styles.formGroup} style={{ marginTop: 20 }}>
-                                        <label className={styles.label}>Yêu cầu đặc biệt / Ghi chú sức khỏe</label>
+                                        <label className={styles.label}>Special Requests / Health Notes</label>
                                         <textarea
                                             className={styles.textarea}
                                             rows={3}
-                                            placeholder="Dị ứng thực phẩm, bệnh nền, yêu cầu phòng đặc biệt hoặc nhu cầu hỗ trợ…"
+                                            placeholder="Food allergies, medical conditions, room preferences or support needs…"
                                             value={form.specialRequests}
                                             onChange={(e) => set("specialRequests", e.target.value)}
                                         />
@@ -400,35 +411,35 @@ export default function BookingPage() {
                                     </h2>
 
                                     <div className={styles.reviewSection}>
-                                        <h3 className={styles.reviewHeading}>Chi tiết chuyến đi</h3>
+                                        <h3 className={styles.reviewHeading}>Trip Details</h3>
                                         <div className={styles.reviewGrid}>
-                                            <div className={styles.reviewItem}><span>Số hành khách</span><strong>{form.travelers} người</strong></div>
-                                            <div className={styles.reviewItem}><span>Ngày đi</span><strong>{checkIn}</strong></div>
-                                            <div className={styles.reviewItem}><span>Ngày về</span><strong>{checkOut}</strong></div>
+                                            <div className={styles.reviewItem}><span>Passengers</span><strong>{form.travelers}</strong></div>
+                                            <div className={styles.reviewItem}><span>Departure</span><strong>{checkIn}</strong></div>
+                                            <div className={styles.reviewItem}><span>Return</span><strong>{checkOut}</strong></div>
                                         </div>
                                         {form.specialRequests && (
                                             <div className={styles.reviewNote}>
-                                                <span>Yêu cầu:</span> {form.specialRequests}
+                                                <span>Requests:</span> {form.specialRequests}
                                             </div>
                                         )}
                                     </div>
 
                                     {/* Traveler table */}
                                     <div className={styles.reviewSection}>
-                                        <h3 className={styles.reviewHeading}>Danh sách hành khách</h3>
+                                        <h3 className={styles.reviewHeading}>Passenger List</h3>
                                         <div className={styles.travelerTable}>
                                             <div className={styles.travelerTableHead}>
                                                 <span>#</span>
-                                                <span>Họ và tên</span>
-                                                <span>Tuổi</span>
-                                                <span>CCCD / CMND</span>
-                                                <span>Số điện thoại</span>
+                                                <span>Full Name</span>
+                                                <span>Age</span>
+                                                <span>ID Number</span>
+                                                <span>Phone</span>
                                             </div>
                                             {travelerInfos.map((t, i) => (
                                                 <div key={i} className={styles.travelerTableRow}>
                                                     <span className={styles.travelerTableNum}>{i + 1}</span>
                                                     <span className={styles.travelerTableName}>{t.fullName}</span>
-                                                    <span>{t.age} tuổi</span>
+                                                    <span>{t.age} yrs</span>
                                                     <span className={styles.travelerTableMono}>{t.idNumber}</span>
                                                     <span className={styles.travelerTableMono}>{t.phone}</span>
                                                 </div>
@@ -477,10 +488,10 @@ export default function BookingPage() {
                                     </button>
                                 ) : (
                                     <button className={styles.submitBtn} onClick={handleSubmit} disabled={submitting}>
-                                        {submitting ? "Đang xử lý..." : (
+                                        {submitting ? "Processing..." : (
                                             <>
                                                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
-                                                Xác nhận đặt tour
+                                                Confirm Booking
                                             </>
                                         )}
                                     </button>
@@ -512,7 +523,7 @@ export default function BookingPage() {
                                 </div>
 
                                 <div className={styles.summaryMeta}>
-                                    <span>{tourDuration} ngày</span>
+                                    <span>{tourDuration} days</span>
                                     <span>·</span>
                                     <span>{form.travelers} traveler{form.travelers > 1 ? "s" : ""}</span>
                                 </div>
@@ -551,6 +562,24 @@ export default function BookingPage() {
                 </div>
             </main>
             <Footer />
+
+            {/* ── Toast notification ── */}
+            {toast && (
+                <div className={styles.toast}>
+                    <div className={styles.toastIcon}>
+                        <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                            <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
+                            <path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                        </svg>
+                    </div>
+                    <p className={styles.toastMsg}>{toast}</p>
+                    <button className={styles.toastClose} onClick={() => setToast(null)} aria-label="Close">
+                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                            <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                        </svg>
+                    </button>
+                </div>
+            )}
         </>
     );
 }

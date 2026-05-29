@@ -33,6 +33,7 @@ export const ROLE_PERMISSIONS: Record<SubRole, Permission[]> = {
         "provider.results.send",
         "provider.customers.view",
         "provider.jobs.view",
+        "provider.groups.view",
         "provider.analytics.view",
         "provider.finance.view",
         "provider.settings.manage",
@@ -48,6 +49,7 @@ export const ROLE_PERMISSIONS: Record<SubRole, Permission[]> = {
         "provider.results.send",
         "provider.customers.view",
         "provider.jobs.view",
+        "provider.groups.view",
     ],
 
     // ── Agency: Admin ─────────────────────────────────────────────────────────
@@ -72,13 +74,14 @@ export const ROLE_PERMISSIONS: Record<SubRole, Permission[]> = {
     ],
 
     // ── Agency: Tour Guide ────────────────────────────────────────────────────
-    // Can view their assigned schedule and tour info only.
-    // Cannot manage bookings, finance, settings, or assign other guides.
+    // Can view their assigned schedule, tour info, and mark activities as done.
     tour_guide: [
         "agency.dashboard.view",
         "agency.tours.view",
         "agency.schedule.view",
         "agency.guides.view",
+        "agency.tracking.view",
+        "agency.jobs.view",
     ],
 };
 

@@ -1,102 +1,107 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import styles from "./page.module.scss";
+import { providerService } from "@/libs/services/provider.service";
+import type { ProviderDashboardStats, ProviderPendingRequest, ProviderActivePackage, ProviderTopAgency } from "@/types/dashboard.type";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-const today = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
+const today     = new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
 const MONTHS_SHORT = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-const curMo = new Date().getMonth();
+const curMo     = new Date().getMonth();
+const curYear   = new Date().getFullYear();
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const STATS = [
+function monthToIndex(m: string): number {
+    const n = parseInt(m, 10);
+    if (!isNaN(n)) return Math.max(0, Math.min(11, n - 1));
+    const si = MONTHS_SHORT.findIndex(s => s.toLowerCase() === m.slice(0, 3).toLowerCase());
+    return si >= 0 ? si : 0;
+}
+
+function fmtScheduledTime(s: string): string {
+    const d = new Date(s);
+    const diffMs = d.getTime() - Date.now();
+    const diffH  = Math.round(diffMs / 3_600_000);
+    if (diffH < 0)   return "Past";
+    if (diffH < 24)  return `Today ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+    if (diffH < 48)  return `Tomorrow ${d.toLocaleTimeString("vi-VN", { hour: "2-digit", minute: "2-digit" })}`;
+    return `In ${Math.floor(diffH / 24)} days`;
+}
+
+const AVATAR_COLORS = ["#3b82f6","#8b5cf6","#22c55e","#f59e0b","#ef4444","#6366f1","#ec4899","#14b8a6"];
+function avatarColor(s: string): string {
+    let h = 0;
+    for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) & 0xffffffff;
+    return AVATAR_COLORS[Math.abs(h) % AVATAR_COLORS.length];
+}
+
+// ── Static icon config ────────────────────────────────────────────────────────
+const STAT_ICONS = [
     {
-        label: "Active Services",
-        value: "12",
-        delta: "+2 this month",
-        up: true,
-        iconBg: "#f0fdf4",
-        iconColor: "#14b8a6",
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/>
-                <path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-        ),
+        label: "Active Services", iconBg: "#f0fdf4", iconColor: "#14b8a6",
+        icon: <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M19.07 4.93l-1.41 1.41M4.93 4.93l1.41 1.41M12 2v2M12 20v2M2 12h2M20 12h2M17.66 17.66l-1.41-1.41M6.34 17.66l1.41-1.41" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
     },
     {
-        label: "Active Packages",
-        value: "8",
-        delta: "4 agencies subscribed",
-        up: true,
-        iconBg: "#eff6ff",
-        iconColor: "#3b82f6",
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-                <path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-        ),
+        label: "Active Packages", iconBg: "#eff6ff", iconColor: "#3b82f6",
+        icon: <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M21 16V8a2 2 0 00-1-1.73l-7-4a2 2 0 00-2 0l-7 4A2 2 0 003 8v8a2 2 0 001 1.73l7 4a2 2 0 002 0l7-4A2 2 0 0021 16z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M3.27 6.96L12 12.01l8.73-5.05M12 22.08V12" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
     },
     {
-        label: "Pending Requests",
-        value: "5",
-        delta: "3 new today",
-        up: false,
-        iconBg: "#fffbeb",
-        iconColor: "#f59e0b",
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                <path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-                <path d="M6 1v3M10 1v3M14 1v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-        ),
+        label: "Pending Requests", iconBg: "#fffbeb", iconColor: "#f59e0b",
+        icon: <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><path d="M18 8h1a4 4 0 010 8h-1" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M2 8h16v9a4 4 0 01-4 4H6a4 4 0 01-4-4V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M6 1v3M10 1v3M14 1v3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
     },
     {
-        label: "Monthly Revenue",
-        value: "₫48M",
-        delta: "+22% vs last month",
-        up: true,
-        iconBg: "#f5f3ff",
-        iconColor: "#8b5cf6",
-        icon: (
-            <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
-                <line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                <path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-            </svg>
-        ),
+        label: "Monthly Revenue", iconBg: "#f5f3ff", iconColor: "#8b5cf6",
+        icon: <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><line x1="12" y1="1" x2="12" y2="23" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
     },
-];
+] as const;
 
-const JOB_DATA = [8, 14, 11, 19, 16, 23, 20, 28, 24, 32, 29, 36];
-const maxJob = Math.max(...JOB_DATA);
-
-const PENDING_REQUESTS = [
-    { id: "rq1", agency: "Ha Long Medical Tours",    service: "Airport Transfer",   pax: 24, date: "Today 10:30",    urgent: true,  avatarBg: "#3b82f6" },
-    { id: "rq2", agency: "Sapa Adventure Health",    service: "Medical Check-up",   pax: 12, date: "Today 14:00",    urgent: true,  avatarBg: "#8b5cf6" },
-    { id: "rq3", agency: "Hoi An Wellness Agency",   service: "Spa & Massage",      pax: 8,  date: "Tomorrow 09:00", urgent: false, avatarBg: "#22c55e" },
-    { id: "rq4", agency: "Mekong Delta Care",        service: "Dental Consultation", pax: 4,  date: "Tomorrow 11:30", urgent: false, avatarBg: "#f59e0b" },
-    { id: "rq5", agency: "Phu Quoc Medical Escape",  service: "Lab Tests Package",   pax: 16, date: "In 2 days",      urgent: false, avatarBg: "#14b8a6" },
-];
-
-const ACTIVE_PACKAGES = [
-    { name: "Medical Check-up Bundle",   services: 4, agencies: 3, revenue: "₫18M", pct: 90, color: "#22c55e" },
-    { name: "Dental Care Package",       services: 3, agencies: 2, revenue: "₫12M", pct: 75, color: "#3b82f6" },
-    { name: "Spa & Wellness Suite",      services: 5, agencies: 4, revenue: "₫10M", pct: 60, color: "#8b5cf6" },
-    { name: "Airport Transfer Pack",     services: 2, agencies: 3, revenue: "₫5M",  pct: 40, color: "#f59e0b" },
-    { name: "Lab & Diagnostics Bundle",  services: 6, agencies: 1, revenue: "₫3M",  pct: 20, color: "#ef4444" },
-];
-
-const TOP_AGENCIES = [
-    { name: "Ha Long Medical Tours",   jobs: 38, revenue: "₫18.4M", avatarBg: "#3b82f6" },
-    { name: "Hoi An Wellness Agency",  jobs: 26, revenue: "₫12.1M", avatarBg: "#22c55e" },
-    { name: "Sapa Adventure Health",   jobs: 22, revenue: "₫10.8M", avatarBg: "#8b5cf6" },
-    { name: "Mekong Delta Care",       jobs: 14, revenue: "₫6.7M",  avatarBg: "#f59e0b" },
-    { name: "Phu Quoc Medical Escape", jobs: 11, revenue: "₫5.2M",  avatarBg: "#14b8a6" },
-];
+const PKG_COLORS = ["#22c55e","#3b82f6","#8b5cf6","#f59e0b","#ef4444","#6366f1","#14b8a6","#ec4899"];
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProviderDashboard() {
+    const [stats,    setStats]    = useState<ProviderDashboardStats | null>(null);
+    const [jobBars,  setJobBars]  = useState<number[]>(new Array(12).fill(0));
+    const [requests, setRequests] = useState<ProviderPendingRequest[]>([]);
+    const [packages, setPackages] = useState<ProviderActivePackage[]>([]);
+    const [agencies, setAgencies] = useState<ProviderTopAgency[]>([]);
+    const [loading,  setLoading]  = useState(true);
+
+    useEffect(() => {
+        providerService.getMe().then(meRes => {
+            if (!meRes?.data) { setLoading(false); return; }
+            const pid = meRes.data.id;
+            Promise.all([
+                providerService.getDashboardStats(pid),
+                providerService.getJobsTrend(pid, curYear),
+                providerService.getPendingRequests(pid),
+                providerService.getActivePackages(pid),
+                providerService.getTopAgencies(pid),
+            ]).then(([sRes, tRes, rRes, pkgRes, agRes]) => {
+                if (sRes?.data) setStats(sRes.data);
+                if (tRes?.data) {
+                    const bars = new Array(12).fill(0);
+                    tRes.data.monthlyTrends.forEach(t => { bars[monthToIndex(t.month)] = t.jobsCount; });
+                    setJobBars(bars);
+                }
+                if (rRes?.data) setRequests(rRes.data);
+                if (pkgRes?.data) setPackages(pkgRes.data);
+                if (agRes?.data) setAgencies(agRes.data);
+            }).catch(() => {}).finally(() => setLoading(false));
+        }).catch(() => setLoading(false));
+    }, []);
+
+    const maxJob = Math.max(...jobBars, 1);
+    const urgentCount = requests.filter(r => r.isUrgent).length;
+
+    const statsData = stats
+        ? [
+            { ...STAT_ICONS[0], value: String(stats.activeServices),      delta: `+${stats.activeServicesChangeThisMonth} this month`,    up: stats.activeServicesChangeThisMonth >= 0 },
+            { ...STAT_ICONS[1], value: String(stats.activePackages),       delta: `${stats.agenciesSubscribedCount} agencies subscribed`,  up: true },
+            { ...STAT_ICONS[2], value: String(stats.pendingRequestsCount), delta: `${stats.newPendingRequestsToday} new today`,            up: false },
+            { ...STAT_ICONS[3], value: `₫${Math.round(stats.monthlyRevenue / 1_000_000)}M`, delta: `+${stats.revenuePercentageChange}% vs last month`, up: stats.revenuePercentageChange >= 0 },
+          ]
+        : STAT_ICONS.map(s => ({ ...s, value: "—", delta: "loading…", up: true }));
+
     return (
         <div className={styles.page}>
 
@@ -109,8 +114,8 @@ export default function ProviderDashboard() {
                 <div className={styles.welcomeActions}>
                     <button className={`${styles.welcomeBtn} ${styles.outline}`}>
                         View Requests
-                        {PENDING_REQUESTS.length > 0 && (
-                            <span className={styles.welcomeBadge}>{PENDING_REQUESTS.length}</span>
+                        {requests.length > 0 && (
+                            <span className={styles.welcomeBadge}>{requests.length}</span>
                         )}
                     </button>
                     <button className={`${styles.welcomeBtn} ${styles.primary}`}>+ New Package</button>
@@ -119,7 +124,7 @@ export default function ProviderDashboard() {
 
             {/* ── Stat cards ── */}
             <div className={styles.statsRow}>
-                {STATS.map(s => (
+                {statsData.map(s => (
                     <div key={s.label} className={styles.statCard}>
                         <div className={styles.statIcon} style={{ background: s.iconBg, color: s.iconColor }}>
                             {s.icon}
@@ -145,19 +150,17 @@ export default function ProviderDashboard() {
                 {/* Jobs completed bar chart */}
                 <div className={styles.card}>
                     <div className={styles.cardHeader}>
-                        <h3 className={styles.cardTitle}>Jobs Completed — {new Date().getFullYear()}</h3>
+                        <h3 className={styles.cardTitle}>Jobs Completed — {curYear}</h3>
                         <button className={styles.cardLink}>View report →</button>
                     </div>
                     <div className={styles.chartWrap}>
                         <div className={styles.chartBars}>
-                            {JOB_DATA.map((val, i) => {
+                            {jobBars.map((val, i) => {
                                 const isCurrent = i === curMo;
-                                const isPast = i < curMo;
+                                const isPast    = i < curMo;
                                 return (
                                     <div key={i} className={styles.barCol}>
-                                        {isCurrent && (
-                                            <span className={styles.barTopVal}>{val}</span>
-                                        )}
+                                        {isCurrent && <span className={styles.barTopVal}>{val}</span>}
                                         <div
                                             className={styles.bar}
                                             style={{
@@ -182,21 +185,25 @@ export default function ProviderDashboard() {
                 <div className={styles.card}>
                     <div className={styles.cardHeader}>
                         <h3 className={styles.cardTitle}>Pending Requests</h3>
-                        <span className={styles.urgentCount}>{PENDING_REQUESTS.filter(r => r.urgent).length} urgent</span>
+                        <span className={styles.urgentCount}>{urgentCount} urgent</span>
                     </div>
                     <div className={styles.requestList}>
-                        {PENDING_REQUESTS.map(r => (
-                            <div key={r.id} className={`${styles.requestItem} ${r.urgent ? styles.requestUrgent : ""}`}>
-                                <div className={styles.requestAvatar} style={{ background: r.avatarBg }}>
-                                    {r.agency.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                        {loading ? (
+                            <p style={{ color: "#9ca3af", fontSize: 13, padding: "20px 0", textAlign: "center" }}>Loading…</p>
+                        ) : requests.length === 0 ? (
+                            <p style={{ color: "#9ca3af", fontSize: 13, padding: "20px 0", textAlign: "center" }}>No pending requests</p>
+                        ) : requests.map(r => (
+                            <div key={r.requestId} className={`${styles.requestItem} ${r.isUrgent ? styles.requestUrgent : ""}`}>
+                                <div className={styles.requestAvatar} style={{ background: avatarColor(r.agencyName) }}>
+                                    {r.agencyShortName || r.agencyName.split(" ").map(w => w[0]).join("").slice(0, 2)}
                                 </div>
                                 <div className={styles.requestInfo}>
                                     <div className={styles.requestTop}>
-                                        <p className={styles.requestAgency}>{r.agency}</p>
-                                        {r.urgent && <span className={styles.urgentBadge}>Urgent</span>}
+                                        <p className={styles.requestAgency}>{r.agencyName}</p>
+                                        {r.isUrgent && <span className={styles.urgentBadge}>Urgent</span>}
                                     </div>
-                                    <p className={styles.requestService}>{r.service} · {r.pax} pax</p>
-                                    <p className={styles.requestDate}>{r.date}</p>
+                                    <p className={styles.requestService}>{r.packageOrServiceName} · {r.pax} pax</p>
+                                    <p className={styles.requestDate}>{fmtScheduledTime(r.scheduledTime)}</p>
                                 </div>
                                 <div className={styles.requestActions}>
                                     <button className={styles.acceptBtn}>Accept</button>
@@ -228,27 +235,33 @@ export default function ProviderDashboard() {
                             </tr>
                         </thead>
                         <tbody>
-                            {ACTIVE_PACKAGES.map((p, i) => (
-                                <tr key={i} className={styles.tr}>
-                                    <td className={styles.td}>
-                                        <div className={styles.pkgCell}>
-                                            <span className={styles.pkgDot} style={{ background: p.color }}/>
-                                            <span className={styles.pkgName}>{p.name}</span>
-                                        </div>
-                                    </td>
-                                    <td className={styles.td} style={{ color: "#6b7280" }}>{p.services}</td>
-                                    <td className={styles.td} style={{ color: "#6b7280" }}>{p.agencies}</td>
-                                    <td className={styles.td} style={{ fontWeight: 700, color: "#14b8a6" }}>{p.revenue}</td>
-                                    <td className={styles.td}>
-                                        <div className={styles.demandWrap}>
-                                            <div className={styles.demandBar}>
-                                                <div className={styles.demandFill} style={{ width: `${p.pct}%`, background: p.color }}/>
+                            {packages.length === 0 ? (
+                                <tr><td colSpan={5} style={{ textAlign: "center", color: "#9ca3af", fontSize: 13, padding: "20px 0" }}>No active packages</td></tr>
+                            ) : packages.map((p, i) => {
+                                const color = PKG_COLORS[i % PKG_COLORS.length];
+                                const revM = (p.revenue / 1_000_000).toFixed(1).replace(/\.0$/, "");
+                                return (
+                                    <tr key={p.packageId} className={styles.tr}>
+                                        <td className={styles.td}>
+                                            <div className={styles.pkgCell}>
+                                                <span className={styles.pkgDot} style={{ background: color }}/>
+                                                <span className={styles.pkgName}>{p.name}</span>
                                             </div>
-                                            <span className={styles.demandPct} style={{ color: p.color }}>{p.pct}%</span>
-                                        </div>
-                                    </td>
-                                </tr>
-                            ))}
+                                        </td>
+                                        <td className={styles.td} style={{ color: "#6b7280" }}>{p.servicesCount}</td>
+                                        <td className={styles.td} style={{ color: "#6b7280" }}>{p.agenciesCount}</td>
+                                        <td className={styles.td} style={{ fontWeight: 700, color: "#14b8a6" }}>₫{revM}M</td>
+                                        <td className={styles.td}>
+                                            <div className={styles.demandWrap}>
+                                                <div className={styles.demandBar}>
+                                                    <div className={styles.demandFill} style={{ width: `${p.demandPercent}%`, background: color }}/>
+                                                </div>
+                                                <span className={styles.demandPct} style={{ color }}>{p.demandPercent}%</span>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                );
+                            })}
                         </tbody>
                     </table>
                 </div>
@@ -260,19 +273,24 @@ export default function ProviderDashboard() {
                         <button className={styles.cardLink}>This month</button>
                     </div>
                     <div className={styles.agencyList}>
-                        {TOP_AGENCIES.map((a, i) => (
-                            <div key={a.name} className={styles.agencyItem}>
-                                <span className={styles.agencyRankNum}>{i + 1}</span>
-                                <div className={styles.agencyAva} style={{ background: a.avatarBg }}>
-                                    {a.name.split(" ").map(w => w[0]).join("").slice(0, 2)}
+                        {agencies.length === 0 ? (
+                            <p style={{ color: "#9ca3af", fontSize: 13, padding: "20px 0", textAlign: "center" }}>No data this month</p>
+                        ) : agencies.map((a, i) => {
+                            const revM = (a.revenueThisMonth / 1_000_000).toFixed(1).replace(/\.0$/, "");
+                            return (
+                                <div key={a.agencyId} className={styles.agencyItem}>
+                                    <span className={styles.agencyRankNum}>{i + 1}</span>
+                                    <div className={styles.agencyAva} style={{ background: avatarColor(a.name) }}>
+                                        {a.name.split(" ").map((w: string) => w[0]).join("").slice(0, 2)}
+                                    </div>
+                                    <div className={styles.agencyInfo}>
+                                        <p className={styles.agencyName}>{a.name}</p>
+                                        <p className={styles.agencyMeta}>{a.jobsThisMonth} jobs this month</p>
+                                    </div>
+                                    <span className={styles.agencyRev}>₫{revM}M</span>
                                 </div>
-                                <div className={styles.agencyInfo}>
-                                    <p className={styles.agencyName}>{a.name}</p>
-                                    <p className={styles.agencyMeta}>{a.jobs} jobs this month</p>
-                                </div>
-                                <span className={styles.agencyRev}>{a.revenue}</span>
-                            </div>
-                        ))}
+                            );
+                        })}
                     </div>
                 </div>
             </div>

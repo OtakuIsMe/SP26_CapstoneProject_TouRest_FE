@@ -6,6 +6,25 @@
     height: 100%;
 }
 
+.loadingState {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex: 1;
+    min-height: 300px;
+}
+
+.spinner {
+    width: 36px;
+    height: 36px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #4f46e5;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
 // ── Top bar ───────────────────────────────────────────────────────────────────
 .topBar {
     display: flex;

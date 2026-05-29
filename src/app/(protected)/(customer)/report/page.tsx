@@ -1,11 +1,101 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
+import { createPortal } from "react-dom";
 import Header from "@/components/layouts/header/header";
 import { authService } from "@/libs/services/auth.service";
 import { userService } from "@/libs/services/user.service";
 import { reportService, ReportDTO, ReportItemType, ReportStatus } from "@/libs/services/report.service";
+import { providerService } from "@/libs/services/provider.service";
 import styles from "./page.module.scss";
+
+// ── Item search box (Service / Package) ───────────────────────────────────────
+interface SearchItem { id: string; name: string; subtitle?: string; }
+
+function ItemSearchBox({ type, value, onSelect, mounted }: {
+    type: "Service" | "Package";
+    value: SearchItem | null;
+    onSelect: (item: SearchItem | null) => void;
+    mounted: boolean;
+}) {
+    const [query, setQuery]     = useState("");
+    const [results, setResults] = useState<SearchItem[]>([]);
+    const [open, setOpen]       = useState(false);
+    const [loading, setLoading] = useState(false);
+    const [pos, setPos]         = useState({ top: 0, left: 0, width: 0 });
+    const inputRef = useRef<HTMLInputElement>(null);
+    const timerRef = useRef<ReturnType<typeof setTimeout>>();
+
+    const updatePos = () => {
+        if (!inputRef.current) return;
+        const r = inputRef.current.getBoundingClientRect();
+        const spaceBelow = window.innerHeight - r.bottom;
+        const top = spaceBelow > 200 ? r.bottom + 4 : r.top - 4 - Math.min(spaceBelow, 220);
+        setPos({ top, left: r.left, width: r.width });
+    };
+
+    useEffect(() => {
+        clearTimeout(timerRef.current);
+        if (!query.trim()) { setResults([]); setOpen(false); return; }
+        timerRef.current = setTimeout(async () => {
+            setLoading(true);
+            try {
+                if (type === "Service") {
+                    const res = await providerService.getServices({ search: query, pageSize: 10 });
+                    setResults((res.data ?? []).map(s => ({ id: s.id, name: s.name, subtitle: s.providerName })));
+                } else {
+                    const res = await providerService.getPackages({ search: query, pageSize: 10 });
+                    setResults((res.data ?? []).map(p => ({ id: p.id, name: p.name, subtitle: p.code })));
+                }
+                setOpen(true);
+            } catch { setResults([]); }
+            finally { setLoading(false); }
+        }, 300);
+        return () => clearTimeout(timerRef.current);
+    }, [query, type]);
+
+    useEffect(() => { setQuery(""); setResults([]); setOpen(false); }, [type]);
+
+    if (value) {
+        return (
+            <div className={styles.itemSelectedTag}>
+                <span>{value.name}</span>
+                {value.subtitle && <span className={styles.itemSelectedSub}>{value.subtitle}</span>}
+                <button type="button" className={styles.itemSelectedRemove} onClick={() => onSelect(null)}>
+                    <svg viewBox="0 0 24 24" fill="none" width="9" height="9"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                </button>
+            </div>
+        );
+    }
+
+    return (
+        <div style={{ position: "relative" }}>
+            <input
+                ref={inputRef}
+                className={styles.input}
+                placeholder={type === "Service" ? "Search services by name…" : "Search packages by name…"}
+                value={query}
+                autoComplete="off"
+                onChange={e => { setQuery(e.target.value); updatePos(); }}
+                onFocus={() => { if (results.length > 0) { setOpen(true); updatePos(); } }}
+                onBlur={() => setTimeout(() => setOpen(false), 180)}
+            />
+            {open && mounted && (results.length > 0 || loading) && createPortal(
+                <div className={styles.itemDropdown} style={{ top: pos.top, left: pos.left, width: pos.width }}>
+                    {loading ? (
+                        <div className={styles.itemDropdownLoading}>Searching…</div>
+                    ) : results.map(r => (
+                        <div key={r.id} className={styles.itemDropdownRow} onMouseDown={() => { onSelect(r); setQuery(""); setOpen(false); }}>
+                            <span className={styles.itemDropdownName}>{r.name}</span>
+                            {r.subtitle && <span className={styles.itemDropdownSub}>{r.subtitle}</span>}
+                        </div>
+                    ))}
+                </div>,
+                document.body
+            )}
+        </div>
+    );
+}
 
 // ── Visual config ─────────────────────────────────────────────────────────────
 const STATUS_CFG: Record<ReportStatus, { label: string; color: string; bg: string; dot: string; desc: string }> = {
@@ -37,10 +127,14 @@ export default function CustomerReportPage() {
     const [lightboxImg, setLightboxImg] = useState<string | null>(null);
     const [currentUser, setCurrentUser] = useState<{ id: string; username: string } | null>(null);
 
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
     // ── Form state ──
     const [formOpen, setFormOpen]       = useState(false);
     const [fTitle, setFTitle]           = useState("");
     const [fItemType, setFItemType]     = useState<ReportItemType>("Booking");
+    const [fItem, setFItem]             = useState<SearchItem | null>(null);
     const [fDesc, setFDesc]             = useState("");
     const [fImages, setFImages]         = useState<PreviewFile[]>([]);
     const [isDragging, setIsDragging]   = useState(false);
@@ -95,6 +189,10 @@ export default function CustomerReportPage() {
         if (!fTitle.trim()) { setFError("Please enter a report title."); return; }
         if (!fDesc.trim())  { setFError("Please describe the issue."); return; }
         if (!currentUser)   { setFError("Not logged in."); return; }
+        if ((fItemType === "Service" || fItemType === "Package") && !fItem) {
+            setFError(`Please select the specific ${fItemType.toLowerCase()} you are reporting.`);
+            return;
+        }
 
         setSubmitting(true); setFError("");
         try {
@@ -105,11 +203,15 @@ export default function CustomerReportPage() {
                 imageUrls.push(uploadRes.data.url);
             }
 
+            const itemId = (fItemType === "Service" || fItemType === "Package")
+                ? fItem!.id
+                : currentUser.id;
+
             await reportService.create({
                 userId:      currentUser.id,
                 title:       fTitle.trim(),
                 description: fDesc.trim(),
-                itemId:      currentUser.id,
+                itemId,
                 itemType:    fItemType,
                 status:      "Pending",
                 imageUrls:   imageUrls.length > 0 ? imageUrls : undefined,
@@ -126,7 +228,7 @@ export default function CustomerReportPage() {
 
     const closeForm = () => {
         setFormOpen(false);
-        setFTitle(""); setFItemType("Booking"); setFDesc("");
+        setFTitle(""); setFItemType("Booking"); setFItem(null); setFDesc("");
         setFImages([]); setFError("");
     };
 
@@ -313,7 +415,7 @@ export default function CustomerReportPage() {
                                             type="button"
                                             className={`${styles.typeOption} ${fItemType === t ? styles.typeOptionActive : ""}`}
                                             style={fItemType === t ? { borderColor: ITEM_TYPE_CFG[t].color, background: ITEM_TYPE_CFG[t].bg, color: ITEM_TYPE_CFG[t].color } : {}}
-                                            onClick={() => setFItemType(t)}
+                                            onClick={() => { setFItemType(t); setFItem(null); }}
                                         >
                                             <span className={styles.typeIcon}>{ITEM_TYPE_CFG[t].icon}</span>
                                             <span className={styles.typeLabel}>{ITEM_TYPE_CFG[t].label}</span>
@@ -322,6 +424,22 @@ export default function CustomerReportPage() {
                                     ))}
                                 </div>
                             </div>
+
+                            {/* Item search — only for Service / Package */}
+                            {(fItemType === "Service" || fItemType === "Package") && (
+                                <div className={styles.field}>
+                                    <label className={styles.label}>
+                                        {fItemType === "Service" ? "Which service?" : "Which package?"}
+                                        <span className={styles.required}>*</span>
+                                    </label>
+                                    <ItemSearchBox
+                                        type={fItemType}
+                                        value={fItem}
+                                        onSelect={item => { setFItem(item); setFError(""); }}
+                                        mounted={mounted}
+                                    />
+                                </div>
+                            )}
 
                             {/* Title */}
                             <div className={styles.field}>

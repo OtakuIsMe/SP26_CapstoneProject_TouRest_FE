@@ -98,7 +98,7 @@ export default function PaymentPage() {
         }
         pollRef.current = setInterval(async () => {
             try {
-                const res = await agencyService.getActivePayment(bookingId);
+                const res = await agencyService.getLatestPayment(bookingId);
                 if (res.data?.status === "Paid") {
                     clearInterval(pollRef.current!); pollRef.current = null;
                     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }

@@ -19,6 +19,32 @@ export interface ItineraryScheduleDTO {
     guideName?: string;
 }
 
+export interface AgencyScheduleDTO {
+    id: string;
+    itineraryId: string;
+    itineraryName: string;
+    startTime: string;
+    endTime: string;
+    spot: number;
+    spotLeft: number;
+    guideId?: string;
+    guideName?: string;
+    status: string;
+}
+
+export interface ProviderScheduleDTO {
+    id: string;
+    itineraryId: string;
+    itineraryName: string;
+    agencyName: string;
+    startTime: string;
+    endTime: string;
+    spot: number;
+    spotLeft: number;
+    guideId?: string;
+    guideName?: string;
+}
+
 export interface ItineraryDTO {
     id: string;
     agencyId: string;
@@ -54,6 +80,16 @@ export interface StopActivityDTO {
     endTime: string;
     price: number;
     note?: string;
+}
+
+export interface ItineraryProviderDTO {
+    id: string;
+    name: string;
+    description: string;
+    address: string;
+    contactPhone: string;
+    services: string[];
+    images: string[];
 }
 
 export interface ItineraryStopWithActivitiesDTO {

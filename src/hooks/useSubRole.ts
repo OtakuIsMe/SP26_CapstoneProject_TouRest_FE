@@ -24,7 +24,10 @@ export function useSubRole(mainRole?: "provider" | "agency") {
     const [subRole, setSubRole] = useState<SubRole | null>(null);
 
     useEffect(() => {
-        const stored = localStorage.getItem(StorageKeys.SUB_ROLE) as SubRole | null;
+        const raw = localStorage.getItem(StorageKeys.SUB_ROLE);
+        // Normalise legacy values written before the RBAC rename
+        const LEGACY: Record<string, SubRole> = { manager: "admin", tourguide: "tour_guide" };
+        const stored = raw ? ((LEGACY[raw] ?? raw) as SubRole) : null;
         if (stored) {
             setSubRole(stored);
         } else if (mainRole) {

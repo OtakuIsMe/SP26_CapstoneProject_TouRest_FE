@@ -15,11 +15,21 @@ const tabs = ["Stays", "Flights", "Cars", "Packages", "Cruises", "Things to do"]
 
 export default function HomePage() {
     const router = useRouter();
-    const [activeTab, setActiveTab] = useState("Stays");
+    const [activeTab,  setActiveTab]  = useState("Stays");
+    const [destination, setDestination] = useState("");
+    const [keyword,     setKeyword]     = useState("");
     const [featuredTours, setFeaturedTours] = useState<ItineraryDTO[]>([]);
 
+    function handleSearch() {
+        const params = new URLSearchParams();
+        if (destination.trim()) params.set("destination", destination.trim());
+        if (keyword.trim())     params.set("name", keyword.trim());
+        const qs = params.toString();
+        router.push(`/tours${qs ? `?${qs}` : ""}`);
+    }
+
     useEffect(() => {
-        agencyService.getItineraries({ limit: 3 }).then((res) => {
+        agencyService.getItineraries({ limit: 3, status: "Active" }).then((res) => {
             if (res.data) setFeaturedTours(res.data.items ?? []);
         });
     }, []);
@@ -76,12 +86,14 @@ export default function HomePage() {
                                     type="text"
                                     className={styles.fieldInput}
                                     placeholder="Enter your destination"
-                                    readOnly
+                                    value={destination}
+                                    onChange={e => setDestination(e.target.value)}
+                                    onKeyDown={e => e.key === "Enter" && handleSearch()}
                                 />
                             </div>
                         </div>
 
-                        {/* Date */}
+                        {/* Date (decorative) */}
                         <div className={styles.searchField}>
                             <div className={styles.fieldIcon}>
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -105,7 +117,7 @@ export default function HomePage() {
                             </div>
                         </div>
 
-                        {/* Travelers */}
+                        {/* Travelers / keyword */}
                         <div className={styles.searchField}>
                             <div className={styles.fieldIcon}>
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -114,7 +126,7 @@ export default function HomePage() {
                             </div>
                             <div className={styles.fieldContent}>
                                 <span className={styles.fieldLabel}>
-                                    Travelers
+                                    Tour Name
                                     <svg viewBox="0 0 24 24" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
                                         <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
@@ -122,14 +134,16 @@ export default function HomePage() {
                                 <input
                                     type="text"
                                     className={styles.fieldInput}
-                                    placeholder="Enter your destination"
-                                    readOnly
+                                    placeholder="Search tour name"
+                                    value={keyword}
+                                    onChange={e => setKeyword(e.target.value)}
+                                    onKeyDown={e => e.key === "Enter" && handleSearch()}
                                 />
                             </div>
                         </div>
 
                         {/* Search Button */}
-                        <button className={styles.searchBtn} onClick={() => router.push("/tours")}>
+                        <button className={styles.searchBtn} onClick={handleSearch}>
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
                                 <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />

@@ -1,37 +1,23 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
+import { bookingService } from "@/libs/services/booking.service";
+import { bookingItineraryService, ItineraryStopDTO } from "@/libs/services/booking-itinerary.service";
+import { agencyService } from "@/libs/services/agency.service";
+import { trackingService, TrackingTypeStop, TrackingTypeActivity } from "@/libs/services/tracking.service";
+import { providerService } from "@/libs/services/provider.service";
+import type { BookingStopMedicalResultDTO } from "@/types/provider-staff.type";
 import styles from "./page.module.scss";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 type NodeStatus    = "completed" | "current" | "upcoming";
 type TransportMode = "car" | "bus" | "boat" | "walk";
 type ActivityType  = "meal" | "sightseeing" | "shopping" | "activity" | "transport" | "rest" | "medical";
-type ResultStatus  = "normal" | "warning" | "critical";
-
-interface ResultItem {
-    name: string;
-    value: string;
-    unit?: string;
-    range?: string;
-    status: ResultStatus;
-}
-
-interface MedicalResult {
-    providerName: string;
-    doctorName: string;
-    specialty: string;
-    date: string;
-    summary: string;
-    items: ResultItem[];
-    notes?: string;
-    followUp?: string;
-}
 
 interface Activity {
     id: string;
@@ -41,11 +27,8 @@ interface Activity {
     description: string;
     type: ActivityType;
     status: NodeStatus;
-    // Provider fields
     isProviderService?: boolean;
     providerName?: string;
-    resultAvailable?: boolean;
-    result?: MedicalResult;
 }
 
 interface Transport { mode: TransportMode; duration: string; distance: string; }
@@ -62,6 +45,8 @@ interface Stop {
     activities: Activity[];
     status: NodeStatus;
     transportToNext?: Transport;
+    hasProvider: boolean;
+    providerName: string | null;
 }
 
 interface BookingDetail {
@@ -81,218 +66,89 @@ interface BookingDetail {
     stops: Stop[];
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const MOCK_BOOKINGS: Record<string, BookingDetail> = {
-    "bk1": {
-        id: "bk1",
-        code: "BK-20240415-A3F7",
-        tourName: "Ha Long Bay Medical & Wellness — 3D2N",
-        tourImage: "/images/landing/explore_1.avif",
-        agencyName: "Vietnam Medical Adventures Co.",
-        startDate: "Apr 15, 2024",
-        endDate: "Apr 18, 2024",
-        durationDays: 3,
-        travelers: 2,
-        totalAmount: 8_500_000,
-        status: "In Progress",
-        guideName: "Nguyen Thi Hoa",
-        guidePhone: "+84 912 345 678",
-        stops: [
-            {
-                id: "s1", order: 1,
-                name: "Hanoi — Medical Center",
-                address: "52 Ly Thuong Kiet, Hoan Kiem, Hanoi",
-                image: "/images/landing/explore_3.avif",
-                arrivalTime: "07:00", departureTime: "10:30",
-                dayLabel: "Day 1 · Apr 15",
-                status: "completed",
-                activities: [
-                    {
-                        id: "a1", name: "Group assembly & check-in",
-                        startTime: "07:00", endTime: "07:30",
-                        description: "Meet your guide and fellow travelers at the hotel lobby",
-                        type: "activity", status: "completed",
-                    },
-                    {
-                        id: "a2", name: "Breakfast (bánh mì & phở)",
-                        startTime: "07:30", endTime: "08:30",
-                        description: "Traditional Vietnamese breakfast at local café",
-                        type: "meal", status: "completed",
-                    },
-                    {
-                        id: "a3", name: "General Health Screening",
-                        startTime: "08:30", endTime: "10:00",
-                        description: "Full body check-up including blood pressure, BMI, and basic blood panel at Hanoi International Clinic",
-                        type: "medical", status: "completed",
-                        isProviderService: true,
-                        providerName: "Hanoi International Clinic",
-                        resultAvailable: true,
-                        result: {
-                            providerName: "Hanoi International Clinic",
-                            doctorName: "Dr. Nguyen Thi Mai",
-                            specialty: "General Medicine",
-                            date: "Apr 15, 2024 · 08:45",
-                            summary: "Overall health status is good. Blood pressure slightly elevated — recommend monitoring. All other markers within normal range.",
-                            items: [
-                                { name: "Blood Pressure",  value: "128/84",  unit: "mmHg", range: "< 120/80",    status: "warning"  },
-                                { name: "Heart Rate",      value: "72",      unit: "bpm",  range: "60 – 100",     status: "normal"   },
-                                { name: "BMI",             value: "23.4",    unit: "",     range: "18.5 – 24.9",  status: "normal"   },
-                                { name: "Blood Glucose",   value: "95",      unit: "mg/dL",range: "70 – 99",      status: "normal"   },
-                                { name: "Cholesterol",     value: "198",     unit: "mg/dL",range: "< 200",        status: "normal"   },
-                                { name: "SpO₂",            value: "98",      unit: "%",    range: "95 – 100",     status: "normal"   },
-                            ],
-                            notes: "Patient is generally healthy. Slight hypertension noted — advised to reduce sodium intake and manage stress levels.",
-                            followUp: "Schedule blood pressure re-check in 4 weeks.",
-                        },
-                    },
-                ],
-                transportToNext: { mode: "bus", duration: "3h 30min", distance: "160 km" },
-            },
-            {
-                id: "s2", order: 2,
-                name: "Ha Long Bay Pier",
-                address: "Bai Chay Tourist Wharf, Quang Ninh",
-                image: "/images/landing/explore_2.avif",
-                arrivalTime: "12:00", departureTime: "13:30",
-                dayLabel: "Day 1 · Apr 15",
-                status: "completed",
-                activities: [
-                    {
-                        id: "a4", name: "Board cruise & cabin check-in",
-                        startTime: "12:00", endTime: "12:30",
-                        description: "Welcome drink and settle into your private cabin",
-                        type: "activity", status: "completed",
-                    },
-                    {
-                        id: "a5", name: "Welcome lunch on deck",
-                        startTime: "12:30", endTime: "13:30",
-                        description: "Fresh seafood buffet with panoramic bay views",
-                        type: "meal", status: "completed",
-                    },
-                ],
-                transportToNext: { mode: "boat", duration: "1h 15min", distance: "22 km" },
-            },
-            {
-                id: "s3", order: 3,
-                name: "Sung Sot Cave & Wellness Spa",
-                address: "Bo Hon Island, Ha Long Bay",
-                image: "/images/landing/explore_1.avif",
-                arrivalTime: "14:45", departureTime: "17:00",
-                dayLabel: "Day 1 · Apr 15",
-                status: "current",
-                activities: [
-                    {
-                        id: "a6", name: "Guided cave exploration",
-                        startTime: "14:45", endTime: "16:00",
-                        description: "Walk through 1.5 km of spectacular limestone formations with a local geologist guide",
-                        type: "sightseeing", status: "completed",
-                    },
-                    {
-                        id: "a7", name: "Dental Consultation",
-                        startTime: "15:30", endTime: "16:00",
-                        description: "On-site dental check-up with specialist from Ha Long Bay Dental Clinic",
-                        type: "medical", status: "current",
-                        isProviderService: true,
-                        providerName: "Ha Long Bay Dental Clinic",
-                        resultAvailable: false,
-                    },
-                    {
-                        id: "a8", name: "Photography at cave exit",
-                        startTime: "16:00", endTime: "16:30",
-                        description: "Panoramic view of Ha Long Bay — perfect for photos",
-                        type: "activity", status: "current",
-                    },
-                    {
-                        id: "a9", name: "Free exploration",
-                        startTime: "16:30", endTime: "17:00",
-                        description: "Browse the local souvenir stands and explore at your own pace",
-                        type: "shopping", status: "upcoming",
-                    },
-                ],
-                transportToNext: { mode: "boat", duration: "45 min", distance: "8 km" },
-            },
-            {
-                id: "s4", order: 4,
-                name: "Luon Cave Anchorage",
-                address: "Luon Cave, Ha Long Bay",
-                image: "/images/landing/explore_2.avif",
-                arrivalTime: "17:45", departureTime: "06:30",
-                dayLabel: "Day 1–2 · Overnight",
-                status: "upcoming",
-                activities: [
-                    {
-                        id: "a10", name: "Lab Results Review",
-                        startTime: "18:00", endTime: "18:30",
-                        description: "Review blood panel results with on-board medical officer",
-                        type: "medical", status: "upcoming",
-                        isProviderService: true,
-                        providerName: "MedSea On-Board Clinic",
-                        resultAvailable: false,
-                    },
-                    {
-                        id: "a11", name: "Kayaking in Luon Lagoon",
-                        startTime: "18:30", endTime: "19:30",
-                        description: "Paddle through the emerald waters and mangrove arch",
-                        type: "activity", status: "upcoming",
-                    },
-                    {
-                        id: "a12", name: "Captain's seafood dinner",
-                        startTime: "20:00", endTime: "22:00",
-                        description: "Live music, local spirits, and a full seafood spread",
-                        type: "meal", status: "upcoming",
-                    },
-                ],
-                transportToNext: { mode: "boat", duration: "30 min", distance: "5 km" },
-            },
-            {
-                id: "s5", order: 5,
-                name: "Ti Top Island — Wellness",
-                address: "Ti Top Island, Ha Long Bay",
-                image: "/images/landing/explore_3.avif",
-                arrivalTime: "07:00", departureTime: "09:30",
-                dayLabel: "Day 2 · Apr 16",
-                status: "upcoming",
-                activities: [
-                    {
-                        id: "a13", name: "Sunrise yoga on deck",
-                        startTime: "06:30", endTime: "07:30",
-                        description: "Morning yoga led by our wellness instructor",
-                        type: "activity", status: "upcoming",
-                    },
-                    {
-                        id: "a14", name: "Spa & Massage Session",
-                        startTime: "07:30", endTime: "09:00",
-                        description: "60-min deep tissue massage at Ti Top Island Spa, by certified therapists",
-                        type: "medical", status: "upcoming",
-                        isProviderService: true,
-                        providerName: "Ti Top Island Spa",
-                        resultAvailable: false,
-                    },
-                ],
-                transportToNext: { mode: "bus", duration: "3h 30min", distance: "165 km" },
-            },
-            {
-                id: "s6", order: 6,
-                name: "Return to Hanoi",
-                address: "52 Ly Thuong Kiet, Hoan Kiem, Hanoi",
-                image: "/images/landing/explore_1.avif",
-                arrivalTime: "14:00", departureTime: "14:00",
-                dayLabel: "Day 3 · Apr 18",
-                status: "upcoming",
-                activities: [
-                    {
-                        id: "a15", name: "Hotel drop-off & farewell",
-                        startTime: "14:00", endTime: "14:30",
-                        description: "Safe return to your Hanoi hotel — journey complete!",
-                        type: "transport", status: "upcoming",
-                    },
-                ],
-            },
-        ],
-    },
+// ── Data helpers ───────────────────────────────────────────────────────────────
+const VEHICLE_TYPE_MAP: Record<string, TransportMode> = {
+    Bus: "bus", MiniVan: "car", PrivateCar: "car",
+    Motorbike: "car", Bicycle: "walk", Boat: "boat",
+    Ferry: "boat", Train: "car", Walking: "walk",
 };
 
-const DEFAULT_BOOKING = MOCK_BOOKINGS["bk1"];
+function activityStatus(startIso: string, endIso: string): NodeStatus {
+    const now   = Date.now();
+    const start = new Date(startIso).getTime();
+    const end   = new Date(endIso).getTime();
+    if (now >= start && now <= end) return "current";
+    return "upcoming";
+}
+
+function fmtTime(iso: string) {
+    return new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+}
+
+function fmtDay(iso: string, scheduleStart: string) {
+    const d     = new Date(iso);
+    const start = new Date(scheduleStart);
+    start.setHours(0, 0, 0, 0);
+    d.setHours(0, 0, 0, 0);
+    const dayN  = Math.floor((d.getTime() - start.getTime()) / 86_400_000) + 1;
+    return `Day ${dayN} · ${new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short" })}`;
+}
+
+function mapStops(apiStops: ItineraryStopDTO[], scheduleStart: string, tourImage: string): Stop[] {
+    return apiStops.map((s) => {
+        const acts = s.activities.map((a): Activity => ({
+            id:                a.id,
+            name:              a.customName ?? a.serviceName ?? "Activity",
+            startTime:         fmtTime(a.startTime),
+            endTime:           fmtTime(a.endTime),
+            description:       a.serviceDescription ?? a.note ?? "",
+            type:              s.providerId && a.serviceId ? "medical" : "activity",
+            status:            activityStatus(a.startTime, a.endTime),
+            isProviderService: !!(s.providerId && a.serviceId),
+            providerName:      s.providerName ?? undefined,
+        }));
+
+        const hasCurrent = acts.some(a => a.status === "current");
+        const firstAct   = s.activities[0];
+        const lastAct    = s.activities[s.activities.length - 1];
+
+        return {
+            id:            s.id,
+            order:         s.stopOrder,
+            name:          s.name,
+            address:       s.address ?? "",
+            image:         tourImage,
+            arrivalTime:   firstAct ? fmtTime(firstAct.startTime) : "",
+            departureTime: lastAct  ? fmtTime(lastAct.endTime)    : "",
+            dayLabel:      firstAct ? fmtDay(firstAct.startTime, scheduleStart) : "",
+            status:        hasCurrent ? "current" : "upcoming",
+            activities:    acts,
+            hasProvider:   !!s.providerId,
+            providerName:  s.providerName,
+            transportToNext: s.vehicleType ? {
+                mode:     VEHICLE_TYPE_MAP[s.vehicleType] ?? "car",
+                duration: "",
+                distance: s.vehicleName ?? s.vehicleType,
+            } : undefined,
+        };
+    });
+}
+
+function deriveBookingDisplayStatus(
+    status: string,
+    schedStart: string | null,
+    schedEnd: string | null,
+): BookingDetail["status"] {
+    if (status === "Cancelled") return "Cancelled";
+    if (status === "Completed") return "Completed";
+    if (schedStart && schedEnd) {
+        const now = Date.now();
+        const s   = new Date(schedStart).getTime();
+        const e   = new Date(schedEnd).getTime();
+        if (now >= s && now <= e) return "In Progress";
+    }
+    return "Upcoming";
+}
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
 function transportIcon(mode: TransportMode) {
@@ -347,11 +203,6 @@ const BOOKING_STATUS_BADGE: Record<string, string> = {
     "Cancelled":   styles.bookingBadgeCancelled,
 };
 
-const RESULT_STATUS: Record<ResultStatus, { color: string; bg: string; label: string }> = {
-    normal:   { color: "#15803d", bg: "#dcfce7", label: "Normal"   },
-    warning:  { color: "#b45309", bg: "#fef3c7", label: "Warning"  },
-    critical: { color: "#b91c1c", bg: "#fee2e2", label: "Critical" },
-};
 
 function completedCount(stops: Stop[]) {
     return stops.filter(s => s.status === "completed").length;
@@ -360,12 +211,131 @@ function completedCount(stops: Stop[]) {
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function BookingJourneyPage() {
     const { id } = useParams<{ id: string }>();
-    const booking = MOCK_BOOKINGS[id] ?? DEFAULT_BOOKING;
-    const done    = completedCount(booking.stops);
-    const total   = booking.stops.length;
-    const pct     = Math.round((done / total) * 100);
 
-    const [resultActivity, setResultActivity] = useState<Activity | null>(null);
+    const [booking, setBooking]   = useState<BookingDetail | null>(null);
+    const [loading, setLoading]   = useState(true);
+    const [scheduleId, setScheduleId]         = useState<string | null>(null);
+    const [trackedStops, setTrackedStops]     = useState<Set<string>>(new Set());
+    const [trackedActivities, setTrackedActivities] = useState<Set<string>>(new Set());
+    const [stopResult, setStopResult]         = useState<BookingStopMedicalResultDTO | null>(null);
+    const [loadingResult, setLoadingResult]   = useState(false);
+
+    useEffect(() => {
+        if (!id) return;
+        (async () => {
+            try {
+                // Step 1: Booking + BookingItinerary in parallel
+                const [bookingRes, biRes] = await Promise.all([
+                    bookingService.getById(id),
+                    bookingItineraryService.getByBookingId(id),
+                ]);
+                const bk = bookingRes.data;
+                const bi = biRes.data?.[0];
+                if (!bk || !bi) return;
+
+                const itineraryId = bi.itineraryId;
+                if (!itineraryId) return;
+
+                // Step 2: Itinerary details + stops + tracking in parallel
+                const [itin, stopsRes, trackingRes] = await Promise.all([
+                    agencyService.getItineraryById(itineraryId).then(r => r.data),
+                    bookingItineraryService.getStopsByItineraryId(itineraryId).then(r => r.data ?? []),
+                    trackingService.getByScheduleId(bi.itineraryScheduleId).then(r => r.data ?? []).catch(() => []),
+                ]);
+                if (!itin) return;
+
+                setScheduleId(bi.itineraryScheduleId);
+                setTrackedStops(new Set(trackingRes.filter(t => t.type === TrackingTypeStop).map(t => t.trackingId)));
+                setTrackedActivities(new Set(trackingRes.filter(t => t.type === TrackingTypeActivity).map(t => t.trackingId)));
+
+                const tourImage = itin.images?.[0]?.url ?? "/images/landing/explore_1.avif";
+                const schedStart = bi.scheduleStartTime ?? new Date().toISOString();
+                const fmtDate = (iso: string) =>
+                    new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "short", year: "numeric" });
+
+                setBooking({
+                    id:           bk.id,
+                    code:         bk.code,
+                    tourName:     bi.itineraryName ?? itin.name,
+                    tourImage,
+                    agencyName:   itin.agencyName ?? "",
+                    startDate:    bi.scheduleStartTime ? fmtDate(bi.scheduleStartTime) : "—",
+                    endDate:      bi.scheduleEndTime   ? fmtDate(bi.scheduleEndTime)   : "—",
+                    durationDays: itin.durationDays,
+                    travelers:    bi.numberOfGuests,
+                    totalAmount:  bi.finalPrice,
+                    status:       deriveBookingDisplayStatus(bk.status, bi.scheduleStartTime, bi.scheduleEndTime),
+                    guideName:    bi.guideName  ?? "Not assigned",
+                    guidePhone:   bi.guidePhone ?? "",
+                    stops:        mapStops(stopsRes, schedStart, tourImage),
+                });
+            } catch {
+                // silently ignore — user sees loading state
+            } finally {
+                setLoading(false);
+            }
+        })();
+    }, [id]);
+
+    const handleViewStopResult = async (stopId: string) => {
+        if (!id) return;
+        setLoadingResult(true);
+        setStopResult(null);
+        try {
+            const res = await providerService.getBookingStopResults(id, stopId);
+            setStopResult(res.data ?? null);
+        } finally {
+            setLoadingResult(false);
+        }
+    };
+
+    const handleCheckIn = async (stopId: string) => {
+        if (!scheduleId) return;
+        setTrackedStops(prev => new Set([...prev, stopId]));
+        try {
+            await trackingService.track({ itineraryScheduleId: scheduleId, trackingId: stopId, type: TrackingTypeStop });
+        } catch {
+            setTrackedStops(prev => { const s = new Set(prev); s.delete(stopId); return s; });
+        }
+    };
+
+    if (loading) return (
+        <>
+            <Header variant="solid" />
+            <div className={styles.page}>
+                <div className={styles.container} style={{ display: "flex", justifyContent: "center", paddingTop: 80 }}>
+                    <div className={styles.spinner} />
+                </div>
+            </div>
+            <Footer />
+        </>
+    );
+
+    if (!booking) return (
+        <>
+            <Header variant="solid" />
+            <div className={styles.page}>
+                <div className={styles.container} style={{ paddingTop: 80, textAlign: "center" }}>
+                    <p>Booking not found.</p>
+                    <Link href="/profile">← Back to Profile</Link>
+                </div>
+            </div>
+            <Footer />
+        </>
+    );
+
+    const effectiveStopStatus = (stop: Stop): NodeStatus => {
+        if (trackedStops.has(stop.id)) return "completed";
+        if (stop.activities.length > 0 && stop.activities.every(a => trackedActivities.has(a.id))) return "completed";
+        return stop.status;
+    };
+
+    const effectiveActStatus = (act: Activity): NodeStatus =>
+        trackedActivities.has(act.id) ? "completed" : act.status;
+
+    const done  = booking.stops.filter(s => effectiveStopStatus(s) === "completed").length;
+    const total = booking.stops.length;
+    const pct   = total > 0 ? Math.round((done / total) * 100) : 0;
 
     return (
         <>
@@ -443,38 +413,57 @@ export default function BookingJourneyPage() {
                             </h2>
 
                             {booking.stops.map((stop, si) => {
-                                const cfg = STATUS_CONFIG[stop.status];
+                                const effStopStatus = effectiveStopStatus(stop);
+                                const cfg = STATUS_CONFIG[effStopStatus];
                                 const isLast = si === booking.stops.length - 1;
 
                                 return (
                                     <div key={stop.id} className={styles.stopBlock}>
+                                        {/* Transport used to arrive at this stop */}
+                                        {si > 0 && stop.transportToNext && (
+                                            <div className={styles.transportSegment}>
+                                                <div className={styles.transportVLine}>
+                                                    <div className={styles.transportVDash} style={{ borderColor: cfg.line }} />
+                                                    <div className={styles.transportVehicle} style={{ borderColor: cfg.line, color: cfg.dot }}>
+                                                        {transportIcon(stop.transportToNext.mode)}
+                                                    </div>
+                                                    <div className={styles.transportVDash} style={{ borderColor: cfg.line }} />
+                                                </div>
+                                                <div className={styles.transportMeta}>
+                                                    <span className={styles.transportMetaVal}>{stop.transportToNext.duration}</span>
+                                                    <span className={styles.transportMetaDot}>·</span>
+                                                    <span className={styles.transportMetaVal}>{stop.transportToNext.distance}</span>
+                                                    <span className={styles.transportMetaMode}>by {stop.transportToNext.mode}</span>
+                                                </div>
+                                            </div>
+                                        )}
                                         <div className={styles.stopRow}>
                                             {/* Vertical line column */}
                                             <div className={styles.stopLine}>
                                                 <div className={styles.stopConnectorHalf} style={{
                                                     borderColor: si === 0 ? "transparent" : cfg.line,
-                                                    borderStyle: (si === 0 || stop.status === "upcoming") ? "dashed" : "solid",
+                                                    borderStyle: (si === 0 || effStopStatus === "upcoming") ? "dashed" : "solid",
                                                 }}/>
                                                 <div
-                                                    className={`${styles.stopDot} ${stop.status === "current" ? styles.stopDotPulse : ""}`}
-                                                    style={{ borderColor: cfg.dot, background: stop.status === "upcoming" ? "#fff" : cfg.dot }}
+                                                    className={`${styles.stopDot} ${effStopStatus === "current" ? styles.stopDotPulse : ""}`}
+                                                    style={{ borderColor: cfg.dot, background: effStopStatus === "upcoming" ? "#fff" : cfg.dot }}
                                                 >
-                                                    {stop.status === "completed" && (
+                                                    {effStopStatus === "completed" && (
                                                         <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                                             <path d="M5 13l4 4L19 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/>
                                                         </svg>
                                                     )}
-                                                    {stop.status === "current" && <div className={styles.stopDotInner} />}
-                                                    {stop.status === "upcoming" && <div className={styles.stopDotEmpty} style={{ background: cfg.dot }} />}
+                                                    {effStopStatus === "current" && <div className={styles.stopDotInner} />}
+                                                    {effStopStatus === "upcoming" && <div className={styles.stopDotEmpty} style={{ background: cfg.dot }} />}
                                                 </div>
                                                 <div className={styles.stopConnectorHalf} style={{
                                                     borderColor: isLast ? "transparent" : cfg.line,
-                                                    borderStyle: (isLast || stop.status === "upcoming") ? "dashed" : "solid",
+                                                    borderStyle: (isLast || effStopStatus === "upcoming") ? "dashed" : "solid",
                                                 }}/>
                                             </div>
 
                                             {/* Stop card */}
-                                            <div className={`${styles.stopCard} ${stop.status === "current" ? styles.stopCardCurrent : ""}`}>
+                                            <div className={`${styles.stopCard} ${effStopStatus === "current" ? styles.stopCardCurrent : ""} ${effStopStatus === "completed" ? styles.stopCardCompleted : ""}`}>
                                                 <div className={styles.stopHeader}>
                                                     <div className={styles.stopPhotoWrap}>
                                                         <Image src={stop.image} alt={stop.name} fill sizes="72px" style={{ objectFit: "cover", borderRadius: "50%" }} />
@@ -495,22 +484,38 @@ export default function BookingJourneyPage() {
                                                         <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M5 12h14M13 6l6 6-6 6" stroke="#9ca3af" strokeWidth="1.7" strokeLinecap="round"/></svg>
                                                         <span>{stop.departureTime}</span>
                                                     </div>
+                                                    {effStopStatus !== "completed" ? (
+                                                        <button
+                                                            className={styles.checkInBtn}
+                                                            onClick={() => handleCheckIn(stop.id)}
+                                                        >
+                                                            <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
+                                                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
+                                                            </svg>
+                                                            Check In
+                                                        </button>
+                                                    ) : (
+                                                        <span className={styles.checkedInBadge}>
+                                                            <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                                            Checked In
+                                                        </span>
+                                                    )}
                                                 </div>
 
                                                 {/* Activities */}
                                                 <div className={styles.activities}>
                                                     {stop.activities.map((act, ai) => {
-                                                        const actCfg = STATUS_CONFIG[act.status];
+                                                        const effActSt   = effectiveActStatus(act);
+                                                        const actCfg     = STATUS_CONFIG[effActSt];
                                                         const isProvider = act.isProviderService;
-                                                        const hasResult  = act.resultAvailable && act.result;
 
                                                         return (
                                                             <div
                                                                 key={act.id}
-                                                                className={`${styles.activityItem} ${act.status === "current" ? styles.activityCurrent : ""} ${isProvider ? styles.activityProvider : ""}`}
+                                                                className={`${styles.activityItem} ${effActSt === "current" ? styles.activityCurrent : ""} ${isProvider ? styles.activityProvider : ""}`}
                                                             >
                                                                 <div className={styles.activityDot} style={{ background: actCfg.dot }}>
-                                                                    {act.status === "completed" && (
+                                                                    {effActSt === "completed" && (
                                                                         <svg viewBox="0 0 24 24" fill="none" width="9" height="9">
                                                                             <path d="M4 13l4 4L20 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round"/>
                                                                         </svg>
@@ -524,15 +529,14 @@ export default function BookingJourneyPage() {
                                                                         <span className={styles.activityEmoji}>{ACTIVITY_ICON[act.type]}</span>
                                                                         <span className={styles.activityName}>{act.name}</span>
                                                                         <span className={styles.activityTime}>{act.startTime} – {act.endTime}</span>
-                                                                        {act.status !== "upcoming" && (
-                                                                            <span className={`${styles.activityBadge} ${act.status === "completed" ? styles.activityBadgeDone : styles.activityBadgeNow}`}>
-                                                                                {act.status === "completed" ? "Done" : "Now"}
+                                                                        {effActSt !== "upcoming" && (
+                                                                            <span className={`${styles.activityBadge} ${effActSt === "completed" ? styles.activityBadgeDone : styles.activityBadgeNow}`}>
+                                                                                {effActSt === "completed" ? "Done" : "Now"}
                                                                             </span>
                                                                         )}
                                                                     </div>
                                                                     <p className={styles.activityDesc}>{act.description}</p>
 
-                                                                    {/* Provider service row */}
                                                                     {isProvider && (
                                                                         <div className={styles.providerRow}>
                                                                             <div className={styles.providerTag}>
@@ -542,30 +546,6 @@ export default function BookingJourneyPage() {
                                                                                 </svg>
                                                                                 {act.providerName}
                                                                             </div>
-
-                                                                            {hasResult ? (
-                                                                                /* ── Result AVAILABLE — glowing button ── */
-                                                                                <button
-                                                                                    className={styles.resultBtnActive}
-                                                                                    onClick={() => setResultActivity(act)}
-                                                                                >
-                                                                                    <span className={styles.resultBtnDot} />
-                                                                                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                                                                                        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
-                                                                                        <path d="M14 2v6h6M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                                                                                    </svg>
-                                                                                    View Result
-                                                                                </button>
-                                                                            ) : (
-                                                                                /* ── Result PENDING — dimmed button ── */
-                                                                                <button className={styles.resultBtnPending} disabled>
-                                                                                    <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
-                                                                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
-                                                                                        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                                                                                    </svg>
-                                                                                    Awaiting result
-                                                                                </button>
-                                                                            )}
                                                                         </div>
                                                                     )}
                                                                 </div>
@@ -573,27 +553,26 @@ export default function BookingJourneyPage() {
                                                         );
                                                     })}
                                                 </div>
+
+                                                {/* ── Stop-level result button ── */}
+                                                {stop.hasProvider && (
+                                                    <div className={styles.stopResultRow}>
+                                                        <button
+                                                            className={styles.resultBtnActive}
+                                                            onClick={() => handleViewStopResult(stop.id)}
+                                                        >
+                                                            <span className={styles.resultBtnDot} />
+                                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                                                                <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
+                                                                <path d="M14 2v6h6M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                                            </svg>
+                                                            Xem kết quả khám
+                                                        </button>
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 
-                                        {/* Transport segment */}
-                                        {stop.transportToNext && (
-                                            <div className={styles.transportSegment}>
-                                                <div className={styles.transportVLine}>
-                                                    <div className={styles.transportVDash} style={{ borderColor: cfg.line }} />
-                                                    <div className={styles.transportVehicle} style={{ borderColor: cfg.line, color: cfg.dot }}>
-                                                        {transportIcon(stop.transportToNext.mode)}
-                                                    </div>
-                                                    <div className={styles.transportVDash} style={{ borderColor: cfg.line }} />
-                                                </div>
-                                                <div className={styles.transportMeta}>
-                                                    <span className={styles.transportMetaVal}>{stop.transportToNext.duration}</span>
-                                                    <span className={styles.transportMetaDot}>·</span>
-                                                    <span className={styles.transportMetaVal}>{stop.transportToNext.distance}</span>
-                                                    <span className={styles.transportMetaMode}>by {stop.transportToNext.mode}</span>
-                                                </div>
-                                            </div>
-                                        )}
                                     </div>
                                 );
                             })}
@@ -652,9 +631,9 @@ export default function BookingJourneyPage() {
                                     </div>
                                 </div>
                                 <div className={styles.progressLegend}>
-                                    <div className={styles.legendRow}><span className={styles.legendDot} style={{ background: "#16a34a" }}/><span>{booking.stops.filter(s => s.status === "completed").length} Completed</span></div>
-                                    <div className={styles.legendRow}><span className={styles.legendDot} style={{ background: "#2563eb" }}/><span>{booking.stops.filter(s => s.status === "current").length} In Progress</span></div>
-                                    <div className={styles.legendRow}><span className={styles.legendDot} style={{ background: "#9ca3af" }}/><span>{booking.stops.filter(s => s.status === "upcoming").length} Upcoming</span></div>
+                                    <div className={styles.legendRow}><span className={styles.legendDot} style={{ background: "#16a34a" }}/><span>{booking.stops.filter(s => effectiveStopStatus(s) === "completed").length} Completed</span></div>
+                                    <div className={styles.legendRow}><span className={styles.legendDot} style={{ background: "#2563eb" }}/><span>{booking.stops.filter(s => effectiveStopStatus(s) === "current").length} In Progress</span></div>
+                                    <div className={styles.legendRow}><span className={styles.legendDot} style={{ background: "#9ca3af" }}/><span>{booking.stops.filter(s => effectiveStopStatus(s) === "upcoming").length} Upcoming</span></div>
                                 </div>
                             </div>
 
@@ -670,12 +649,11 @@ export default function BookingJourneyPage() {
             </div>
             <Footer />
 
-            {/* ════════════ RESULT MODAL ════════════ */}
-            {resultActivity?.result && (
-                <div className={styles.resultOverlay} onClick={() => setResultActivity(null)}>
+            {/* ════════════ STOP RESULT MODAL ════════════ */}
+            {(stopResult || loadingResult) && (
+                <div className={styles.resultOverlay} onClick={() => { setStopResult(null); }}>
                     <div className={styles.resultModal} onClick={e => e.stopPropagation()}>
 
-                        {/* Modal header */}
                         <div className={styles.resultModalHeader}>
                             <div className={styles.resultModalIcon}>
                                 <svg viewBox="0 0 24 24" fill="none" width="22" height="22">
@@ -684,96 +662,81 @@ export default function BookingJourneyPage() {
                                 </svg>
                             </div>
                             <div className={styles.resultModalTitleWrap}>
-                                <h2 className={styles.resultModalTitle}>Medical Result</h2>
-                                <p className={styles.resultModalActivity}>{resultActivity.name}</p>
+                                <h2 className={styles.resultModalTitle}>Kết quả khám</h2>
+                                {stopResult && <p className={styles.resultModalActivity}>{stopResult.providerName} · {stopResult.stopName}</p>}
                             </div>
-                            <button className={styles.resultModalClose} onClick={() => setResultActivity(null)}>
+                            <button className={styles.resultModalClose} onClick={() => setStopResult(null)}>
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                     <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/>
                                 </svg>
                             </button>
                         </div>
 
-                        {/* Provider info */}
-                        <div className={styles.resultProviderBar}>
-                            <div className={styles.resultProviderItem}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M3 21V7l9-4 9 4v14" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9 21v-6h6v6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
-                                {resultActivity.result.providerName}
-                            </div>
-                            <div className={styles.resultProviderItem}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="8" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M4 20c0-4 3.58-7 8-7s8 3 8 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                {resultActivity.result.doctorName} · {resultActivity.result.specialty}
-                            </div>
-                            <div className={styles.resultProviderItem}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                {resultActivity.result.date}
-                            </div>
-                        </div>
-
-                        {/* Summary */}
-                        <div className={styles.resultSummary}>
-                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14" style={{ flexShrink: 0, color: "#3b82f6" }}>
-                                <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
-                                <path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                            </svg>
-                            <p>{resultActivity.result.summary}</p>
-                        </div>
-
-                        {/* Result items */}
-                        <div className={styles.resultItems}>
-                            <p className={styles.resultItemsTitle}>Measurements & Values</p>
-                            <div className={styles.resultItemsGrid}>
-                                {resultActivity.result.items.map((item, i) => {
-                                    const cfg = RESULT_STATUS[item.status];
-                                    return (
-                                        <div key={i} className={styles.resultItem} style={{ borderColor: cfg.color + "30" }}>
-                                            <div className={styles.resultItemTop}>
-                                                <span className={styles.resultItemName}>{item.name}</span>
-                                                <span className={styles.resultItemBadge} style={{ background: cfg.bg, color: cfg.color }}>
-                                                    {cfg.label}
+                        {loadingResult ? (
+                            <div style={{ padding: "40px", textAlign: "center", color: "#6b7280" }}>Đang tải…</div>
+                        ) : stopResult && (
+                            <div className={styles.resultPassengerList}>
+                                {stopResult.passengers.map((p) => (
+                                    <div key={p.passengerId} className={styles.resultPassengerCard}>
+                                        <div className={styles.resultPassengerHeader}>
+                                            <div className={styles.resultPassengerAvatar}>
+                                                {p.fullName.trim().split(" ").slice(-1)[0][0].toUpperCase()}
+                                            </div>
+                                            <div className={styles.resultPassengerInfo}>
+                                                <span className={styles.resultPassengerName}>{p.fullName}</span>
+                                                <span className={styles.resultPassengerMeta}>{p.age} tuổi · CCCD: {p.idNumber}</span>
+                                            </div>
+                                            {p.resultSent ? (
+                                                <span className={styles.resultSentBadge}>
+                                                    <svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                                    Đã nhận
                                                 </span>
-                                            </div>
-                                            <div className={styles.resultItemValue}>
-                                                {item.value}
-                                                {item.unit && <span className={styles.resultItemUnit}> {item.unit}</span>}
-                                            </div>
-                                            {item.range && (
-                                                <div className={styles.resultItemRange}>Ref: {item.range}</div>
+                                            ) : (
+                                                <span className={styles.resultPendingBadge}>Chờ kết quả</span>
                                             )}
                                         </div>
-                                    );
-                                })}
-                            </div>
-                        </div>
 
-                        {/* Doctor notes */}
-                        {resultActivity.result.notes && (
-                            <div className={styles.resultNotes}>
-                                <p className={styles.resultNotesTitle}>
-                                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                    Doctor&apos;s Notes
-                                </p>
-                                <p className={styles.resultNotesText}>{resultActivity.result.notes}</p>
+                                        {p.resultSent && (
+                                            <div className={styles.resultPassengerBody}>
+                                                {p.notes && (
+                                                    <div className={styles.resultNotesBlock}>
+                                                        <p className={styles.resultNotesLabel}>
+                                                            <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                            Ghi chú & chẩn đoán
+                                                        </p>
+                                                        <p className={styles.resultNotesText}>{p.notes}</p>
+                                                    </div>
+                                                )}
+                                                {p.imageUrls.length > 0 && (
+                                                    <div className={styles.resultImagesBlock}>
+                                                        <p className={styles.resultNotesLabel}>
+                                                            <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7"/><circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/><path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                                            Hình ảnh hồ sơ ({p.imageUrls.length})
+                                                        </p>
+                                                        <div className={styles.resultImagesGrid}>
+                                                            {p.imageUrls.map((url, i) => (
+                                                                <a key={i} href={url} target="_blank" rel="noreferrer">
+                                                                    <img src={url} alt={`result-${i}`} className={styles.resultThumb} />
+                                                                </a>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                                {p.sentAt && (
+                                                    <p className={styles.resultSentTime}>
+                                                        <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                                        Gửi lúc {new Date(p.sentAt).toLocaleString("vi-VN")}
+                                                    </p>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
                             </div>
                         )}
 
-                        {/* Follow-up */}
-                        {resultActivity.result.followUp && (
-                            <div className={styles.resultFollowUp}>
-                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18M8 14h.01M12 14h.01M16 14h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                <span>Follow-up: {resultActivity.result.followUp}</span>
-                            </div>
-                        )}
-
-                        {/* Footer */}
                         <div className={styles.resultFooter}>
-                            <button className={styles.resultDownloadBtn}>
-                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M7 10l5 5 5-5M12 15V3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                Download PDF
-                            </button>
-                            <button className={styles.resultCloseBtn} onClick={() => setResultActivity(null)}>
-                                Close
-                            </button>
+                            <button className={styles.resultCloseBtn} onClick={() => setStopResult(null)}>Đóng</button>
                         </div>
                     </div>
                 </div>

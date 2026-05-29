@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useParams, usePathname } from "next/navigation";
 import { StorageKeys } from "@/constants/storage";
 import { agencyService } from "@/libs/services/agency.service";
-import { ItineraryDTO, ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
+import { feedbackService, FeedbackItemType as FbItemType } from "@/libs/services/feedback.service";
+import { providerService } from "@/libs/services/provider.service";
+import { useWishlist } from "@/hooks/useWishlist";
+import { WishlistItemType } from "@/libs/services/wishlist.service";
+import { ItineraryDTO, ItineraryProviderDTO, ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
 import Image from "next/image";
 import Link from "next/link";
 import Header from "@/components/layouts/header/header";
@@ -167,24 +172,21 @@ function fmtDate(s: string) {
 const MONTHS_FULL = ["January","February","March","April","May","June","July","August","September","October","November","December"];
 const WDAYS_SHORT = ["Su","Mo","Tu","We","Th","Fr","Sa"];
 
-const placeSidebar = [
-    "Top Attractions",
-    "Local Restaurants",
-    "Hotels",
-    "Expeditions",
-    "Trekking Routes",
-];
+const PLACE_ALL = "Tất cả";
 // ──────────────────────────────────────────────────────────────────────────
 
 export default function TourDetailPage() {
     const params = useParams();
     const pathname = usePathname();
+    const itineraryId = Array.isArray(params.id) ? params.id[0] : params.id;
+    const { liked: wishlisted, loading: wishlistLoading, toggle: toggleWishlist } = useWishlist(itineraryId, WishlistItemType.Itinerary, { checkOnMount: true });
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [loginPromptOpen, setLoginPromptOpen] = useState(false);
     const [activeTab, setActiveTab] = useState<Tab>("Overview");
     const [expanded, setExpanded] = useState(false);
     const [itinerary, setItinerary] = useState<ItineraryDTO | null>(null);
     const [stops, setStops] = useState<ItineraryStopWithActivitiesDTO[]>([]);
+    const [providers, setProviders] = useState<ItineraryProviderDTO[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -198,12 +200,14 @@ export default function TourDetailPage() {
         Promise.all([
             agencyService.getItineraryById(id),
             agencyService.getItineraryStops(id),
-        ]).then(([iRes, sRes]) => {
+            agencyService.getItineraryProviders(id),
+        ]).then(([iRes, sRes, pRes]) => {
             if (iRes?.data) setItinerary(iRes.data);
             if (sRes?.data) setStops(sRes.data);
+            if (pRes?.data) setProviders(pRes.data);
         }).finally(() => setLoading(false));
     }, [params.id]);
-    const [activePlaceCat, setActivePlaceCat] = useState("Top Attractions");
+    const [activePlaceCat, setActivePlaceCat] = useState(PLACE_ALL);
     const [galleryOpen, setGalleryOpen] = useState(false);
     const [galleryIndex, setGalleryIndex] = useState(0);
 
@@ -236,6 +240,9 @@ export default function TourDetailPage() {
             setReviewsLoaded(true);
         }).catch(() => setReviewsLoaded(true)).finally(() => setReviewsLoading(false));
     }, [activeTab, reviewsLoaded, params.id]);
+    const [mounted, setMounted] = useState(false);
+    useEffect(() => setMounted(true), []);
+
     const [writeOpen, setWriteOpen] = useState(false);
     const [wRating, setWRating] = useState(0);
     const [wHover, setWHover] = useState(0);
@@ -244,7 +251,20 @@ export default function TourDetailPage() {
     const [wError, setWError] = useState("");
     const [wImages, setWImages] = useState<{ preview: string; name: string }[]>([]);
     const [wDragging, setWDragging] = useState(false);
+    const [wSubmitting, setWSubmitting] = useState(false);
+    const [wCheckingBooking, setWCheckingBooking] = useState(false);
+    const [wNoBooking, setWNoBooking] = useState(false);
+    const [wBookingItineraryId, setWBookingItineraryId] = useState<string | null>(null);
+    const [wItemType, setWItemType] = useState<FbItemType>("Service");
+    const [wItem, setWItem] = useState<{ id: string; name: string } | null>(null);
+    const [wItemQuery, setWItemQuery] = useState("");
+    const [wItemResults, setWItemResults] = useState<{ id: string; name: string; sub?: string }[]>([]);
+    const [wItemOpen, setWItemOpen] = useState(false);
+    const [wItemPos, setWItemPos] = useState({ top: 0, left: 0, width: 0 });
+    const [wAnon, setWAnon] = useState(false);
     const wFileRef = useRef<HTMLInputElement>(null);
+    const wItemInputRef = useRef<HTMLInputElement>(null);
+    const wItemTimerRef = useRef<ReturnType<typeof setTimeout>>();
 
     function processImages(files: FileList | File[]) {
         Array.from(files).filter(f => f.type.startsWith("image/")).forEach(file => {
@@ -254,25 +274,82 @@ export default function TourDetailPage() {
         });
     }
 
-    function submitReview() {
+    function resetWriteForm() {
+        setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]);
+        setWItem(null); setWItemQuery(""); setWItemResults([]); setWItemOpen(false);
+        setWAnon(false); setWItemType("Service");
+        setWBookingItineraryId(null); setWNoBooking(false); setWCheckingBooking(false);
+    }
+
+    async function openWriteReview() {
+        if (!isLoggedIn) { setLoginPromptOpen(true); return; }
+        resetWriteForm();
+        setWriteOpen(true);
+        setWCheckingBooking(true);
+        try {
+            const res = await feedbackService.getMyBookingItineraryId(itineraryId!);
+            setWBookingItineraryId(res.data.bookingItineraryId);
+            setWNoBooking(false);
+        } catch {
+            setWBookingItineraryId(null);
+            setWNoBooking(true);
+        } finally {
+            setWCheckingBooking(false);
+        }
+    }
+
+    function updateWItemPos() {
+        if (!wItemInputRef.current) return;
+        const r = wItemInputRef.current.getBoundingClientRect();
+        setWItemPos({ top: r.bottom + 4, left: r.left, width: r.width });
+    }
+
+    useEffect(() => {
+        clearTimeout(wItemTimerRef.current);
+        if (!wItemQuery.trim()) { setWItemResults([]); setWItemOpen(false); return; }
+        wItemTimerRef.current = setTimeout(async () => {
+            try {
+                if (wItemType === "Service") {
+                    const res = await providerService.getServices({ search: wItemQuery, pageSize: 8 });
+                    setWItemResults((res.data ?? []).map(s => ({ id: s.id, name: s.name, sub: s.providerName })));
+                } else {
+                    const res = await providerService.getPackages({ search: wItemQuery, pageSize: 8 });
+                    setWItemResults((res.data ?? []).map(p => ({ id: p.id, name: p.name, sub: p.code })));
+                }
+                setWItemOpen(true);
+            } catch { setWItemResults([]); }
+        }, 300);
+        return () => clearTimeout(wItemTimerRef.current);
+    }, [wItemQuery, wItemType]);
+
+    async function submitReview() {
+        if (!wBookingItineraryId) { setWError("No completed booking found for this tour."); return; }
         if (!wRating) { setWError("Please select a star rating."); return; }
         if (!wTitle.trim()) { setWError("Please enter a title."); return; }
         if (!wComment.trim()) { setWError("Please write a comment."); return; }
-        const newR: TourReview = {
-            id: Math.random().toString(36).slice(2),
-            name: "You",
-            rating: wRating,
-            title: wTitle.trim(),
-            comment: wComment.trim(),
-            images: wImages.map(i => i.preview),
-            date: new Date().toISOString().slice(0, 10),
-            helpful: 0,
-            bookingCode: "BKG-NEW",
-        };
-        setReviews(prev => [newR, ...prev]);
-        setWriteOpen(false);
-        setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]);
-        setActiveTab("Reviews");
+        if (!wItem) { setWError(`Please select which ${wItemType.toLowerCase()} you are reviewing.`); return; }
+
+        setWSubmitting(true); setWError("");
+        try {
+            await feedbackService.create({
+                bookingItineraryId: wBookingItineraryId,
+                itemType: wItemType,
+                itemId: wItem.id,
+                rating: wRating,
+                title: wTitle.trim(),
+                comment: wComment.trim() || undefined,
+                isAnonymous: wAnon,
+            });
+            setReviewsLoaded(false);
+            setWriteOpen(false);
+            resetWriteForm();
+            setActiveTab("Reviews");
+        } catch (err: unknown) {
+            const e = err as { response?: { data?: { message?: string } } };
+            setWError(e.response?.data?.message ?? "Failed to submit. Please try again.");
+        } finally {
+            setWSubmitting(false);
+        }
     }
 
     // Schedule tab state
@@ -366,7 +443,20 @@ export default function TourDetailPage() {
                                 </>
                             ) : (
                                 <>
-                                    <h1 className={styles.title}>{itinerary?.name ?? tour.title}</h1>
+                                    <div className={styles.titleRow}>
+                                        <h1 className={styles.title}>{itinerary?.name ?? tour.title}</h1>
+                                        <button
+                                            className={`${styles.wishlistBtn} ${wishlisted ? styles.wishlistBtnActive : ""}`}
+                                            onClick={toggleWishlist}
+                                            disabled={wishlistLoading}
+                                            aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
+                                            type="button"
+                                        >
+                                            <svg width="22" height="22" viewBox="0 0 24 24" fill={wishlisted ? "currentColor" : "none"} xmlns="http://www.w3.org/2000/svg">
+                                                <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                     <div className={styles.metaRow}>
                                         <span className={styles.metaItem}>
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M12 2a10 10 0 100 20A10 10 0 0012 2zm1 14.93V17a1 1 0 00-2 0v-.07A8.001 8.001 0 014.07 11H5a1 1 0 000-2h-.93A8.001 8.001 0 0111 4.07V5a1 1 0 002 0v-.93A8.001 8.001 0 0119.93 11H19a1 1 0 000 2h.93A8.001 8.001 0 0113 16.93z" fill="currentColor" /></svg>
@@ -477,41 +567,72 @@ export default function TourDetailPage() {
                                         </>
                                     )}
 
-                                    {/* Unmissable Places */}
-                                    <div className={styles.places}>
-                                        <h2 className={styles.sectionTitle}>The Unmissable Places</h2>
-                                        <div className={styles.placesLayout}>
-                                            <ul className={styles.placesSidebar}>
-                                                {placeSidebar.map((cat) => (
-                                                    <li key={cat}>
-                                                        <button
-                                                            className={`${styles.placesCat} ${activePlaceCat === cat ? styles.placesCatActive : ""}`}
-                                                            onClick={() => setActivePlaceCat(cat)}
-                                                        >
-                                                            {cat}
-                                                        </button>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                            <div className={styles.placesCards}>
-                                                {tour.places.map((place) => (
-                                                    <div key={place.name} className={styles.placeCard}>
-                                                        <div className={styles.placeCardImg}>
-                                                            <Image src={place.image} alt={place.name} fill sizes="200px" style={{ objectFit: "cover" }} />
-                                                        </div>
-                                                        <div className={styles.placeCardBody}>
-                                                            <span className={styles.placeType}>{place.type}</span>
-                                                            <p className={styles.placeName}>{place.name}</p>
-                                                            <div className={styles.placeRating}>
-                                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="#f5a623"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" fill="#f5a623" /></svg>
-                                                                {place.rating}
+                                    {/* Medical Facilities */}
+                                    {providers.length > 0 && (() => {
+                                        const allServices = Array.from(
+                                            new Set(providers.flatMap(p => p.services))
+                                        ).slice(0, 6);
+                                        const sidebar = [PLACE_ALL, ...allServices];
+                                        const filtered = activePlaceCat === PLACE_ALL
+                                            ? providers
+                                            : providers.filter(p => p.services.includes(activePlaceCat));
+                                        return (
+                                            <div className={styles.places}>
+                                                <h2 className={styles.sectionTitle}>Cơ sở y tế trong hành trình</h2>
+                                                <div className={styles.placesLayout}>
+                                                    <ul className={styles.placesSidebar}>
+                                                        {sidebar.map((cat) => (
+                                                            <li key={cat}>
+                                                                <button
+                                                                    className={`${styles.placesCat} ${activePlaceCat === cat ? styles.placesCatActive : ""}`}
+                                                                    onClick={() => setActivePlaceCat(cat)}
+                                                                >
+                                                                    {cat}
+                                                                </button>
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                    <div className={styles.placesCards}>
+                                                        {filtered.length === 0 ? (
+                                                            <p className={styles.emptyNote}>Không có cơ sở phù hợp.</p>
+                                                        ) : filtered.map((p) => (
+                                                            <div key={p.id} className={styles.placeCard}>
+                                                                <div className={styles.placeCardImg}>
+                                                                    {p.images[0] ? (
+                                                                        <Image src={p.images[0]} alt={p.name} fill sizes="200px" style={{ objectFit: "cover" }} />
+                                                                    ) : (
+                                                                        <div className={styles.placeCardImgFallback}>
+                                                                            <svg width="32" height="32" viewBox="0 0 24 24" fill="none">
+                                                                                <path d="M19 3H5a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2V5a2 2 0 00-2-2zM12 8v8M8 12h8" stroke="#94a3b8" strokeWidth="1.6" strokeLinecap="round"/>
+                                                                            </svg>
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                                <div className={styles.placeCardBody}>
+                                                                    <p className={styles.placeName}>{p.name}</p>
+                                                                    <span className={styles.placeAddress}>
+                                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7z" fill="#6b7280"/></svg>
+                                                                        {p.address}
+                                                                    </span>
+                                                                    {p.services.length > 0 && (
+                                                                        <div className={styles.placeServices}>
+                                                                            {p.services.slice(0, 3).map(s => (
+                                                                                <span key={s} className={styles.placeServiceTag}>{s}</span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                    <span className={styles.placePhone}>
+                                                                        <svg width="11" height="11" viewBox="0 0 24 24" fill="none"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.8 10.72 19.79 19.79 0 01.77 2.12 2 2 0 012.75.01h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.91 7.91a16 16 0 006.13 6.13l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="#6b7280" strokeWidth="1.6" strokeLinecap="round"/></svg>
+                                                                        {p.contactPhone}
+                                                                    </span>
+                                                                </div>
                                                             </div>
-                                                        </div>
+                                                        ))}
                                                     </div>
-                                                ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    </div>
+                                        );
+                                    })()}
                                 </div>
                             )}
 
@@ -635,9 +756,10 @@ export default function TourDetailPage() {
                                             {visibleSchedules.length === 0 ? (
                                                 <p className={styles.schedEmpty}>No departures this month. Try another month.</p>
                                             ) : visibleSchedules.map(sched => {
-                                                const start  = new Date(sched.startTime);
-                                                const end    = new Date(sched.endTime);
-                                                const isPast = end < today;
+                                                const start    = new Date(sched.startTime);
+                                                const end      = new Date(sched.endTime);
+                                                const isPast   = end < today;
+                                                const isFull   = !isPast && sched.spotLeft <= 0;
                                                 const isSelected = selectedSchedId === sched.id;
                                                 const fmtD = (d: Date) => d.toLocaleDateString("en-GB", { day:"2-digit", month:"short", year:"numeric" });
                                                 return (
@@ -653,10 +775,12 @@ export default function TourDetailPage() {
                                                                 <span>→</span>
                                                                 <strong>{fmtD(end)}</strong>
                                                             </div>
-                                                            <span className={styles.runStatus} style={isPast
-                                                                ? { background:"#f3f4f6", color:"#6b7280" }
-                                                                : { background:"#d1fae5", color:"#065f46" }}>
-                                                                {isPast ? "Past" : "Available"}
+                                                            <span className={styles.runStatus} style={
+                                                                isPast ? { background:"#f3f4f6", color:"#6b7280" }
+                                                                : isFull ? { background:"#fee2e2", color:"#991b1b" }
+                                                                : { background:"#d1fae5", color:"#065f46" }
+                                                            }>
+                                                                {isPast ? "Past" : isFull ? "Hết chỗ" : "Available"}
                                                             </span>
                                                         </div>
 
@@ -667,7 +791,7 @@ export default function TourDetailPage() {
                                                             </span>
                                                             <span className={styles.runMetaItem}>
                                                                 <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                                                {sched.spotLeft ?? "—"} spots left
+                                                                {isFull ? "Đã đầy" : `${sched.spotLeft ?? "—"} chỗ trống`}
                                                             </span>
                                                         </div>
 
@@ -678,7 +802,7 @@ export default function TourDetailPage() {
                                                                 </span>
                                                                 <span className={styles.runPricePer}>/ person</span>
                                                             </div>
-                                                            {!isPast ? (
+                                                            {!isPast && !isFull ? (
                                                                 <Link
                                                                     href={`/tours/${params?.id ?? 1}/booking?scheduleId=${sched.id}`}
                                                                     className={styles.runBookBtn}
@@ -687,7 +811,9 @@ export default function TourDetailPage() {
                                                                     Book This Date
                                                                 </Link>
                                                             ) : (
-                                                                <span className={styles.runFullTag}>Unavailable</span>
+                                                                <span className={`${styles.runFullTag} ${isFull ? styles.runSoldTag : ""}`}>
+                                                                    {isFull ? "Hết chỗ" : "Unavailable"}
+                                                                </span>
                                                             )}
                                                         </div>
                                                     </div>
@@ -747,7 +873,7 @@ export default function TourDetailPage() {
                                                     </div>
                                                 ))}
                                             </div>
-                                            <button className={styles.writeReviewBtn} onClick={() => isLoggedIn ? setWriteOpen(true) : setLoginPromptOpen(true)}>
+                                            <button className={styles.writeReviewBtn} onClick={openWriteReview}>
                                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
                                                 Write a Review
                                             </button>
@@ -775,7 +901,7 @@ export default function TourDetailPage() {
                                                     </p>
                                                     <button
                                                         className={styles.reviewEmptyBtn}
-                                                        onClick={() => isLoggedIn ? setWriteOpen(true) : setLoginPromptOpen(true)}
+                                                        onClick={openWriteReview}
                                                     >
                                                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                                                             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
@@ -878,10 +1004,14 @@ export default function TourDetailPage() {
                                     </>
                                 ) : (() => {
                                     const now = new Date();
-                                    const nearestSchedule = itinerary?.schedules
+                                    const futureSchedules = itinerary?.schedules
                                         ?.map(s => ({ ...s, start: new Date(s.startTime), end: new Date(s.endTime) }))
                                         .filter(s => s.start >= now)
-                                        .sort((a, b) => a.start.getTime() - b.start.getTime())[0] ?? null;
+                                        .sort((a, b) => a.start.getTime() - b.start.getTime()) ?? [];
+                                    const nearestAvailable = futureSchedules.find(s => s.spotLeft > 0) ?? null;
+                                    const nearestSchedule  = futureSchedules[0] ?? null;
+                                    const displaySchedule  = nearestAvailable ?? nearestSchedule;
+                                    const allFull = futureSchedules.length > 0 && !nearestAvailable;
                                     const fmtBookingDate = (d: Date) =>
                                         d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, ".");
                                     return (
@@ -905,14 +1035,14 @@ export default function TourDetailPage() {
                                                 <div className={styles.dateBox}>
                                                     <span className={styles.dateLabel}>Check-in</span>
                                                     <span className={styles.dateValue}>
-                                                        {nearestSchedule ? fmtBookingDate(nearestSchedule.start) : "—"}
+                                                        {displaySchedule ? fmtBookingDate(displaySchedule.start) : "—"}
                                                     </span>
                                                 </div>
                                                 <div className={styles.dateArrow}>→</div>
                                                 <div className={styles.dateBox}>
                                                     <span className={styles.dateLabel}>Check-out</span>
                                                     <span className={styles.dateValue}>
-                                                        {nearestSchedule ? fmtBookingDate(nearestSchedule.end) : "—"}
+                                                        {displaySchedule ? fmtBookingDate(displaySchedule.end) : "—"}
                                                     </span>
                                                 </div>
                                             </div>
@@ -928,7 +1058,21 @@ export default function TourDetailPage() {
                                                 </span>
                                             </div>
 
-                                            <Link href={`/tours/${params?.id ?? 1}/booking`} className={styles.bookBtn}>Book Your Trip Now!</Link>
+                                            {allFull ? (
+                                                <div className={styles.bookBtnFull}>
+                                                    <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7"/><path d="M8 8l8 8M16 8l-8 8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
+                                                    Đã hết chỗ — xem lịch khác
+                                                </div>
+                                            ) : nearestAvailable ? (
+                                                <Link
+                                                    href={`/tours/${params?.id ?? 1}/booking?scheduleId=${nearestAvailable.id}`}
+                                                    className={styles.bookBtn}
+                                                >
+                                                    Book Your Trip Now!
+                                                </Link>
+                                            ) : (
+                                                <div className={styles.bookBtnFull}>Chưa có lịch khởi hành</div>
+                                            )}
 
                                             <div className={styles.bookingFeatures}>
                                                 {booking.features.map((f) => (
@@ -983,19 +1127,82 @@ export default function TourDetailPage() {
 
             {/* ── Write Review Modal ── */}
             {writeOpen && (
-                <div className={styles.reviewOverlay} onClick={() => setWriteOpen(false)}>
+                <div className={styles.reviewOverlay} onClick={() => { setWriteOpen(false); resetWriteForm(); }}>
                     <div className={styles.reviewModal} onClick={e => e.stopPropagation()}>
                         <div className={styles.reviewModalHeader}>
                             <div>
-                                <h3 className={styles.reviewModalTitle}>Leave Feedback</h3>
-                                <p className={styles.reviewModalSub}>{tour.title}</p>
+                                <h3 className={styles.reviewModalTitle}>Leave a Review</h3>
+                                <p className={styles.reviewModalSub}>{itinerary?.name ?? tour.title}</p>
                             </div>
-                            <button className={styles.reviewModalClose} onClick={() => { setWriteOpen(false); setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]); }}>
+                            <button className={styles.reviewModalClose} onClick={() => { setWriteOpen(false); resetWriteForm(); }}>
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
                             </button>
                         </div>
 
                         <div className={styles.reviewModalBody}>
+                            {/* Booking check */}
+                            {wCheckingBooking && (
+                                <div className={styles.reviewBookingNote}>
+                                    <div className={styles.reviewBookingSpinner} />
+                                    Checking your booking…
+                                </div>
+                            )}
+                            {wNoBooking && (
+                                <div className={styles.reviewNoBooking}>
+                                    <svg viewBox="0 0 24 24" fill="none" width="20" height="20"><circle cx="12" cy="12" r="10" stroke="#f59e0b" strokeWidth="1.8"/><path d="M12 8v4M12 16h.01" stroke="#f59e0b" strokeWidth="2" strokeLinecap="round"/></svg>
+                                    You need to have completed a booking for this tour to leave a review.
+                                </div>
+                            )}
+
+                            {!wCheckingBooking && wBookingItineraryId && (
+                            <>
+                            {/* Item type + search */}
+                            <div className={styles.reviewField}>
+                                <label className={styles.reviewLabel}>Reviewing <span className={styles.reviewRequired}>*</span></label>
+                                <div className={styles.wItemTypeRow}>
+                                    {(["Service", "Package"] as FbItemType[]).map(t => (
+                                        <button
+                                            key={t}
+                                            type="button"
+                                            className={`${styles.wItemTypeBtn} ${wItemType === t ? styles.wItemTypeBtnActive : ""}`}
+                                            onClick={() => { setWItemType(t); setWItem(null); setWItemQuery(""); setWItemResults([]); }}
+                                        >{t}</button>
+                                    ))}
+                                </div>
+                                {wItem ? (
+                                    <div className={styles.wItemSelected}>
+                                        <span>{wItem.name}</span>
+                                        <button type="button" onClick={() => { setWItem(null); setWItemQuery(""); }} className={styles.wItemClear}>
+                                            <svg viewBox="0 0 24 24" fill="none" width="9" height="9"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ position: "relative" }}>
+                                        <input
+                                            ref={wItemInputRef}
+                                            className={styles.reviewInput}
+                                            placeholder={wItemType === "Service" ? "Search services…" : "Search packages…"}
+                                            value={wItemQuery}
+                                            autoComplete="off"
+                                            onChange={e => { setWItemQuery(e.target.value); updateWItemPos(); setWError(""); }}
+                                            onFocus={() => { if (wItemResults.length > 0) { setWItemOpen(true); updateWItemPos(); } }}
+                                            onBlur={() => setTimeout(() => setWItemOpen(false), 180)}
+                                        />
+                                        {wItemOpen && mounted && wItemResults.length > 0 && createPortal(
+                                            <div className={styles.wItemDropdown} style={{ top: wItemPos.top, left: wItemPos.left, width: wItemPos.width }}>
+                                                {wItemResults.map(r => (
+                                                    <div key={r.id} className={styles.wItemDropRow} onMouseDown={() => { setWItem({ id: r.id, name: r.name }); setWItemQuery(""); setWItemOpen(false); setWError(""); }}>
+                                                        <span className={styles.wItemDropName}>{r.name}</span>
+                                                        {r.sub && <span className={styles.wItemDropSub}>{r.sub}</span>}
+                                                    </div>
+                                                ))}
+                                            </div>,
+                                            document.body
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+
                             {/* Star picker */}
                             <div className={styles.reviewField}>
                                 <label className={styles.reviewLabel}>Your Rating <span className={styles.reviewRequired}>*</span></label>
@@ -1090,16 +1297,37 @@ export default function TourDetailPage() {
                                 )}
                             </div>
 
+                            {/* Anonymous toggle */}
+                            <label className={styles.reviewAnonRow}>
+                                <input type="checkbox" checked={wAnon} onChange={e => setWAnon(e.target.checked)} />
+                                <span className={`${styles.reviewAnonCheck} ${wAnon ? styles.reviewAnonCheckOn : ""}`}>
+                                    {wAnon && <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M5 12l5 5L20 7" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>}
+                                </span>
+                                <span className={styles.reviewAnonLabel}>Post anonymously</span>
+                                <span className={styles.reviewAnonNote}>Your name won&apos;t be shown</span>
+                            </label>
+                            </>
+                            )}
+
                             {wError && <p className={styles.reviewError}>{wError}</p>}
                         </div>
 
                         <div className={styles.reviewModalFooter}>
-                            <button className={styles.reviewCancelBtn} onClick={() => { setWriteOpen(false); setWRating(0); setWTitle(""); setWComment(""); setWError(""); setWImages([]); }}>Cancel</button>
+                            <button className={styles.reviewCancelBtn} onClick={() => { setWriteOpen(false); resetWriteForm(); }}>Cancel</button>
                             <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
                                 {wImages.length > 0 && <span style={{ fontSize: 12, color: "#6b7280" }}>{wImages.length} photo{wImages.length > 1 ? "s" : ""}</span>}
-                                <button className={styles.reviewSubmitBtn} onClick={submitReview}>
-                                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                    Submit
+                                <button
+                                    className={styles.reviewSubmitBtn}
+                                    onClick={submitReview}
+                                    disabled={wSubmitting || wCheckingBooking || wNoBooking || !wBookingItineraryId}
+                                    style={wSubmitting || wCheckingBooking || wNoBooking || !wBookingItineraryId ? { opacity: 0.6, cursor: "not-allowed" } : {}}
+                                >
+                                    {wSubmitting ? (
+                                        <span style={{ width: 13, height: 13, border: "2px solid rgba(255,255,255,.4)", borderTopColor: "#fff", borderRadius: "50%", display: "inline-block", animation: "spin 0.7s linear infinite" }} />
+                                    ) : (
+                                        <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M22 2L11 13M22 2L15 22l-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                                    )}
+                                    {wSubmitting ? "Submitting…" : "Submit"}
                                 </button>
                             </div>
                         </div>

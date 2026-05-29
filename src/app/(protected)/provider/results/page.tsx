@@ -1,21 +1,23 @@
 "use client";
 
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
+import { providerService } from "@/libs/services/provider.service";
+import type { ProviderTourGroupDTO, ProviderPassengerDTO } from "@/types/provider-staff.type";
 import styles from "./page.module.scss";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
-type Gender      = "Nam" | "Nữ";
 type GroupStatus = "complete" | "partial" | "pending";
 
 interface Patient {
     id: string;
     name: string;
-    dob: string;
-    gender: Gender;
+    idNumber: string;
+    age: number;
     bookingId: string;
+    bookingCode: string;
     phone: string;
     resultSent: boolean;
-    sentAt?: string;
+    sentAt: string | null;
 }
 
 interface TourGroup {
@@ -24,89 +26,46 @@ interface TourGroup {
     date: string;
     agency: string;
     agencyColor: string;
-    service: string;
+    service: string | null;
     patients: Patient[];
+    loadedPatients: boolean;
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const INIT_GROUPS: TourGroup[] = [
-    {
-        id: "g1",
-        tourName: "Hà Long Bay Medical & Wellness",
-        date: "12/05/2026",
-        agency: "Sunrise Travel",
-        agencyColor: "#f59e0b",
-        service: "Khám sức khỏe tổng quát",
-        patients: [
-            { id: "p1", name: "Nguyễn Văn An",    dob: "15/03/1985", gender: "Nam", bookingId: "BK-2026051201", phone: "0912 345 678", resultSent: true,  sentAt: "13/05/2026" },
-            { id: "p2", name: "Trần Thị Bình",     dob: "22/07/1990", gender: "Nữ",  bookingId: "BK-2026051202", phone: "0987 654 321", resultSent: true,  sentAt: "13/05/2026" },
-            { id: "p3", name: "Lê Minh Cường",     dob: "08/11/1978", gender: "Nam", bookingId: "BK-2026051203", phone: "0901 234 567", resultSent: true,  sentAt: "13/05/2026" },
-            { id: "p4", name: "Phạm Thị Dung",     dob: "30/01/1995", gender: "Nữ",  bookingId: "BK-2026051204", phone: "0934 567 890", resultSent: true,  sentAt: "14/05/2026" },
-            { id: "p5", name: "Hoàng Văn Em",      dob: "05/06/1982", gender: "Nam", bookingId: "BK-2026051205", phone: "0971 234 567", resultSent: true,  sentAt: "14/05/2026" },
-            { id: "p6", name: "Vũ Thị Phương",     dob: "18/09/1988", gender: "Nữ",  bookingId: "BK-2026051206", phone: "0918 765 432", resultSent: true,  sentAt: "14/05/2026" },
-            { id: "p7", name: "Đặng Quốc Hùng",    dob: "12/04/1975", gender: "Nam", bookingId: "BK-2026051207", phone: "0903 456 789", resultSent: false },
-            { id: "p8", name: "Bùi Thị Lan",       dob: "25/12/1992", gender: "Nữ",  bookingId: "BK-2026051208", phone: "0945 678 901", resultSent: false },
-        ],
-    },
-    {
-        id: "g2",
-        tourName: "Sapa Wellness Retreat",
-        date: "15/05/2026",
-        agency: "VietGlobe Travel",
-        agencyColor: "#8b5cf6",
-        service: "Khám và tư vấn sức khỏe",
-        patients: [
-            { id: "p9",  name: "Ngô Văn Khoa",    dob: "10/02/1980", gender: "Nam", bookingId: "BK-2026051501", phone: "0912 111 222", resultSent: false },
-            { id: "p10", name: "Đinh Thị Mai",     dob: "03/08/1993", gender: "Nữ",  bookingId: "BK-2026051502", phone: "0987 222 333", resultSent: false },
-            { id: "p11", name: "Phan Văn Nam",     dob: "28/05/1970", gender: "Nam", bookingId: "BK-2026051503", phone: "0901 333 444", resultSent: false },
-            { id: "p12", name: "Lý Thị Oanh",     dob: "14/11/1998", gender: "Nữ",  bookingId: "BK-2026051504", phone: "0934 444 555", resultSent: false },
-            { id: "p13", name: "Trương Minh Phú",  dob: "07/03/1987", gender: "Nam", bookingId: "BK-2026051505", phone: "0971 555 666", resultSent: false },
-            { id: "p14", name: "Hồ Thị Quỳnh",    dob: "20/07/1991", gender: "Nữ",  bookingId: "BK-2026051506", phone: "0918 666 777", resultSent: false },
-            { id: "p15", name: "Lâm Văn Rồng",    dob: "15/10/1976", gender: "Nam", bookingId: "BK-2026051507", phone: "0903 777 888", resultSent: false },
-            { id: "p16", name: "Mạc Thị Sen",     dob: "08/04/1984", gender: "Nữ",  bookingId: "BK-2026051508", phone: "0945 888 999", resultSent: false },
-            { id: "p17", name: "Cao Văn Thắng",   dob: "22/01/1989", gender: "Nam", bookingId: "BK-2026051509", phone: "0912 999 000", resultSent: false },
-            { id: "p18", name: "Đỗ Thị Uyên",     dob: "17/06/1996", gender: "Nữ",  bookingId: "BK-2026051510", phone: "0987 000 111", resultSent: false },
-            { id: "p19", name: "Từ Văn Vinh",     dob: "05/09/1983", gender: "Nam", bookingId: "BK-2026051511", phone: "0901 111 222", resultSent: false },
-            { id: "p20", name: "Chu Thị Xuân",    dob: "30/12/1994", gender: "Nữ",  bookingId: "BK-2026051512", phone: "0934 222 333", resultSent: false },
-        ],
-    },
-    {
-        id: "g3",
-        tourName: "Hội An Healing Journey",
-        date: "10/05/2026",
-        agency: "HoiAn Tours",
-        agencyColor: "#22c55e",
-        service: "Massage trị liệu & thư giãn",
-        patients: [
-            { id: "p21", name: "Nguyễn Thị Yến", dob: "11/03/1986", gender: "Nữ",  bookingId: "BK-2026051001", phone: "0912 333 444", resultSent: true, sentAt: "11/05/2026" },
-            { id: "p22", name: "Trần Văn Dũng",  dob: "24/07/1979", gender: "Nam", bookingId: "BK-2026051002", phone: "0987 444 555", resultSent: true, sentAt: "11/05/2026" },
-            { id: "p23", name: "Lê Thị Ánh",     dob: "09/11/1991", gender: "Nữ",  bookingId: "BK-2026051003", phone: "0901 555 666", resultSent: true, sentAt: "11/05/2026" },
-            { id: "p24", name: "Phạm Văn Bắc",   dob: "01/01/1975", gender: "Nam", bookingId: "BK-2026051004", phone: "0934 666 777", resultSent: true, sentAt: "12/05/2026" },
-            { id: "p25", name: "Hoàng Thị Cẩm",  dob: "16/06/1988", gender: "Nữ",  bookingId: "BK-2026051005", phone: "0971 777 888", resultSent: true, sentAt: "12/05/2026" },
-            { id: "p26", name: "Vũ Văn Dương",   dob: "03/09/1982", gender: "Nam", bookingId: "BK-2026051006", phone: "0918 888 999", resultSent: true, sentAt: "12/05/2026" },
-        ],
-    },
-    {
-        id: "g4",
-        tourName: "Đà Lạt Health Check Tour",
-        date: "18/05/2026",
-        agency: "DaLat Adventure",
-        agencyColor: "#ef4444",
-        service: "Kiểm tra sức khỏe định kỳ",
-        patients: [
-            { id: "p27", name: "Đặng Thị Hà",    dob: "19/04/1990", gender: "Nữ",  bookingId: "BK-2026051801", phone: "0912 444 555", resultSent: true,  sentAt: "19/05/2026" },
-            { id: "p28", name: "Bùi Văn Hải",    dob: "07/10/1977", gender: "Nam", bookingId: "BK-2026051802", phone: "0987 555 666", resultSent: true,  sentAt: "19/05/2026" },
-            { id: "p29", name: "Ngô Thị Hiền",   dob: "25/02/1995", gender: "Nữ",  bookingId: "BK-2026051803", phone: "0901 666 777", resultSent: true,  sentAt: "19/05/2026" },
-            { id: "p30", name: "Đinh Văn Hùng",  dob: "13/08/1981", gender: "Nam", bookingId: "BK-2026051804", phone: "0934 777 888", resultSent: false },
-            { id: "p31", name: "Phan Thị Hương",  dob: "30/05/1993", gender: "Nữ",  bookingId: "BK-2026051805", phone: "0971 888 999", resultSent: false },
-            { id: "p32", name: "Lý Văn Khánh",   dob: "08/12/1986", gender: "Nam", bookingId: "BK-2026051806", phone: "0918 999 000", resultSent: false },
-            { id: "p33", name: "Trương Thị Kim",  dob: "21/07/1997", gender: "Nữ",  bookingId: "BK-2026051807", phone: "0903 000 111", resultSent: false },
-            { id: "p34", name: "Hồ Văn Long",    dob: "04/03/1974", gender: "Nam", bookingId: "BK-2026051808", phone: "0945 111 222", resultSent: false },
-            { id: "p35", name: "Lâm Thị Linh",   dob: "17/11/1988", gender: "Nữ",  bookingId: "BK-2026051809", phone: "0912 222 333", resultSent: false },
-            { id: "p36", name: "Mạc Văn Lộc",    dob: "09/06/1979", gender: "Nam", bookingId: "BK-2026051810", phone: "0987 333 444", resultSent: false },
-        ],
-    },
-];
+// ── Helpers ───────────────────────────────────────────────────────────────────
+const ACCENT_COLORS = ["#f59e0b", "#8b5cf6", "#22c55e", "#ef4444", "#3b82f6", "#f97316", "#14b8a6"];
+function accentColor(idx: number) { return ACCENT_COLORS[idx % ACCENT_COLORS.length]; }
+
+function fmtDate(iso: string) {
+    const d = new Date(iso);
+    return d.toLocaleDateString("vi-VN", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
+
+function mapGroup(g: ProviderTourGroupDTO, idx: number): TourGroup {
+    return {
+        id:             g.scheduleId,
+        tourName:       g.tourName,
+        date:           fmtDate(g.startTime),
+        agency:         g.agencyName,
+        agencyColor:    accentColor(idx),
+        service:        g.tourDescription ?? null,
+        patients:       [],
+        loadedPatients: false,
+    };
+}
+
+function mapPassenger(p: ProviderPassengerDTO): Patient {
+    return {
+        id:          p.passengerId,
+        name:        p.fullName,
+        idNumber:    p.idNumber,
+        age:         p.age,
+        bookingId:   p.bookingId,
+        bookingCode: p.bookingCode,
+        phone:       p.phone,
+        resultSent:  p.resultSent,
+        sentAt:      p.sentAt ? fmtDate(p.sentAt) : null,
+    };
+}
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function initials(name: string) {
@@ -117,6 +76,7 @@ const AVATAR_COLORS = ["#6366f1", "#f59e0b", "#10b981", "#3b82f6", "#ef4444", "#
 function avatarColor(i: number) { return AVATAR_COLORS[i % AVATAR_COLORS.length]; }
 
 function groupStatus(g: TourGroup): GroupStatus {
+    if (g.patients.length === 0) return "pending";
     const sent = g.patients.filter(p => p.resultSent).length;
     if (sent === g.patients.length) return "complete";
     if (sent === 0) return "pending";
@@ -131,24 +91,56 @@ const STATUS_LABEL: Record<GroupStatus, string> = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ResultsPage() {
-    const [groups, setGroups]             = useState<TourGroup[]>(INIT_GROUPS);
-    const [selectedId, setSelectedId]     = useState<string>(INIT_GROUPS[0].id);
-    const [sendTarget, setSendTarget]     = useState<Patient | null>(null);
-    const [images, setImages]             = useState<File[]>([]);
-    const [previews, setPreviews]         = useState<string[]>([]);
-    const [notes, setNotes]               = useState("");
-    const [sending, setSending]           = useState(false);
-    const [sendSuccess, setSendSuccess]   = useState(false);
-    const [search, setSearch]             = useState("");
+    const [groups, setGroups]               = useState<TourGroup[]>([]);
+    const [loadingGroups, setLoadingGroups] = useState(true);
+    const [loadingPats, setLoadingPats]     = useState(false);
+    const [selectedId, setSelectedId]       = useState<string | null>(null);
+    const [sendTarget, setSendTarget]       = useState<Patient | null>(null);
+    const [images, setImages]               = useState<File[]>([]);
+    const [previews, setPreviews]           = useState<string[]>([]);
+    const [notes, setNotes]                 = useState("");
+    const [sending, setSending]             = useState(false);
+    const [sendSuccess, setSendSuccess]     = useState(false);
+    const [search, setSearch]               = useState("");
     const fileRef = useRef<HTMLInputElement>(null);
 
-    const currentGroup = groups.find(g => g.id === selectedId) ?? groups[0];
-    const filtered     = currentGroup.patients.filter(p =>
+    // Fetch group list on mount
+    useEffect(() => {
+        providerService.getTourGroups()
+            .then(res => {
+                const mapped = (res.data ?? []).map(mapGroup);
+                setGroups(mapped);
+                if (mapped.length > 0) setSelectedId(mapped[0].id);
+            })
+            .finally(() => setLoadingGroups(false));
+    }, []);
+
+    // Fetch patients when selected group changes (only once per group)
+    useEffect(() => {
+        if (!selectedId) return;
+        const grp = groups.find(g => g.id === selectedId);
+        if (!grp || grp.loadedPatients) return;
+        setLoadingPats(true);
+        providerService.getGroupPassengers(selectedId)
+            .then(res => {
+                const patients = (res.data ?? []).map(mapPassenger);
+                setGroups(prev => prev.map(g =>
+                    g.id === selectedId ? { ...g, patients, loadedPatients: true } : g
+                ));
+            })
+            .finally(() => setLoadingPats(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [selectedId]);
+
+    const currentGroup = groups.find(g => g.id === selectedId) ?? null;
+    const filtered     = (currentGroup?.patients ?? []).filter(p =>
         p.name.toLowerCase().includes(search.toLowerCase()) ||
-        p.bookingId.toLowerCase().includes(search.toLowerCase())
+        p.bookingCode.toLowerCase().includes(search.toLowerCase()) ||
+        p.idNumber.includes(search) ||
+        p.phone.includes(search)
     );
-    const sentCount  = currentGroup.patients.filter(p => p.resultSent).length;
-    const totalCount = currentGroup.patients.length;
+    const sentCount  = currentGroup?.patients.filter(p => p.resultSent).length ?? 0;
+    const totalCount = currentGroup?.patients.length ?? 0;
 
     function openModal(p: Patient) {
         setSendTarget(p);
@@ -175,34 +167,44 @@ export default function ResultsPage() {
         setPreviews(p => [...p, ...urls]);
     }
 
-    function removePreview(idx: number) {
-        URL.revokeObjectURL(previews[idx]);
-        setImages(p => p.filter((_, i) => i !== idx));
-        setPreviews(p => p.filter((_, i) => i !== idx));
+    function removePreview(i: number) {
+        URL.revokeObjectURL(previews[i]);
+        setImages(p => p.filter((_, j) => j !== i));
+        setPreviews(p => p.filter((_, j) => j !== i));
     }
 
     async function handleSend() {
-        if (!sendTarget) return;
+        if (!sendTarget || !selectedId) return;
         setSending(true);
-        await new Promise(r => setTimeout(r, 1800));
-        const today = new Date().toLocaleDateString("vi-VN");
-        setGroups(prev => prev.map(g => ({
-            ...g,
-            patients: g.patients.map(p =>
-                p.id === sendTarget.id ? { ...p, resultSent: true, sentAt: today } : p
-            ),
-        })));
-        setSending(false);
-        setSendSuccess(true);
+        try {
+            const fd = new FormData();
+            if (notes.trim()) fd.append("notes", notes.trim());
+            images.forEach(f => fd.append("images", f));
+
+            const res = await providerService.sendMedicalResult(selectedId, sendTarget.id, fd);
+            const updated = res.data;
+            if (updated) {
+                const sentAt = updated.sentAt ? fmtDate(updated.sentAt) : new Date().toLocaleDateString("vi-VN");
+                setGroups(prev => prev.map(g => ({
+                    ...g,
+                    patients: g.patients.map(p =>
+                        p.id === sendTarget.id ? { ...p, resultSent: true, sentAt } : p
+                    ),
+                })));
+            }
+            setSendSuccess(true);
+        } finally {
+            setSending(false);
+        }
     }
 
     function goNextPatient() {
-        const remaining = currentGroup.patients.filter(p => !p.resultSent && p.id !== sendTarget?.id);
+        const remaining = (currentGroup?.patients ?? []).filter(p => !p.resultSent && p.id !== sendTarget?.id);
         if (remaining.length > 0) openModal(remaining[0]);
         else closeModal();
     }
 
-    const targetIdx = sendTarget ? currentGroup.patients.findIndex(p => p.id === sendTarget.id) : 0;
+    const targetIdx = sendTarget ? (currentGroup?.patients.findIndex(p => p.id === sendTarget.id) ?? 0) : 0;
 
     return (
         <div className={styles.page}>
@@ -218,7 +220,9 @@ export default function ResultsPage() {
                     </div>
                     <div>
                         <h2 className={styles.sidebarTitle}>Đoàn khám bệnh</h2>
-                        <p className={styles.sidebarSub}>{groups.length} đoàn hoàn thành</p>
+                        <p className={styles.sidebarSub}>
+                            {loadingGroups ? "Đang tải…" : `${groups.length} đoàn`}
+                        </p>
                     </div>
                 </div>
 
@@ -226,7 +230,8 @@ export default function ResultsPage() {
                     {groups.map(g => {
                         const st   = groupStatus(g);
                         const sent = g.patients.filter(p => p.resultSent).length;
-                        const pct  = Math.round((sent / g.patients.length) * 100);
+                        const total = g.patients.length;
+                        const pct  = total > 0 ? Math.round((sent / total) * 100) : 0;
                         return (
                             <button
                                 key={g.id}
@@ -256,7 +261,7 @@ export default function ResultsPage() {
                                         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                         <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
                                     </svg>
-                                    {g.patients.length} BN
+                                    {total > 0 ? `${total} BN` : "— BN"}
                                 </div>
                                 <div className={styles.groupProgress}>
                                     <div className={styles.progressTrack}>
@@ -264,7 +269,7 @@ export default function ResultsPage() {
                                             background: st === "complete" ? "#22c55e" : st === "partial" ? "#f59e0b" : "#e5e7eb"
                                         }}/>
                                     </div>
-                                    <span className={styles.progressLabel}>{sent}/{g.patients.length}</span>
+                                    <span className={styles.progressLabel}>{sent}/{total}</span>
                                 </div>
                             </button>
                         );
@@ -278,11 +283,11 @@ export default function ResultsPage() {
                 {/* Group header */}
                 <div className={styles.groupHeader}>
                     <div className={styles.groupHeaderLeft}>
-                        <div className={styles.groupHeaderAccent} style={{ background: currentGroup.agencyColor }}/>
+                        <div className={styles.groupHeaderAccent} style={{ background: currentGroup?.agencyColor ?? "#3b82f6" }}/>
                         <div>
-                            <h1 className={styles.groupHeaderTitle}>{currentGroup.tourName}</h1>
+                            <h1 className={styles.groupHeaderTitle}>{currentGroup?.tourName ?? "—"}</h1>
                             <p className={styles.groupHeaderMeta}>
-                                {currentGroup.agency} · {currentGroup.date} · {currentGroup.service}
+                                {currentGroup?.agency}{currentGroup?.date ? ` · ${currentGroup.date}` : ""}{currentGroup?.service ? ` · ${currentGroup.service}` : ""}
                             </p>
                         </div>
                     </div>
@@ -328,16 +333,21 @@ export default function ResultsPage() {
 
                 {/* Patient grid */}
                 <div className={styles.patientGrid}>
-                    {filtered.map((p, idx) => (
+                    {loadingPats && (
+                        <div className={styles.emptyState} style={{ gridColumn: "1/-1" }}>
+                            <p>Đang tải bệnh nhân…</p>
+                        </div>
+                    )}
+                    {!loadingPats && filtered.map((p, idx) => (
                         <div key={p.id} className={`${styles.patientCard} ${p.resultSent ? styles.patientCardDone : ""}`}>
                             <div className={styles.cardTop}>
-                                <div className={styles.patientAvatar} style={{ background: avatarColor(currentGroup.patients.indexOf(p)) }}>
+                                <div className={styles.patientAvatar} style={{ background: avatarColor(idx) }}>
                                     {initials(p.name)}
                                 </div>
                                 <div className={styles.patientInfo}>
                                     <div className={styles.patientName}>{p.name}</div>
-                                    <div className={styles.patientSubMeta}>{p.gender} · {p.dob}</div>
-                                    <div className={styles.bookingId}>{p.bookingId}</div>
+                                    <div className={styles.patientSubMeta}>{p.age} tuổi · CCCD: {p.idNumber}</div>
+                                    <div className={styles.bookingId}>{p.bookingCode}</div>
                                 </div>
                                 {p.resultSent
                                     ? <span className={styles.sentBadge}>
@@ -364,7 +374,7 @@ export default function ResultsPage() {
                                 <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
                                     <path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.14 12a19.79 19.79 0 01-3.07-8.67A2 2 0 012.06 1h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 8.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 16.92z" stroke="currentColor" strokeWidth="1.7"/>
                                 </svg>
-                                {p.phone}
+                                {p.phone ?? "—"}
                             </div>
 
                             <button
@@ -419,7 +429,7 @@ export default function ResultsPage() {
                                         <div>
                                             <p className={styles.modalName}>{sendTarget.name}</p>
                                             <p className={styles.modalMeta}>
-                                                {sendTarget.gender} · {sendTarget.dob} · {sendTarget.bookingId}
+                                                {sendTarget.age} tuổi · CCCD: {sendTarget.idNumber} · {sendTarget.bookingCode}
                                             </p>
                                         </div>
                                     </div>
@@ -565,7 +575,7 @@ export default function ResultsPage() {
                                     Bệnh nhân sẽ nhận thông báo qua ứng dụng.
                                 </p>
                                 {(() => {
-                                    const remaining = currentGroup.patients.filter(p => !p.resultSent && p.id !== sendTarget.id);
+                                    const remaining = (currentGroup?.patients ?? []).filter(p => !p.resultSent && p.id !== sendTarget.id);
                                     return (
                                         <div className={styles.successActions}>
                                             <button className={styles.doneBtn} onClick={closeModal}>Đóng</button>

@@ -5,6 +5,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
+import { agencyService } from "@/libs/services/agency.service";
 import styles from "./page.module.scss";
 
 function SuccessContent() {
@@ -16,6 +17,12 @@ function SuccessContent() {
 
     const [count, setCount] = useState(10);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+    // Confirm DB state after PayOS redirect (webhook can't reach localhost)
+    useEffect(() => {
+        if (!isSuccess || !orderCode) return;
+        agencyService.finalizePayment(orderCode).catch(() => {});
+    }, [isSuccess, orderCode]);
 
     useEffect(() => {
         if (!isSuccess) return;

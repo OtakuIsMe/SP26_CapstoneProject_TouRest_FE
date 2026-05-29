@@ -23,6 +23,7 @@ export type Permission =
     | "provider.results.send"
     | "provider.customers.view"
     | "provider.jobs.view"
+    | "provider.groups.view"
     | "provider.analytics.view"
     | "provider.finance.view"
     | "provider.settings.manage"
@@ -40,6 +41,8 @@ export type Permission =
     | "agency.schedule.manage"
     | "agency.guides.view"
     | "agency.guides.assign"
+    | "agency.tracking.view"
+    | "agency.jobs.view"
     | "agency.analytics.view"
     | "agency.finance.view"
     | "agency.settings.manage";

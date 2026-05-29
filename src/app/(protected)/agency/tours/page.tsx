@@ -125,7 +125,7 @@ export default function AgencyToursPage() {
             .then(meRes => {
                 if (!meRes.data) return;
                 setAgencyId(meRes.data.id);
-                agencyService.getAgencyUsers(meRes.data.id)
+                agencyService.getTourGuides(meRes.data.id)
                     .then(r => { if (r.data) setAgencyUsers(r.data); })
                     .catch(() => {});
                 return agencyService.getMyItineraries();

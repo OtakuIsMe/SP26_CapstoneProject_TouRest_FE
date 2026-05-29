@@ -29,7 +29,7 @@ export type UserResponse = {
     id: string;
     username: string;
     role: "admin" | "agency" | "provider" | "customer";
-    subRole?: string;   // "manager" | "staff" | "admin" | "tour_guide" — added by API when ready
+    subRole?: string;   // "manager" | "tourguide"
     email: string;
     phone?: string;
     fullName?: string;

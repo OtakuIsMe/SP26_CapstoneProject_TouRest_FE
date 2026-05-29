@@ -29,7 +29,15 @@ export default function SignInPage() {
 
             const me = await authService.getMe();
             const role    = me.data.role;
-            const subRole = me.data.subRole ?? null;
+            const rawSubRole = me.data.subRole ?? null;
+            // Map backend sub-role names to RBAC keys used by the permission matrix
+            const AGENCY_SUB_ROLE_MAP: Record<string, string> = {
+                manager:   "admin",
+                tourguide: "tour_guide",
+            };
+            const subRole = (role?.toUpperCase() === "AGENCY" && rawSubRole)
+                ? (AGENCY_SUB_ROLE_MAP[rawSubRole.toLowerCase()] ?? rawSubRole)
+                : rawSubRole;
             document.cookie = `role=${role}; path=/`;
             // Persist sub-role so the RBAC hook and middleware can read it
             if (subRole) {

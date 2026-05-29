@@ -903,3 +903,56 @@
     font-size: 12.5px;
     letter-spacing: 0.3px;
 }
+
+/* ── Toast notification ── */
+.toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 9999;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    background: #1f2937;
+    color: #f9fafb;
+    padding: 14px 18px;
+    border-radius: 12px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.28);
+    min-width: 280px;
+    max-width: 480px;
+    animation: toastIn 0.25s ease;
+}
+
+.toastIcon {
+    flex-shrink: 0;
+    color: #fbbf24;
+    margin-top: 1px;
+}
+
+.toastMsg {
+    flex: 1;
+    font-size: 14px;
+    line-height: 1.5;
+    margin: 0;
+}
+
+.toastClose {
+    flex-shrink: 0;
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 2px;
+    display: flex;
+    align-items: center;
+    border-radius: 4px;
+    transition: color 0.15s;
+
+    &:hover { color: #f9fafb; }
+}
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateX(-50%) translateY(12px); }
+    to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
