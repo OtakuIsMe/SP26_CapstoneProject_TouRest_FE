@@ -7,6 +7,7 @@ export type PackageServiceItem = {
     servicePrice: number;
     serviceDurationMinutes: number;
     serviceBasePrice: number;
+    serviceStatus?: string;
 };
 
 export type PackageWithServicesDTO = {

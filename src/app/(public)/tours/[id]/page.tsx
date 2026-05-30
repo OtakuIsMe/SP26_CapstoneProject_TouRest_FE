@@ -264,7 +264,7 @@ export default function TourDetailPage() {
     const [wAnon, setWAnon] = useState(false);
     const wFileRef = useRef<HTMLInputElement>(null);
     const wItemInputRef = useRef<HTMLInputElement>(null);
-    const wItemTimerRef = useRef<ReturnType<typeof setTimeout>>();
+    const wItemTimerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     function processImages(files: FileList | File[]) {
         Array.from(files).filter(f => f.type.startsWith("image/")).forEach(file => {

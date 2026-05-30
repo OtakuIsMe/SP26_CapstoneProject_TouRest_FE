@@ -24,7 +24,7 @@ function ItemSearchBox({ type, value, onSelect, mounted }: {
     const [loading, setLoading] = useState(false);
     const [pos, setPos]         = useState({ top: 0, left: 0, width: 0 });
     const inputRef = useRef<HTMLInputElement>(null);
-    const timerRef = useRef<ReturnType<typeof setTimeout>>();
+    const timerRef = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
     const updatePos = () => {
         if (!inputRef.current) return;
