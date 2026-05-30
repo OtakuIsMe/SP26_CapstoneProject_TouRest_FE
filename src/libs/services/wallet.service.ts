@@ -10,6 +10,7 @@ export interface WalletDTO {
     providerId: string | null;
     balance: number;
     pendingBalance: number;
+    ownerType?: string;
 }
 
 export interface WalletTransactionDTO {
@@ -23,11 +24,30 @@ export interface WalletTransactionDTO {
     createdAt: string;
 }
 
-// These will be filled in once the teammate sends the API list
+export interface SavedBankDTO {
+    bankAccount: string;
+    bankName: string;
+    accountHolder: string;
+    lastUsedAt: string;
+}
+
+export interface PayoutRequestDTO {
+    amount: number;
+    bankAccount: string;
+    bankName: string;
+    accountHolder: string;
+}
+
 export const walletService = {
     getMyWallet: (): Promise<ApiResponse<WalletDTO>> =>
-        axiosClient.get("/wallet/me"),
+        axiosClient.get("/wallet"),
 
     getMyTransactions: (): Promise<ApiResponse<WalletTransactionDTO[]>> =>
         axiosClient.get("/wallet/transactions"),
+
+    getSavedBanks: (): Promise<ApiResponse<SavedBankDTO[]>> =>
+        axiosClient.get("/wallet/banks"),
+
+    requestPayout: (data: PayoutRequestDTO): Promise<ApiResponse<unknown>> =>
+        axiosClient.post("/wallet/payout", data),
 };

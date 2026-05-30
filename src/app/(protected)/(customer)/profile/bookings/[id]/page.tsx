@@ -6,7 +6,7 @@ import Link from "next/link";
 import Image from "next/image";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
-import { bookingService } from "@/libs/services/booking.service";
+import { bookingService, type CancelBookingResult } from "@/libs/services/booking.service";
 import { bookingItineraryService, ItineraryStopDTO } from "@/libs/services/booking-itinerary.service";
 import { agencyService } from "@/libs/services/agency.service";
 import { trackingService, TrackingTypeStop, TrackingTypeActivity } from "@/libs/services/tracking.service";
@@ -219,6 +219,9 @@ export default function BookingJourneyPage() {
     const [trackedActivities, setTrackedActivities] = useState<Set<string>>(new Set());
     const [stopResult, setStopResult]         = useState<BookingStopMedicalResultDTO | null>(null);
     const [loadingResult, setLoadingResult]   = useState(false);
+    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+    const [cancelling, setCancelling]               = useState(false);
+    const [cancelResult, setCancelResult]           = useState<CancelBookingResult | null>(null);
 
     useEffect(() => {
         if (!id) return;
@@ -286,6 +289,21 @@ export default function BookingJourneyPage() {
             setStopResult(res.data ?? null);
         } finally {
             setLoadingResult(false);
+        }
+    };
+
+    const handleCancelBooking = async () => {
+        if (!id) return;
+        setCancelling(true);
+        try {
+            const res = await bookingService.cancelWithRefund(id);
+            if (res.data) {
+                setCancelResult(res.data);
+                setBooking(prev => prev ? { ...prev, status: "Cancelled" } : prev);
+                setShowCancelConfirm(false);
+            }
+        } finally {
+            setCancelling(false);
         }
     };
 
@@ -566,7 +584,7 @@ export default function BookingJourneyPage() {
                                                                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/>
                                                                 <path d="M14 2v6h6M9 13h6M9 17h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                                             </svg>
-                                                            Xem kết quả khám
+                                                            View Health Results
                                                         </button>
                                                     </div>
                                                 )}
@@ -643,6 +661,19 @@ export default function BookingJourneyPage() {
                                 </svg>
                                 Back to Profile
                             </Link>
+
+                            {booking.status !== "Cancelled" && booking.status !== "Completed" && (
+                                <button
+                                    className={styles.cancelBookingBtn}
+                                    onClick={() => setShowCancelConfirm(true)}
+                                >
+                                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
+                                        <path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                    </svg>
+                                    Cancel Booking
+                                </button>
+                            )}
                         </aside>
                     </div>
                 </div>
@@ -662,7 +693,7 @@ export default function BookingJourneyPage() {
                                 </svg>
                             </div>
                             <div className={styles.resultModalTitleWrap}>
-                                <h2 className={styles.resultModalTitle}>Kết quả khám</h2>
+                                <h2 className={styles.resultModalTitle}>Health Results</h2>
                                 {stopResult && <p className={styles.resultModalActivity}>{stopResult.providerName} · {stopResult.stopName}</p>}
                             </div>
                             <button className={styles.resultModalClose} onClick={() => setStopResult(null)}>
@@ -684,15 +715,15 @@ export default function BookingJourneyPage() {
                                             </div>
                                             <div className={styles.resultPassengerInfo}>
                                                 <span className={styles.resultPassengerName}>{p.fullName}</span>
-                                                <span className={styles.resultPassengerMeta}>{p.age} tuổi · CCCD: {p.idNumber}</span>
+                                                <span className={styles.resultPassengerMeta}>{p.age} yrs · ID: {p.idNumber}</span>
                                             </div>
                                             {p.resultSent ? (
                                                 <span className={styles.resultSentBadge}>
                                                     <svg viewBox="0 0 24 24" fill="none" width="10" height="10"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/></svg>
-                                                    Đã nhận
+                                                    Received
                                                 </span>
                                             ) : (
-                                                <span className={styles.resultPendingBadge}>Chờ kết quả</span>
+                                                <span className={styles.resultPendingBadge}>Awaiting result</span>
                                             )}
                                         </div>
 
@@ -702,7 +733,7 @@ export default function BookingJourneyPage() {
                                                     <div className={styles.resultNotesBlock}>
                                                         <p className={styles.resultNotesLabel}>
                                                             <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                                            Ghi chú & chẩn đoán
+                                                            Notes & Diagnosis
                                                         </p>
                                                         <p className={styles.resultNotesText}>{p.notes}</p>
                                                     </div>
@@ -711,7 +742,7 @@ export default function BookingJourneyPage() {
                                                     <div className={styles.resultImagesBlock}>
                                                         <p className={styles.resultNotesLabel}>
                                                             <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="3" y="3" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7"/><circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/><path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>
-                                                            Hình ảnh hồ sơ ({p.imageUrls.length})
+                                                            Medical Records ({p.imageUrls.length})
                                                         </p>
                                                         <div className={styles.resultImagesGrid}>
                                                             {p.imageUrls.map((url, i) => (
@@ -725,7 +756,7 @@ export default function BookingJourneyPage() {
                                                 {p.sentAt && (
                                                     <p className={styles.resultSentTime}>
                                                         <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                                        Gửi lúc {new Date(p.sentAt).toLocaleString("vi-VN")}
+                                                        Sent at {new Date(p.sentAt).toLocaleString("en-GB")}
                                                     </p>
                                                 )}
                                             </div>
@@ -736,7 +767,83 @@ export default function BookingJourneyPage() {
                         )}
 
                         <div className={styles.resultFooter}>
-                            <button className={styles.resultCloseBtn} onClick={() => setStopResult(null)}>Đóng</button>
+                            <button className={styles.resultCloseBtn} onClick={() => setStopResult(null)}>Close</button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ════════════ CANCEL CONFIRM MODAL ════════════ */}
+            {showCancelConfirm && (
+                <div className={styles.resultOverlay} onClick={() => !cancelling && setShowCancelConfirm(false)}>
+                    <div className={styles.cancelModal} onClick={e => e.stopPropagation()}>
+                        <div className={styles.cancelModalIcon}>
+                            <svg viewBox="0 0 24 24" fill="none" width="28" height="28">
+                                <circle cx="12" cy="12" r="10" stroke="#ef4444" strokeWidth="1.8"/>
+                                <path d="M12 8v4m0 4h.01" stroke="#ef4444" strokeWidth="1.8" strokeLinecap="round"/>
+                            </svg>
+                        </div>
+                        <h3 className={styles.cancelModalTitle}>Confirm Cancellation</h3>
+                        <p className={styles.cancelModalSub}>
+                            Refund policy:
+                        </p>
+                        <ul className={styles.cancelPolicyList}>
+                            <li><span className={styles.policyGreen}>Cancel 7+ days before</span> → 100% refund to wallet</li>
+                            <li><span className={styles.policyAmber}>Cancel 2–7 days before</span> → 50% refund to wallet</li>
+                            <li><span className={styles.policyRed}>Cancel within 2 days</span> → No refund</li>
+                        </ul>
+                        <p className={styles.cancelModalNote}>Refund is credited to your wallet instantly.</p>
+                        <div className={styles.cancelModalActions}>
+                            <button
+                                className={styles.cancelModalBack}
+                                onClick={() => setShowCancelConfirm(false)}
+                                disabled={cancelling}
+                            >
+                                Go back
+                            </button>
+                            <button
+                                className={styles.cancelModalConfirm}
+                                onClick={handleCancelBooking}
+                                disabled={cancelling}
+                            >
+                                {cancelling ? "Processing…" : "Confirm cancellation"}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* ════════════ CANCEL RESULT MODAL ════════════ */}
+            {cancelResult && (
+                <div className={styles.resultOverlay} onClick={() => setCancelResult(null)}>
+                    <div className={styles.cancelModal} onClick={e => e.stopPropagation()}>
+                        <div className={styles.cancelModalIcon}>
+                            {cancelResult.refundAmount > 0 ? (
+                                <svg viewBox="0 0 24 24" fill="none" width="28" height="28">
+                                    <circle cx="12" cy="12" r="10" stroke="#16a34a" strokeWidth="1.8"/>
+                                    <path d="M8 12l3 3 5-5" stroke="#16a34a" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                </svg>
+                            ) : (
+                                <svg viewBox="0 0 24 24" fill="none" width="28" height="28">
+                                    <circle cx="12" cy="12" r="10" stroke="#6b7280" strokeWidth="1.8"/>
+                                    <path d="M12 8v4m0 4h.01" stroke="#6b7280" strokeWidth="1.8" strokeLinecap="round"/>
+                                </svg>
+                            )}
+                        </div>
+                        <h3 className={styles.cancelModalTitle}>Booking cancelled</h3>
+                        <p className={styles.cancelModalSub}>{cancelResult.message}</p>
+                        {cancelResult.refundAmount > 0 && (
+                            <div className={styles.cancelRefundBox}>
+                                <span className={styles.cancelRefundLabel}>Refunded to wallet</span>
+                                <span className={styles.cancelRefundAmount}>
+                                    +{cancelResult.refundAmount.toLocaleString("vi-VN")}đ
+                                </span>
+                            </div>
+                        )}
+                        <div className={styles.cancelModalActions}>
+                            <Link href="/profile" className={styles.cancelModalBack}>
+                                Back to home
+                            </Link>
                         </div>
                     </div>
                 </div>

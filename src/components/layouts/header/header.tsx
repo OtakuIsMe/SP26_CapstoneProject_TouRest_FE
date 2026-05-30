@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authService } from "@/libs/services/auth.service";
 import { notificationService, NotificationDTO, NotificationEntityType } from "@/libs/services/notification.service";
+import { walletService, type WalletDTO } from "@/libs/services/wallet.service";
 import { StorageKeys } from "@/constants/storage";
 import styles from "./header.module.scss";
 
@@ -68,6 +69,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
   const [notifOpen,   setNotifOpen]   = useState(false);
   const [notifs,      setNotifs]      = useState<NotificationDTO[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [wallet,      setWallet]      = useState<WalletDTO | null>(null);
   const menuRef  = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
@@ -99,6 +101,15 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
   useEffect(() => {
     if (notifOpen) fetchNotifications();
   }, [notifOpen, fetchNotifications]);
+
+  // Fetch wallet when user menu opens
+  useEffect(() => {
+    if (menuOpen && loggedIn && !wallet) {
+      walletService.getMyWallet()
+        .then(res => { if (res.data) setWallet(res.data); })
+        .catch(() => {});
+    }
+  }, [menuOpen, loggedIn, wallet]);
 
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
@@ -240,12 +251,50 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
             </button>
             {menuOpen && (
               <div className={styles.dropdown}>
+                {/* ── Wallet card ── */}
+                <div className={styles.walletCard}>
+                  <div className={styles.walletCardTop}>
+                    <div className={styles.walletIconWrap}>
+                      <svg viewBox="0 0 24 24" fill="none" width="16" height="16">
+                        <path d="M21 18V7a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2z" stroke="currentColor" strokeWidth="1.7"/>
+                        <path d="M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
+                        <circle cx="16.5" cy="14.5" r="1.5" fill="currentColor"/>
+                      </svg>
+                    </div>
+                    <span className={styles.walletLabel}>My Wallet</span>
+                    <Link href="/profile/wallet" className={styles.walletTopUpBtn} onClick={() => setMenuOpen(false)}>
+                      Withdraw
+                    </Link>
+                  </div>
+                  <div className={styles.walletBalance}>
+                    {wallet == null
+                      ? <span className={styles.walletLoading}>Loading…</span>
+                      : <>{wallet.balance.toLocaleString("vi-VN")}<span className={styles.walletCurrency}>₫</span></>
+                    }
+                  </div>
+                  {wallet != null && wallet.pendingBalance > 0 && (
+                    <div className={styles.walletPending}>
+                      Pending: +{wallet.pendingBalance.toLocaleString("vi-VN")}₫
+                    </div>
+                  )}
+                </div>
+
+                <div className={styles.dropdownDivider} />
+
                 <Link href="/profile" className={styles.dropdownItem} onClick={() => setMenuOpen(false)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                     <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
                   Profile
+                </Link>
+                <Link href="/profile/wallet" className={styles.dropdownItem} onClick={() => setMenuOpen(false)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <path d="M21 18V7a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2z" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M3 10h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <circle cx="16.5" cy="14.5" r="1.5" fill="currentColor"/>
+                  </svg>
+                  Wallet History
                 </Link>
                 <Link href="/settings" className={styles.dropdownItem} onClick={() => setMenuOpen(false)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -259,7 +308,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4M16 17l5-5-5-5M21 12H9" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
                   </svg>
-                  Logout
+                  Sign Out
                 </button>
               </div>
             )}

@@ -84,9 +84,9 @@ function groupStatus(g: TourGroup): GroupStatus {
 }
 
 const STATUS_LABEL: Record<GroupStatus, string> = {
-    complete: "Hoàn tất",
-    partial:  "Một phần",
-    pending:  "Chưa gửi",
+    complete: "Done",
+    partial:  "Partial",
+    pending:  "Not Sent",
 };
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -219,9 +219,9 @@ export default function ResultsPage() {
                         </svg>
                     </div>
                     <div>
-                        <h2 className={styles.sidebarTitle}>Đoàn khám bệnh</h2>
+                        <h2 className={styles.sidebarTitle}>Tour Groups</h2>
                         <p className={styles.sidebarSub}>
-                            {loadingGroups ? "Đang tải…" : `${groups.length} đoàn`}
+                            {loadingGroups ? "Loading…" : `${groups.length} group${groups.length !== 1 ? "s" : ""}`}
                         </p>
                     </div>
                 </div>
@@ -261,7 +261,7 @@ export default function ResultsPage() {
                                         <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                         <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
                                     </svg>
-                                    {total > 0 ? `${total} BN` : "— BN"}
+                                    {total > 0 ? `${total} pt` : "— pt"}
                                 </div>
                                 <div className={styles.groupProgress}>
                                     <div className={styles.progressTrack}>
@@ -294,17 +294,17 @@ export default function ResultsPage() {
                     <div className={styles.headerStats}>
                         <div className={styles.headerStat}>
                             <span className={styles.headerStatNum} style={{ color: "#15803d" }}>{sentCount}</span>
-                            <span className={styles.headerStatLabel}>Đã gửi</span>
+                            <span className={styles.headerStatLabel}>Sent</span>
                         </div>
                         <div className={styles.headerStatDiv}/>
                         <div className={styles.headerStat}>
                             <span className={styles.headerStatNum} style={{ color: "#d97706" }}>{totalCount - sentCount}</span>
-                            <span className={styles.headerStatLabel}>Chưa gửi</span>
+                            <span className={styles.headerStatLabel}>Pending</span>
                         </div>
                         <div className={styles.headerStatDiv}/>
                         <div className={styles.headerStat}>
                             <span className={styles.headerStatNum}>{totalCount}</span>
-                            <span className={styles.headerStatLabel}>Tổng BN</span>
+                            <span className={styles.headerStatLabel}>Total</span>
                         </div>
                     </div>
                 </div>
@@ -318,7 +318,7 @@ export default function ResultsPage() {
                     <input
                         className={styles.searchInput}
                         type="text"
-                        placeholder="Tìm tên hoặc mã đặt chỗ…"
+                        placeholder="Search name or booking code…"
                         value={search}
                         onChange={e => setSearch(e.target.value)}
                     />
@@ -335,7 +335,7 @@ export default function ResultsPage() {
                 <div className={styles.patientGrid}>
                     {loadingPats && (
                         <div className={styles.emptyState} style={{ gridColumn: "1/-1" }}>
-                            <p>Đang tải bệnh nhân…</p>
+                            <p>Loading patients…</p>
                         </div>
                     )}
                     {!loadingPats && filtered.map((p, idx) => (
@@ -346,7 +346,7 @@ export default function ResultsPage() {
                                 </div>
                                 <div className={styles.patientInfo}>
                                     <div className={styles.patientName}>{p.name}</div>
-                                    <div className={styles.patientSubMeta}>{p.age} tuổi · CCCD: {p.idNumber}</div>
+                                    <div className={styles.patientSubMeta}>{p.age} yrs · ID: {p.idNumber}</div>
                                     <div className={styles.bookingId}>{p.bookingCode}</div>
                                 </div>
                                 {p.resultSent
@@ -354,9 +354,9 @@ export default function ResultsPage() {
                                         <svg viewBox="0 0 24 24" fill="none" width="9" height="9">
                                             <path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"/>
                                         </svg>
-                                        Đã gửi
+                                        Sent
                                       </span>
-                                    : <span className={styles.pendingBadge}>Chưa gửi</span>
+                                    : <span className={styles.pendingBadge}>Not Sent</span>
                                 }
                             </div>
 
@@ -366,7 +366,7 @@ export default function ResultsPage() {
                                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
                                         <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                     </svg>
-                                    Đã gửi lúc {p.sentAt}
+                                    Sent at {p.sentAt}
                                 </div>
                             )}
 
@@ -387,14 +387,14 @@ export default function ResultsPage() {
                                             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                         </svg>
-                                        Gửi lại / Chỉnh sửa
+                                        Resend / Edit
                                     </>
                                 ) : (
                                     <>
                                         <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
                                             <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                         </svg>
-                                        Gửi kết quả
+                                        Send Result
                                     </>
                                 )}
                             </button>
@@ -407,7 +407,7 @@ export default function ResultsPage() {
                                 <circle cx="11" cy="11" r="8" stroke="#d1d5db" strokeWidth="1.5"/>
                                 <path d="M21 21l-4.35-4.35" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round"/>
                             </svg>
-                            <p>Không tìm thấy bệnh nhân phù hợp</p>
+                            <p>No matching patients found</p>
                         </div>
                     )}
                 </div>
@@ -429,7 +429,7 @@ export default function ResultsPage() {
                                         <div>
                                             <p className={styles.modalName}>{sendTarget.name}</p>
                                             <p className={styles.modalMeta}>
-                                                {sendTarget.age} tuổi · CCCD: {sendTarget.idNumber} · {sendTarget.bookingCode}
+                                                {sendTarget.age} yrs · ID: {sendTarget.idNumber} · {sendTarget.bookingCode}
                                             </p>
                                         </div>
                                     </div>
@@ -450,7 +450,7 @@ export default function ResultsPage() {
                                                 <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/>
                                                 <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
                                             </svg>
-                                            Hình ảnh hồ sơ bệnh án
+                                            Medical Record Images
                                             {images.length > 0 && <span className={styles.fileCount}>{images.length} file</span>}
                                         </p>
 
@@ -469,9 +469,9 @@ export default function ResultsPage() {
                                                             <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                                         </svg>
                                                     </div>
-                                                    <p className={styles.dropTitle}>Kéo thả ảnh / PDF vào đây</p>
-                                                    <p className={styles.dropSub}>hoặc <button className={styles.dropBrowse} onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>chọn từ máy tính</button></p>
-                                                    <p className={styles.dropHint}>PNG, JPG, PDF · Tối đa 10 MB/file · Nhiều file</p>
+                                                    <p className={styles.dropTitle}>Drag & drop images / PDF here</p>
+                                                    <p className={styles.dropSub}>or <button className={styles.dropBrowse} onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>browse from computer</button></p>
+                                                    <p className={styles.dropHint}>PNG, JPG, PDF · Max 10 MB/file · Multiple files</p>
                                                 </>
                                             ) : (
                                                 <div className={styles.previewGrid} onClick={e => e.stopPropagation()}>
@@ -489,7 +489,7 @@ export default function ResultsPage() {
                                                         <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                                                             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                                         </svg>
-                                                        <span>Thêm</span>
+                                                        <span>Add</span>
                                                     </button>
                                                 </div>
                                             )}
@@ -511,11 +511,11 @@ export default function ResultsPage() {
                                                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
                                                 <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                             </svg>
-                                            Ghi chú & chẩn đoán
+                                            Notes & Diagnosis
                                         </p>
                                         <textarea
                                             className={styles.notesArea}
-                                            placeholder="Nhập chẩn đoán, kết quả xét nghiệm, khuyến nghị điều trị hoặc ghi chú quan trọng cho bệnh nhân…"
+                                            placeholder="Enter diagnosis, test results, treatment recommendations or important notes for the patient…"
                                             rows={5}
                                             value={notes}
                                             onChange={e => setNotes(e.target.value.slice(0, 1000))}
@@ -532,27 +532,27 @@ export default function ResultsPage() {
                                                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
                                                 <path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                             </svg>
-                                            Vui lòng đính kèm ít nhất 1 hình ảnh hoặc nhập ghi chú trước khi gửi.
+                                            Please attach at least 1 image or enter notes before sending.
                                         </div>
                                     )}
                                 </div>
 
                                 {/* Footer */}
                                 <div className={styles.modalFooter}>
-                                    <button className={styles.cancelBtn} onClick={closeModal} disabled={sending}>Huỷ</button>
+                                    <button className={styles.cancelBtn} onClick={closeModal} disabled={sending}>Cancel</button>
                                     <button
                                         className={styles.sendResultBtn}
                                         disabled={sending || (images.length === 0 && !notes.trim())}
                                         onClick={handleSend}
                                     >
                                         {sending ? (
-                                            <><span className={styles.spinner}/> Đang gửi…</>
+                                            <><span className={styles.spinner}/> Sending…</>
                                         ) : (
                                             <>
                                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                                 </svg>
-                                                Gửi kết quả cho bệnh nhân
+                                                Send result to patient
                                             </>
                                         )}
                                     </button>
@@ -569,19 +569,19 @@ export default function ResultsPage() {
                                         </svg>
                                     </div>
                                 </div>
-                                <h3 className={styles.successTitle}>Đã gửi thành công!</h3>
+                                <h3 className={styles.successTitle}>Sent successfully!</h3>
                                 <p className={styles.successSub}>
-                                    Kết quả khám bệnh của <strong>{sendTarget.name}</strong> đã được gửi đi.<br/>
-                                    Bệnh nhân sẽ nhận thông báo qua ứng dụng.
+                                    The result for <strong>{sendTarget.name}</strong> has been sent.<br/>
+                                    The patient will receive a notification in the app.
                                 </p>
                                 {(() => {
                                     const remaining = (currentGroup?.patients ?? []).filter(p => !p.resultSent && p.id !== sendTarget.id);
                                     return (
                                         <div className={styles.successActions}>
-                                            <button className={styles.doneBtn} onClick={closeModal}>Đóng</button>
+                                            <button className={styles.doneBtn} onClick={closeModal}>Close</button>
                                             {remaining.length > 0 && (
                                                 <button className={styles.nextBtn} onClick={goNextPatient}>
-                                                    Bệnh nhân tiếp theo ({remaining.length} còn lại) →
+                                                    Next patient ({remaining.length} remaining) →
                                                 </button>
                                             )}
                                         </div>

@@ -58,7 +58,7 @@ export default function AgencyGuidesPage() {
     });
 
     async function handleCreate() {
-        if (!cEmail || !cFullName || !cPassword) { setCError("Vui lòng điền đầy đủ thông tin bắt buộc"); return; }
+        if (!cEmail || !cFullName || !cPassword) { setCError("Please fill in all required fields"); return; }
         setCError("");
         setCSubmitting(true);
         try {
@@ -71,7 +71,7 @@ export default function AgencyGuidesPage() {
             setCreateOpen(false);
             setCEmail(""); setCFullName(""); setCPassword(""); setCPhone("");
         } catch {
-            setCError("Tạo tài khoản thất bại. Email có thể đã được sử dụng.");
+            setCError("Failed to create account. Email may already be in use.");
         } finally {
             setCSubmitting(false);
         }
@@ -89,7 +89,7 @@ export default function AgencyGuidesPage() {
     }
 
     if (loading) {
-        return <div className={styles.page}><div className={styles.loadingState}>Đang tải...</div></div>;
+        return <div className={styles.page}><div className={styles.loadingState}>Loading...</div></div>;
     }
 
     if (isManager === false) {
@@ -100,7 +100,7 @@ export default function AgencyGuidesPage() {
                         <circle cx="12" cy="12" r="10" stroke="#ef4444" strokeWidth="1.5"/>
                         <path d="M15 9l-6 6M9 9l6 6" stroke="#ef4444" strokeWidth="2" strokeLinecap="round"/>
                     </svg>
-                    <p>Chỉ Manager mới có quyền truy cập trang này.</p>
+                    <p>Only managers can access this page.</p>
                 </div>
             </div>
         );
@@ -113,13 +113,13 @@ export default function AgencyGuidesPage() {
             <div className={styles.header}>
                 <div>
                     <h1 className={styles.title}>Tour Guides</h1>
-                    <p className={styles.subtitle}>{guides.length} hướng dẫn viên trong agency</p>
+                    <p className={styles.subtitle}>{guides.length} guide{guides.length !== 1 ? "s" : ""} in this agency</p>
                 </div>
                 <button className={styles.createBtn} onClick={() => setCreateOpen(true)}>
                     <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                         <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"/>
                     </svg>
-                    Tạo tài khoản
+                    Create Account
                 </button>
             </div>
 
@@ -131,7 +131,7 @@ export default function AgencyGuidesPage() {
                 </svg>
                 <input
                     className={styles.searchInput}
-                    placeholder="Tìm theo tên hoặc email…"
+                    placeholder="Search by name or email…"
                     value={search}
                     onChange={e => setSearch(e.target.value)}
                 />
@@ -144,7 +144,7 @@ export default function AgencyGuidesPage() {
                         <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round"/>
                         <circle cx="12" cy="7" r="4" stroke="#d1d5db" strokeWidth="1.5"/>
                     </svg>
-                    <p>{search ? "Không tìm thấy hướng dẫn viên" : "Chưa có hướng dẫn viên nào"}</p>
+                    <p>{search ? "No guides found" : "No guides yet"}</p>
                 </div>
             ) : (
                 <div className={styles.guideGrid}>
@@ -160,7 +160,7 @@ export default function AgencyGuidesPage() {
                                     <span className={styles.guideBadge}>Tour Guide</span>
                                 )}
                             </div>
-                            <button className={styles.deleteBtn} onClick={() => setDeleteTarget(guide)} title="Xóa khỏi agency">
+                            <button className={styles.deleteBtn} onClick={() => setDeleteTarget(guide)} title="Remove from agency">
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                     <path d="M3 6h18M8 6V4h8v2M19 6l-1 14H6L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                 </svg>
@@ -175,7 +175,7 @@ export default function AgencyGuidesPage() {
                 <div className={styles.overlay} onClick={() => setCreateOpen(false)}>
                     <div className={styles.modal} onClick={e => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h2 className={styles.modalTitle}>Tạo tài khoản Tour Guide</h2>
+                            <h2 className={styles.modalTitle}>Create Tour Guide Account</h2>
                             <button className={styles.modalClose} onClick={() => setCreateOpen(false)}>
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                     <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"/>
@@ -189,24 +189,24 @@ export default function AgencyGuidesPage() {
                                 <input className={styles.input} type="email" placeholder="guide@example.com" value={cEmail} onChange={e => setCEmail(e.target.value)} />
                             </div>
                             <div className={styles.field}>
-                                <label className={styles.label}>Họ và tên <span className={styles.required}>*</span></label>
-                                <input className={styles.input} type="text" placeholder="Nguyễn Văn A" value={cFullName} onChange={e => setCFullName(e.target.value)} />
+                                <label className={styles.label}>Full Name <span className={styles.required}>*</span></label>
+                                <input className={styles.input} type="text" placeholder="Nguyen Van A" value={cFullName} onChange={e => setCFullName(e.target.value)} />
                             </div>
                             <div className={styles.field}>
-                                <label className={styles.label}>Mật khẩu <span className={styles.required}>*</span></label>
-                                <input className={styles.input} type="password" placeholder="Tối thiểu 6 ký tự" value={cPassword} onChange={e => setCPassword(e.target.value)} />
+                                <label className={styles.label}>Password <span className={styles.required}>*</span></label>
+                                <input className={styles.input} type="password" placeholder="At least 6 characters" value={cPassword} onChange={e => setCPassword(e.target.value)} />
                             </div>
                             <div className={styles.field}>
-                                <label className={styles.label}>Số điện thoại</label>
+                                <label className={styles.label}>Phone</label>
                                 <input className={styles.input} type="tel" placeholder="0901234567" value={cPhone} onChange={e => setCPhone(e.target.value)} />
                             </div>
                             {cError && <p className={styles.errorMsg}>{cError}</p>}
                         </div>
 
                         <div className={styles.modalFooter}>
-                            <button className={styles.cancelBtn} onClick={() => setCreateOpen(false)}>Hủy</button>
+                            <button className={styles.cancelBtn} onClick={() => setCreateOpen(false)}>Cancel</button>
                             <button className={styles.confirmBtn} onClick={handleCreate} disabled={cSubmitting}>
-                                {cSubmitting ? "Đang tạo…" : "Tạo tài khoản"}
+                                {cSubmitting ? "Creating…" : "Create Account"}
                             </button>
                         </div>
                     </div>
@@ -218,7 +218,7 @@ export default function AgencyGuidesPage() {
                 <div className={styles.overlay} onClick={() => setDeleteTarget(null)}>
                     <div className={styles.modal} onClick={e => e.stopPropagation()}>
                         <div className={styles.modalHeader}>
-                            <h2 className={styles.modalTitle}>Xóa khỏi agency</h2>
+                            <h2 className={styles.modalTitle}>Remove from agency</h2>
                             <button className={styles.modalClose} onClick={() => setDeleteTarget(null)}>
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                     <path d="M18 6L6 18M6 6l12 12" stroke="currentColor" strokeWidth="2.3" strokeLinecap="round"/>
@@ -227,13 +227,13 @@ export default function AgencyGuidesPage() {
                         </div>
                         <div className={styles.modalBody}>
                             <p className={styles.confirmText}>
-                                Bạn có chắc muốn xóa <strong>{deleteTarget.userFullName || deleteTarget.email}</strong> khỏi agency không?
+                                Are you sure you want to remove <strong>{deleteTarget.userFullName || deleteTarget.email}</strong> from this agency?
                             </p>
                         </div>
                         <div className={styles.modalFooter}>
-                            <button className={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>Hủy</button>
+                            <button className={styles.cancelBtn} onClick={() => setDeleteTarget(null)}>Cancel</button>
                             <button className={styles.deleteConfirmBtn} onClick={handleDelete} disabled={deleting}>
-                                {deleting ? "Đang xóa…" : "Xóa"}
+                                {deleting ? "Removing…" : "Remove"}
                             </button>
                         </div>
                     </div>

@@ -28,9 +28,9 @@ function sentStatus(group: ProviderTourGroupDTO): SentStatus {
 }
 
 const SENT_BADGE: Record<SentStatus, { label: string; cls: string }> = {
-    none:    { label: "Chưa gửi",  cls: styles.badgeNone    },
-    partial: { label: "Một phần",  cls: styles.badgePartial },
-    done:    { label: "Hoàn tất",  cls: styles.badgeDone    },
+    none:    { label: "Not Sent", cls: styles.badgeNone    },
+    partial: { label: "Partial",  cls: styles.badgePartial },
+    done:    { label: "Done",     cls: styles.badgeDone    },
 };
 
 const ACCENT_COLORS = ["#f97316", "#8b5cf6", "#10b981", "#ef4444", "#3b82f6", "#ec4899", "#14b8a6"];
@@ -168,9 +168,9 @@ export default function ProviderGroupsPage() {
             {/* ── Left panel ── */}
             <div className={styles.leftPanel}>
                 <div className={styles.panelHeader}>
-                    <p className={styles.panelTitle}>Đoàn khám bệnh</p>
+                    <p className={styles.panelTitle}>Tour Groups</p>
                     <p className={styles.panelSub}>
-                        {loadingGroups ? "Đang tải…" : `${doneCount} đoàn hoàn thành`}
+                        {loadingGroups ? "Loading…" : `${doneCount} group${doneCount !== 1 ? "s" : ""} done`}
                     </p>
                 </div>
 
@@ -206,7 +206,7 @@ export default function ProviderGroupsPage() {
                                             <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                             <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.7"/>
                                         </svg>
-                                        {g.totalPatients} BN
+                                        {g.totalPatients} pt
                                     </span>
                                 </div>
                                 <div className={styles.groupProgress}>
@@ -235,7 +235,7 @@ export default function ProviderGroupsPage() {
                             <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.5"/>
                             <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                         </svg>
-                        <p>Chọn một đoàn để xem danh sách bệnh nhân</p>
+                        <p>Select a group to view the patient list</p>
                     </div>
                 ) : (
                     <>
@@ -253,15 +253,15 @@ export default function ProviderGroupsPage() {
                                 <div className={styles.statsRow}>
                                     <div className={`${styles.statBox} ${styles.statSent}`}>
                                         <div className={styles.statValue}>{sentCount}</div>
-                                        <div className={styles.statLabel}>Đã gửi</div>
+                                        <div className={styles.statLabel}>Sent</div>
                                     </div>
                                     <div className={`${styles.statBox} ${styles.statUnsent}`}>
                                         <div className={styles.statValue}>{unsentCount}</div>
-                                        <div className={styles.statLabel}>Chưa gửi</div>
+                                        <div className={styles.statLabel}>Pending</div>
                                     </div>
                                     <div className={`${styles.statBox} ${styles.statTotal}`}>
                                         <div className={styles.statValue}>{patients.length}</div>
-                                        <div className={styles.statLabel}>Tổng BN</div>
+                                        <div className={styles.statLabel}>Total</div>
                                     </div>
                                 </div>
                             </div>
@@ -275,7 +275,7 @@ export default function ProviderGroupsPage() {
                                     <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                 </svg>
                                 <input
-                                    placeholder="Tìm tên hoặc mã đặt chỗ…"
+                                    placeholder="Search name or booking code…"
                                     value={search}
                                     onChange={e => setSearch(e.target.value)}
                                 />
@@ -285,9 +285,9 @@ export default function ProviderGroupsPage() {
                         {/* Patient list */}
                         <div className={styles.patientList}>
                             {loadingPatients ? (
-                                <div className={styles.loadingState}>Đang tải bệnh nhân…</div>
+                                <div className={styles.loadingState}>Loading patients…</div>
                             ) : filteredPatients.length === 0 ? (
-                                <div className={styles.loadingState}>Không có bệnh nhân nào</div>
+                                <div className={styles.loadingState}>No patients found</div>
                             ) : (
                                 filteredPatients.map((p, pi) => (
                                     <div
@@ -305,11 +305,11 @@ export default function ProviderGroupsPage() {
                                             <div className={styles.patientNameRow}>
                                                 <span className={styles.patientName}>{p.fullName}</span>
                                                 {p.resultSent && (
-                                                    <span className={styles.sentBadgeLg}>✓ Đã gửi</span>
+                                                    <span className={styles.sentBadgeLg}>✓ Sent</span>
                                                 )}
                                             </div>
                                             <p className={styles.patientSubMeta}>
-                                                {p.age} tuổi · CCCD: {p.idNumber}
+                                                {p.age} yrs · ID: {p.idNumber}
                                             </p>
                                             <span className={styles.bookingChip}>{p.bookingCode}</span>
                                             {p.resultSent && p.sentAt && (
@@ -318,7 +318,7 @@ export default function ProviderGroupsPage() {
                                                         <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7"/>
                                                         <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                                     </svg>
-                                                    Đã gửi lúc {fmtDate(p.sentAt)}
+                                                    Sent at {fmtDate(p.sentAt)}
                                                 </p>
                                             )}
                                             <p className={styles.patientPhone}>
@@ -334,7 +334,7 @@ export default function ProviderGroupsPage() {
                                                 className={`${styles.actionBtn} ${p.resultSent ? styles.actionBtnResend : styles.actionBtnSend}`}
                                                 onClick={() => openModal(p)}
                                             >
-                                                {p.resultSent ? "Gửi lại / Chỉnh sửa" : "Gửi kết quả"}
+                                                {p.resultSent ? "Resend / Edit" : "Send Result"}
                                             </button>
                                         </div>
                                     </div>
@@ -359,7 +359,7 @@ export default function ProviderGroupsPage() {
                                         <div>
                                             <p className={styles.modalName}>{sendTarget.fullName}</p>
                                             <p className={styles.modalMeta}>
-                                                {sendTarget.age} tuổi · CCCD: {sendTarget.idNumber} · {sendTarget.bookingCode}
+                                                {sendTarget.age} yrs · ID: {sendTarget.idNumber} · {sendTarget.bookingCode}
                                             </p>
                                         </div>
                                     </div>
@@ -379,7 +379,7 @@ export default function ProviderGroupsPage() {
                                                 <circle cx="8.5" cy="8.5" r="1.5" stroke="currentColor" strokeWidth="1.7"/>
                                                 <path d="M21 15l-5-5L5 21" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/>
                                             </svg>
-                                            Hình ảnh hồ sơ bệnh án
+                                            Medical Record Images
                                             {images.length > 0 && <span className={styles.fileCount}>{images.length} file</span>}
                                         </p>
                                         <div
@@ -397,9 +397,9 @@ export default function ProviderGroupsPage() {
                                                             <line x1="12" y1="3" x2="12" y2="15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                                         </svg>
                                                     </div>
-                                                    <p className={styles.dropTitle}>Kéo thả ảnh / PDF vào đây</p>
-                                                    <p className={styles.dropSub}>hoặc <button className={styles.dropBrowse} onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>chọn từ máy tính</button></p>
-                                                    <p className={styles.dropHint}>PNG, JPG, PDF · Tối đa 10 MB/file · Nhiều file</p>
+                                                    <p className={styles.dropTitle}>Drag & drop images / PDF here</p>
+                                                    <p className={styles.dropSub}>or <button className={styles.dropBrowse} onClick={e => { e.stopPropagation(); fileRef.current?.click(); }}>browse from computer</button></p>
+                                                    <p className={styles.dropHint}>PNG, JPG, PDF · Max 10 MB/file · Multiple files</p>
                                                 </>
                                             ) : (
                                                 <div className={styles.previewGrid} onClick={e => e.stopPropagation()}>
@@ -417,7 +417,7 @@ export default function ProviderGroupsPage() {
                                                         <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
                                                             <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                                         </svg>
-                                                        <span>Thêm</span>
+                                                        <span>Add</span>
                                                     </button>
                                                 </div>
                                             )}
@@ -439,11 +439,11 @@ export default function ProviderGroupsPage() {
                                                 <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/>
                                                 <path d="M14 2v6h6M16 13H8M16 17H8M10 9H8" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/>
                                             </svg>
-                                            Ghi chú & chẩn đoán
+                                            Notes & Diagnosis
                                         </p>
                                         <textarea
                                             className={styles.notesArea}
-                                            placeholder="Nhập chẩn đoán, kết quả xét nghiệm, khuyến nghị điều trị hoặc ghi chú quan trọng cho bệnh nhân…"
+                                            placeholder="Enter diagnosis, test results, treatment recommendations or important notes…"
                                             rows={5}
                                             value={notes}
                                             onChange={e => setNotes(e.target.value.slice(0, 1000))}
@@ -459,26 +459,26 @@ export default function ProviderGroupsPage() {
                                                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
                                                 <path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                             </svg>
-                                            Vui lòng đính kèm ít nhất 1 hình ảnh hoặc nhập ghi chú trước khi gửi.
+                                            Please attach at least 1 image or enter notes before sending.
                                         </div>
                                     )}
                                 </div>
 
                                 <div className={styles.modalFooter}>
-                                    <button className={styles.cancelBtn} onClick={closeModal} disabled={sending}>Huỷ</button>
+                                    <button className={styles.cancelBtn} onClick={closeModal} disabled={sending}>Cancel</button>
                                     <button
                                         className={styles.sendResultBtn}
                                         disabled={sending || (images.length === 0 && !notes.trim())}
                                         onClick={handleSend}
                                     >
                                         {sending ? (
-                                            <><span className={styles.spinner}/> Đang gửi…</>
+                                            <><span className={styles.spinner}/> Sending…</>
                                         ) : (
                                             <>
                                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                                     <path d="M22 2L11 13M22 2l-7 20-4-9-9-4 20-7z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
                                                 </svg>
-                                                Gửi kết quả cho bệnh nhân
+                                                Send result to patient
                                             </>
                                         )}
                                     </button>
@@ -494,19 +494,19 @@ export default function ProviderGroupsPage() {
                                         </svg>
                                     </div>
                                 </div>
-                                <h3 className={styles.successTitle}>Đã gửi thành công!</h3>
+                                <h3 className={styles.successTitle}>Sent successfully!</h3>
                                 <p className={styles.successSub}>
-                                    Kết quả của <strong>{sendTarget.fullName}</strong> đã được gửi.<br/>
-                                    Bệnh nhân sẽ nhận thông báo qua ứng dụng.
+                                    The result for <strong>{sendTarget.fullName}</strong> has been sent.<br/>
+                                    The patient will receive a notification in the app.
                                 </p>
                                 {(() => {
                                     const remaining = patients.filter(p => !p.resultSent && p.passengerId !== sendTarget.passengerId);
                                     return (
                                         <div className={styles.successActions}>
-                                            <button className={styles.doneBtn} onClick={closeModal}>Đóng</button>
+                                            <button className={styles.doneBtn} onClick={closeModal}>Close</button>
                                             {remaining.length > 0 && (
                                                 <button className={styles.nextBtn} onClick={goNextPatient}>
-                                                    Bệnh nhân tiếp theo ({remaining.length} còn lại) →
+                                                    Next patient ({remaining.length} remaining) →
                                                 </button>
                                             )}
                                         </div>

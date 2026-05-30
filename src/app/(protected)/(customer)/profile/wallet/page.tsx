@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
+import { walletService, type WalletDTO, type WalletTransactionDTO, type SavedBankDTO } from "@/libs/services/wallet.service";
 import styles from "./page.module.scss";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -30,30 +31,7 @@ interface Transaction {
     status: TxStatus;
 }
 
-// ── Mock data ─────────────────────────────────────────────────────────────────
-const WALLET = {
-    available:      2_450_000,
-    pending:          800_000,
-    totalDeposited: 14_200_000,
-    totalWithdrawn: 11_750_000,
-};
-
-const SAVED_BANKS: BankAccount[] = [
-    { id: "b1", bankName: "MB Bank",     bankCode: "MB",  accountNumber: "0901234488823", holderName: "NGUYEN VAN A", isPrimary: true  },
-    { id: "b2", bankName: "Vietcombank", bankCode: "VCB", accountNumber: "1014564294417", holderName: "NGUYEN VAN A", isPrimary: false },
-];
-
-const TRANSACTIONS: Transaction[] = [
-    { id: "t1", type: "refund",     amount:  1_200_000, date: "18/05/2026", description: "Hoàn tiền đặt tour bị huỷ",             reference: "BK-20240415-A3F7", status: "completed" },
-    { id: "t2", type: "withdrawal", amount: -800_000,   date: "15/05/2026", description: "Rút tiền về MB Bank ****8823",           reference: "WD-20240515-B2C1", status: "completed" },
-    { id: "t3", type: "cashback",   amount:  250_000,   date: "10/05/2026", description: "Cashback giới thiệu bạn bè",            reference: "CB-20240510-E4F3", status: "completed" },
-    { id: "t4", type: "refund",     amount:  800_000,   date: "08/05/2026", description: "Hoàn tiền một phần — Sapa Trek",       reference: "BK-20240301-B7D2", status: "pending"   },
-    { id: "t5", type: "withdrawal", amount: -2_400_000, date: "22/04/2026", description: "Rút tiền về Vietcombank ****4417",      reference: "WD-20240422-G5H8", status: "completed" },
-    { id: "t6", type: "deposit",    amount:  3_000_000, date: "10/04/2026", description: "Thưởng hoàn thành tour cao điểm",      reference: "DP-20240410-K9L2", status: "completed" },
-    { id: "t7", type: "refund",     amount:  500_000,   date: "02/04/2026", description: "Hoàn phí dịch vụ chênh lệch",         reference: "BK-20240320-F1G9", status: "completed" },
-    { id: "t8", type: "withdrawal", amount: -5_000_000, date: "18/03/2026", description: "Rút tiền về MB Bank ****8823",         reference: "WD-20240318-H3I4", status: "failed"    },
-];
-
+// ── Constants ─────────────────────────────────────────────────────────────────
 const QUICK_AMOUNTS = [200_000, 500_000, 1_000_000, 2_000_000];
 
 const BANK_OPTIONS = [
@@ -69,53 +47,122 @@ const BANK_CODE: Record<string, string> = {
     "OCB": "OCB", "SHB": "SHB", "VIB": "VIB",
 };
 
-const WITHDRAWAL_FEE = 0;
-const MIN_WITHDRAW   = 50_000;
+const MIN_WITHDRAW = 50_000;
+
+const TX_CFG: Record<TxType, { label: string; color: string; bg: string; sign: "+" | "-" }> = {
+    refund:     { label: "Refund",      color: "#15803d", bg: "#dcfce7", sign: "+" },
+    cashback:   { label: "Cashback",    color: "#0369a1", bg: "#e0f2fe", sign: "+" },
+    deposit:    { label: "Earning",     color: "#7c3aed", bg: "#ede9fe", sign: "+" },
+    withdrawal: { label: "Withdrawal",  color: "#b91c1c", bg: "#fee2e2", sign: "-" },
+};
+
+const ST_CFG: Record<TxStatus, { label: string; color: string; bg: string }> = {
+    completed: { label: "Completed",   color: "#15803d", bg: "#dcfce7" },
+    pending:   { label: "Processing",  color: "#92400e", bg: "#fef3c7" },
+    failed:    { label: "Failed",      color: "#b91c1c", bg: "#fee2e2" },
+};
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
-function vnd(n: number) {
-    return Math.abs(n).toLocaleString("vi-VN") + "đ";
+function currency(n: number) {
+    return Math.abs(n).toLocaleString("vi-VN") + "₫";
 }
 
 function maskAccount(num: string) {
     return num.length > 8 ? num.slice(0, 4) + " **** " + num.slice(-4) : num;
 }
 
-const TX_CFG: Record<TxType, { label: string; color: string; bg: string; sign: "+" | "-" }> = {
-    refund:     { label: "Hoàn tiền",   color: "#15803d", bg: "#dcfce7", sign: "+" },
-    cashback:   { label: "Cashback",    color: "#0369a1", bg: "#e0f2fe", sign: "+" },
-    deposit:    { label: "Nạp tiền",    color: "#7c3aed", bg: "#ede9fe", sign: "+" },
-    withdrawal: { label: "Rút tiền",    color: "#b91c1c", bg: "#fee2e2", sign: "-" },
-};
+function fmtDate(iso: string) {
+    return new Date(iso).toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" });
+}
 
-const ST_CFG: Record<TxStatus, { label: string; color: string; bg: string }> = {
-    completed: { label: "Hoàn thành", color: "#15803d", bg: "#dcfce7" },
-    pending:   { label: "Đang xử lý", color: "#92400e", bg: "#fef3c7" },
-    failed:    { label: "Thất bại",   color: "#b91c1c", bg: "#fee2e2" },
-};
+function mapTransaction(tx: WalletTransactionDTO): Transaction {
+    let type: TxType;
+    if (tx.type === "Credit") {
+        if (tx.reason === "Refund")         type = "refund";
+        else if (tx.reason === "BookingEarning") type = "deposit";
+        else                                 type = "cashback";
+    } else {
+        type = "withdrawal";
+    }
+    const status: TxStatus = tx.reason === "Payout" ? "pending" : "completed";
+    return {
+        id:          tx.id,
+        type,
+        amount:      tx.type === "Credit" ? tx.amount : -tx.amount,
+        date:        fmtDate(tx.createdAt),
+        description: tx.note ?? `${tx.reason.replace(/([A-Z])/g, " $1").trim()} transaction`,
+        reference:   tx.referenceId
+            ? tx.referenceId.slice(0, 8).toUpperCase()
+            : tx.id.slice(0, 8).toUpperCase(),
+        status,
+    };
+}
+
+function mapBank(b: SavedBankDTO, idx: number): BankAccount {
+    return {
+        id:            b.bankAccount,
+        bankName:      b.bankName,
+        bankCode:      BANK_CODE[b.bankName] ?? b.bankName.slice(0, 3).toUpperCase(),
+        accountNumber: b.bankAccount,
+        holderName:    b.accountHolder,
+        isPrimary:     idx === 0,
+    };
+}
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function WalletPage() {
     const [step, setStep]               = useState<Step>(1);
     const [amount, setAmount]           = useState("");
     const [amountErr, setAmountErr]     = useState("");
-    const [selectedBank, setSelectedBank] = useState<string>(SAVED_BANKS[0].id);
+    const [selectedBank, setSelectedBank] = useState<string>("");
     const [addNew, setAddNew]           = useState(false);
     const [processing, setProcessing]   = useState(false);
     const [txFilter, setTxFilter]       = useState<"all" | TxType>("all");
-    const [newBank, setNewBank] = useState({
-        bankName: "", accountNumber: "", holderName: "",
-    });
+    const [newBank, setNewBank]         = useState({ bankName: "", accountNumber: "", holderName: "" });
     const amountRef = useRef<HTMLInputElement>(null);
 
-    const numAmount = parseInt(amount.replace(/\D/g, ""), 10) || 0;
-    const netAmount = numAmount - WITHDRAWAL_FEE;
-    const selectedBankObj = SAVED_BANKS.find(b => b.id === selectedBank);
+    // ── API state ──────────────────────────────────────────────────────────────
+    const [wallet,       setWallet]       = useState<WalletDTO | null>(null);
+    const [banks,        setBanks]        = useState<BankAccount[]>([]);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+    const [loading,      setLoading]      = useState(true);
 
-    useEffect(() => {
-        if (step === 1) { setAmountErr(""); }
-    }, [step]);
+    const fetchData = useCallback(async () => {
+        setLoading(true);
+        try {
+            const [wRes, txRes, bRes] = await Promise.all([
+                walletService.getMyWallet(),
+                walletService.getMyTransactions(),
+                walletService.getSavedBanks(),
+            ]);
+            if (wRes.data)  setWallet(wRes.data);
+            if (txRes.data) setTransactions(txRes.data.map(mapTransaction));
+            if (bRes.data && bRes.data.length > 0) {
+                const mapped = bRes.data.map(mapBank);
+                setBanks(mapped);
+                setSelectedBank(mapped[0].id);
+            } else {
+                setAddNew(true);
+            }
+        } catch {
+            // silently ignore — page still renders with empty state
+        } finally {
+            setLoading(false);
+        }
+    }, []);
 
+    useEffect(() => { fetchData(); }, [fetchData]);
+    useEffect(() => { if (step === 1) setAmountErr(""); }, [step]);
+
+    // ── Derived values ────────────────────────────────────────────────────────
+    const numAmount       = parseInt(amount.replace(/\D/g, ""), 10) || 0;
+    const availableBalance = wallet?.balance ?? 0;
+    const selectedBankObj  = banks.find(b => b.id === selectedBank);
+
+    const totalDeposited = transactions.filter(t => t.amount > 0).reduce((s, t) => s + t.amount, 0);
+    const totalWithdrawn = transactions.filter(t => t.amount < 0).reduce((s, t) => s + Math.abs(t.amount), 0);
+
+    // ── Handlers ──────────────────────────────────────────────────────────────
     function handleAmountInput(raw: string) {
         const digits = raw.replace(/\D/g, "");
         setAmount(digits ? parseInt(digits, 10).toLocaleString("vi-VN") : "");
@@ -129,12 +176,12 @@ export default function WalletPage() {
 
     function validateStep1(): boolean {
         if (!numAmount || numAmount < MIN_WITHDRAW) {
-            setAmountErr(`Số tiền tối thiểu là ${vnd(MIN_WITHDRAW)}`);
+            setAmountErr(`Minimum withdrawal is ${currency(MIN_WITHDRAW)}`);
             amountRef.current?.focus();
             return false;
         }
-        if (numAmount > WALLET.available) {
-            setAmountErr("Số tiền vượt quá số dư khả dụng");
+        if (numAmount > availableBalance) {
+            setAmountErr("Amount exceeds your available balance");
             return false;
         }
         return true;
@@ -142,21 +189,37 @@ export default function WalletPage() {
 
     async function handleConfirm() {
         setProcessing(true);
-        await new Promise(r => setTimeout(r, 2000));
-        setProcessing(false);
-        setStep(4);
+        try {
+            const bankData = addNew
+                ? { bankAccount: newBank.accountNumber, bankName: newBank.bankName, accountHolder: newBank.holderName }
+                : { bankAccount: selectedBankObj!.accountNumber, bankName: selectedBankObj!.bankName, accountHolder: selectedBankObj!.holderName };
+
+            await walletService.requestPayout({ amount: numAmount, ...bankData });
+
+            // Refresh wallet balance
+            const wRes = await walletService.getMyWallet();
+            if (wRes.data) setWallet(wRes.data);
+
+            setStep(4);
+        } catch {
+            setAmountErr("Withdrawal request failed. Please try again.");
+            setStep(1);
+        } finally {
+            setProcessing(false);
+        }
     }
 
     function resetFlow() {
         setStep(1);
         setAmount("");
         setAmountErr("");
-        setSelectedBank(SAVED_BANKS[0].id);
-        setAddNew(false);
+        setSelectedBank(banks[0]?.id ?? "");
+        setAddNew(banks.length === 0);
         setNewBank({ bankName: "", accountNumber: "", holderName: "" });
+        fetchData();
     }
 
-    const filteredTx = TRANSACTIONS.filter(t => txFilter === "all" || t.type === txFilter);
+    const filteredTx = transactions.filter(t => txFilter === "all" || t.type === txFilter);
 
     return (
         <>
@@ -166,41 +229,49 @@ export default function WalletPage() {
 
                     {/* Breadcrumb */}
                     <nav className={styles.breadcrumb}>
-                        <Link href="/">Trang chủ</Link>
+                        <Link href="/">Home</Link>
                         <span>/</span>
-                        <Link href="/profile">Hồ sơ</Link>
+                        <Link href="/profile">Profile</Link>
                         <span>/</span>
-                        <span>Ví & Rút tiền</span>
+                        <span>Wallet & Withdrawal</span>
                     </nav>
 
                     {/* ── Balance hero ── */}
                     <div className={styles.hero}>
                         <div className={styles.heroGlow} />
                         <div className={styles.heroLeft}>
-                            <p className={styles.heroLabel}>Số dư khả dụng</p>
-                            <p className={styles.heroBalance}>{vnd(WALLET.available)}</p>
-                            <div className={styles.heroPending}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
-                                    <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
-                                    <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                                </svg>
-                                Đang chờ xử lý: <strong>{vnd(WALLET.pending)}</strong>
-                            </div>
+                            <p className={styles.heroLabel}>Available Balance</p>
+                            <p className={styles.heroBalance}>
+                                {loading ? "—" : currency(availableBalance)}
+                            </p>
+                            {(wallet?.pendingBalance ?? 0) > 0 && (
+                                <div className={styles.heroPending}>
+                                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13">
+                                        <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
+                                        <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                    </svg>
+                                    Pending: <strong>{currency(wallet!.pendingBalance)}</strong>
+                                </div>
+                            )}
                         </div>
                         <div className={styles.heroStats}>
                             <div className={styles.heroStat}>
-                                <span className={styles.heroStatLabel}>Tổng đã nạp</span>
-                                <span className={styles.heroStatVal} style={{ color: "#4ade80" }}>{vnd(WALLET.totalDeposited)}</span>
+                                <span className={styles.heroStatLabel}>Total Received</span>
+                                <span className={styles.heroStatVal} style={{ color: "#4ade80" }}>
+                                    {loading ? "—" : currency(totalDeposited)}
+                                </span>
                             </div>
                             <div className={styles.heroStatDivider}/>
                             <div className={styles.heroStat}>
-                                <span className={styles.heroStatLabel}>Tổng đã rút</span>
-                                <span className={styles.heroStatVal} style={{ color: "#fca5a5" }}>{vnd(WALLET.totalWithdrawn)}</span>
+                                <span className={styles.heroStatLabel}>Total Withdrawn</span>
+                                <span className={styles.heroStatVal} style={{ color: "#fca5a5" }}>
+                                    {loading ? "—" : currency(totalWithdrawn)}
+                                </span>
                             </div>
                             <div className={styles.heroStatDivider}/>
                             <div className={styles.heroStat}>
-                                <span className={styles.heroStatLabel}>Số giao dịch</span>
-                                <span className={styles.heroStatVal}>{TRANSACTIONS.length}</span>
+                                <span className={styles.heroStatLabel}>Transactions</span>
+                                <span className={styles.heroStatVal}>{loading ? "—" : transactions.length}</span>
                             </div>
                         </div>
                     </div>
@@ -213,9 +284,9 @@ export default function WalletPage() {
                             {/* Step indicator */}
                             <div className={styles.steps}>
                                 {([
-                                    { n: 1, label: "Số tiền"  },
-                                    { n: 2, label: "Tài khoản"},
-                                    { n: 3, label: "Xác nhận" },
+                                    { n: 1, label: "Amount"   },
+                                    { n: 2, label: "Account"  },
+                                    { n: 3, label: "Confirm"  },
                                 ] as const).map((s, i) => (
                                     <div key={s.n} className={styles.stepItem}>
                                         <div className={`${styles.stepCircle}
@@ -236,10 +307,9 @@ export default function WalletPage() {
                             {/* ══ STEP 1: Amount ══ */}
                             {step === 1 && (
                                 <div className={styles.stepBody}>
-                                    <h2 className={styles.stepTitle}>Nhập số tiền muốn rút</h2>
-                                    <p className={styles.stepSub}>Số dư khả dụng: <strong>{vnd(WALLET.available)}</strong></p>
+                                    <h2 className={styles.stepTitle}>Enter withdrawal amount</h2>
+                                    <p className={styles.stepSub}>Available balance: <strong>{currency(availableBalance)}</strong></p>
 
-                                    {/* Amount input */}
                                     <div className={`${styles.amountWrap} ${amountErr ? styles.amountWrapError : ""}`}>
                                         <span className={styles.amountCurrency}>₫</span>
                                         <input
@@ -261,7 +331,6 @@ export default function WalletPage() {
                                     </div>
                                     {amountErr && <p className={styles.amountErr}>{amountErr}</p>}
 
-                                    {/* Quick amounts */}
                                     <div className={styles.quickRow}>
                                         {QUICK_AMOUNTS.map(v => (
                                             <button
@@ -269,40 +338,40 @@ export default function WalletPage() {
                                                 className={`${styles.quickBtn} ${numAmount === v ? styles.quickBtnActive : ""}`}
                                                 onClick={() => handleQuickAmount(v)}
                                             >
-                                                {vnd(v)}
+                                                {currency(v)}
                                             </button>
                                         ))}
                                         <button
-                                            className={`${styles.quickBtn} ${numAmount === WALLET.available ? styles.quickBtnActive : ""}`}
-                                            onClick={() => handleQuickAmount(WALLET.available)}
+                                            className={`${styles.quickBtn} ${numAmount === availableBalance && availableBalance > 0 ? styles.quickBtnActive : ""}`}
+                                            onClick={() => handleQuickAmount(availableBalance)}
+                                            disabled={availableBalance === 0}
                                         >
-                                            Tất cả
+                                            All
                                         </button>
                                     </div>
 
-                                    {/* Fee info */}
                                     <div className={styles.feeBox}>
                                         <div className={styles.feeRow}>
-                                            <span>Số tiền rút</span>
-                                            <span>{numAmount ? vnd(numAmount) : "—"}</span>
+                                            <span>Withdrawal amount</span>
+                                            <span>{numAmount ? currency(numAmount) : "—"}</span>
                                         </div>
                                         <div className={styles.feeRow}>
-                                            <span>Phí giao dịch</span>
-                                            <span style={{ color: "#16a34a" }}>Miễn phí</span>
+                                            <span>Transaction fee</span>
+                                            <span style={{ color: "#16a34a" }}>Free</span>
                                         </div>
                                         <div className={styles.feeDivider}/>
                                         <div className={`${styles.feeRow} ${styles.feeTotal}`}>
-                                            <span>Thực nhận</span>
-                                            <strong style={{ color: "#4f46e5" }}>{numAmount ? vnd(numAmount) : "—"}</strong>
+                                            <span>You receive</span>
+                                            <strong style={{ color: "#4f46e5" }}>{numAmount ? currency(numAmount) : "—"}</strong>
                                         </div>
                                     </div>
 
                                     <button
                                         className={styles.nextBtn}
                                         onClick={() => validateStep1() && setStep(2)}
-                                        disabled={!numAmount}
+                                        disabled={!numAmount || loading}
                                     >
-                                        Tiếp theo
+                                        Next
                                         <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                     </button>
                                 </div>
@@ -311,12 +380,11 @@ export default function WalletPage() {
                             {/* ══ STEP 2: Bank account ══ */}
                             {step === 2 && (
                                 <div className={styles.stepBody}>
-                                    <h2 className={styles.stepTitle}>Chọn tài khoản ngân hàng</h2>
-                                    <p className={styles.stepSub}>Chuyển <strong>{vnd(numAmount)}</strong> về tài khoản sau</p>
+                                    <h2 className={styles.stepTitle}>Select bank account</h2>
+                                    <p className={styles.stepSub}>Transfer <strong>{currency(numAmount)}</strong> to</p>
 
-                                    {/* Saved accounts */}
                                     <div className={styles.bankList}>
-                                        {SAVED_BANKS.map(b => (
+                                        {banks.map(b => (
                                             <label
                                                 key={b.id}
                                                 className={`${styles.bankItem} ${selectedBank === b.id && !addNew ? styles.bankItemSelected : ""}`}
@@ -331,7 +399,7 @@ export default function WalletPage() {
                                                 <div className={styles.bankInfo}>
                                                     <div className={styles.bankName}>
                                                         {b.bankName}
-                                                        {b.isPrimary && <span className={styles.primaryBadge}>Mặc định</span>}
+                                                        {b.isPrimary && <span className={styles.primaryBadge}>Default</span>}
                                                     </div>
                                                     <div className={styles.bankNum}>{maskAccount(b.accountNumber)}</div>
                                                     <div className={styles.bankHolder}>{b.holderName}</div>
@@ -339,7 +407,6 @@ export default function WalletPage() {
                                             </label>
                                         ))}
 
-                                        {/* Add new account option */}
                                         <label
                                             className={`${styles.bankItem} ${addNew ? styles.bankItemSelected : ""} ${styles.bankItemAdd}`}
                                             onClick={() => setAddNew(true)}
@@ -354,37 +421,36 @@ export default function WalletPage() {
                                                     <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                                 </svg>
                                             </div>
-                                            <span className={styles.bankAddLabel}>Thêm tài khoản mới</span>
+                                            <span className={styles.bankAddLabel}>Add new account</span>
                                         </label>
                                     </div>
 
-                                    {/* New bank form */}
                                     {addNew && (
                                         <div className={styles.newBankForm}>
                                             <div className={styles.formField}>
-                                                <label className={styles.fieldLabel}>Ngân hàng</label>
+                                                <label className={styles.fieldLabel}>Bank</label>
                                                 <select
                                                     className={styles.fieldSelect}
                                                     value={newBank.bankName}
                                                     onChange={e => setNewBank(p => ({ ...p, bankName: e.target.value }))}
                                                 >
-                                                    <option value="">Chọn ngân hàng…</option>
+                                                    <option value="">Select bank…</option>
                                                     {BANK_OPTIONS.map(b => <option key={b} value={b}>{b}</option>)}
                                                 </select>
                                             </div>
                                             <div className={styles.formField}>
-                                                <label className={styles.fieldLabel}>Số tài khoản</label>
+                                                <label className={styles.fieldLabel}>Account number</label>
                                                 <input
                                                     className={styles.fieldInput}
                                                     type="text"
-                                                    placeholder="Nhập số tài khoản"
+                                                    placeholder="Enter account number"
                                                     value={newBank.accountNumber}
                                                     onChange={e => setNewBank(p => ({ ...p, accountNumber: e.target.value.replace(/\D/g, "") }))}
                                                     maxLength={20}
                                                 />
                                             </div>
                                             <div className={styles.formField}>
-                                                <label className={styles.fieldLabel}>Tên chủ tài khoản</label>
+                                                <label className={styles.fieldLabel}>Account holder name</label>
                                                 <input
                                                     className={styles.fieldInput}
                                                     type="text"
@@ -392,7 +458,7 @@ export default function WalletPage() {
                                                     value={newBank.holderName}
                                                     onChange={e => setNewBank(p => ({ ...p, holderName: e.target.value.toUpperCase() }))}
                                                 />
-                                                <p className={styles.fieldHint}>Nhập đúng tên in hoa như trên tài khoản ngân hàng</p>
+                                                <p className={styles.fieldHint}>Enter your name exactly as it appears on your bank account</p>
                                             </div>
                                         </div>
                                     )}
@@ -400,14 +466,14 @@ export default function WalletPage() {
                                     <div className={styles.stepBtns}>
                                         <button className={styles.backBtn} onClick={() => setStep(1)}>
                                             <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                            Quay lại
+                                            Back
                                         </button>
                                         <button
                                             className={styles.nextBtn}
                                             onClick={() => setStep(3)}
                                             disabled={addNew && (!newBank.bankName || !newBank.accountNumber || !newBank.holderName)}
                                         >
-                                            Tiếp theo
+                                            Next
                                             <svg viewBox="0 0 24 24" fill="none" width="16" height="16"><path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                         </button>
                                     </div>
@@ -417,51 +483,35 @@ export default function WalletPage() {
                             {/* ══ STEP 3: Confirm ══ */}
                             {step === 3 && (
                                 <div className={styles.stepBody}>
-                                    <h2 className={styles.stepTitle}>Xác nhận rút tiền</h2>
-                                    <p className={styles.stepSub}>Vui lòng kiểm tra thông tin trước khi xác nhận</p>
+                                    <h2 className={styles.stepTitle}>Confirm withdrawal</h2>
+                                    <p className={styles.stepSub}>Please review the details before confirming</p>
 
                                     <div className={styles.confirmCard}>
-                                        {/* Amount display */}
                                         <div className={styles.confirmAmount}>
-                                            <p className={styles.confirmAmountLabel}>Số tiền rút</p>
-                                            <p className={styles.confirmAmountVal}>{vnd(numAmount)}</p>
+                                            <p className={styles.confirmAmountLabel}>Withdrawal amount</p>
+                                            <p className={styles.confirmAmountVal}>{currency(numAmount)}</p>
                                         </div>
 
                                         <div className={styles.confirmRows}>
                                             <div className={styles.confirmRow}>
-                                                <span>Ngân hàng thụ hưởng</span>
-                                                <strong>
-                                                    {addNew
-                                                        ? `${newBank.bankName}`
-                                                        : selectedBankObj?.bankName
-                                                    }
-                                                </strong>
+                                                <span>Bank</span>
+                                                <strong>{addNew ? newBank.bankName : selectedBankObj?.bankName}</strong>
                                             </div>
                                             <div className={styles.confirmRow}>
-                                                <span>Số tài khoản</span>
-                                                <strong>
-                                                    {addNew
-                                                        ? newBank.accountNumber
-                                                        : maskAccount(selectedBankObj?.accountNumber ?? "")
-                                                    }
-                                                </strong>
+                                                <span>Account number</span>
+                                                <strong>{addNew ? newBank.accountNumber : maskAccount(selectedBankObj?.accountNumber ?? "")}</strong>
                                             </div>
                                             <div className={styles.confirmRow}>
-                                                <span>Chủ tài khoản</span>
-                                                <strong>
-                                                    {addNew
-                                                        ? newBank.holderName
-                                                        : selectedBankObj?.holderName
-                                                    }
-                                                </strong>
+                                                <span>Account holder</span>
+                                                <strong>{addNew ? newBank.holderName : selectedBankObj?.holderName}</strong>
                                             </div>
                                             <div className={styles.confirmRow}>
-                                                <span>Phí giao dịch</span>
-                                                <span style={{ color: "#16a34a", fontWeight: 600 }}>Miễn phí</span>
+                                                <span>Transaction fee</span>
+                                                <span style={{ color: "#16a34a", fontWeight: 600 }}>Free</span>
                                             </div>
                                             <div className={`${styles.confirmRow} ${styles.confirmRowTotal}`}>
-                                                <span>Thực nhận</span>
-                                                <strong style={{ color: "#4f46e5", fontSize: 18 }}>{vnd(netAmount)}</strong>
+                                                <span>You receive</span>
+                                                <strong style={{ color: "#4f46e5", fontSize: 18 }}>{currency(numAmount)}</strong>
                                             </div>
                                         </div>
 
@@ -470,14 +520,14 @@ export default function WalletPage() {
                                                 <circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/>
                                                 <path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                             </svg>
-                                            Giao dịch thường xử lý trong <strong>1–3 ngày làm việc</strong>. Tiền sẽ được chuyển vào tài khoản của bạn sau khi xác minh thành công.
+                                            Withdrawals are typically processed within <strong>1–3 business days</strong>. Funds will be transferred after verification.
                                         </div>
                                     </div>
 
                                     <div className={styles.stepBtns}>
                                         <button className={styles.backBtn} onClick={() => setStep(2)}>
                                             <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="M19 12H5M12 19l-7-7 7-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                            Quay lại
+                                            Back
                                         </button>
                                         <button
                                             className={styles.confirmBtn}
@@ -485,14 +535,11 @@ export default function WalletPage() {
                                             disabled={processing}
                                         >
                                             {processing ? (
-                                                <>
-                                                    <span className={styles.btnSpinner}/>
-                                                    Đang xử lý…
-                                                </>
+                                                <><span className={styles.btnSpinner}/> Processing…</>
                                             ) : (
                                                 <>
                                                     <svg viewBox="0 0 24 24" fill="none" width="15" height="15"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                                                    Xác nhận rút tiền
+                                                    Confirm withdrawal
                                                 </>
                                             )}
                                         </button>
@@ -512,36 +559,36 @@ export default function WalletPage() {
                                         </div>
                                     </div>
 
-                                    <h2 className={styles.successTitle}>Yêu cầu đã gửi!</h2>
+                                    <h2 className={styles.successTitle}>Request submitted!</h2>
                                     <p className={styles.successSub}>
-                                        Yêu cầu rút <strong>{vnd(numAmount)}</strong> đang được xử lý.<br/>
-                                        Tiền sẽ về tài khoản trong <strong>1–3 ngày làm việc</strong>.
+                                        Your withdrawal of <strong>{currency(numAmount)}</strong> is being processed.<br/>
+                                        Funds will arrive within <strong>1–3 business days</strong>.
                                     </p>
 
                                     <div className={styles.successInfo}>
                                         <div className={styles.successRow}>
-                                            <span>Ngân hàng</span>
+                                            <span>Bank</span>
                                             <strong>{addNew ? newBank.bankName : selectedBankObj?.bankName}</strong>
                                         </div>
                                         <div className={styles.successRow}>
-                                            <span>Tài khoản</span>
+                                            <span>Account</span>
                                             <strong>{addNew ? newBank.accountNumber : maskAccount(selectedBankObj?.accountNumber ?? "")}</strong>
                                         </div>
                                         <div className={styles.successRow}>
-                                            <span>Thực nhận</span>
-                                            <strong style={{ color: "#4f46e5" }}>{vnd(netAmount)}</strong>
-                                        </div>
-                                        <div className={styles.successRow}>
-                                            <span>Mã giao dịch</span>
-                                            <strong style={{ fontFamily: "monospace" }}>WD-{Date.now().toString(36).toUpperCase().slice(-8)}</strong>
+                                            <span>Amount</span>
+                                            <strong style={{ color: "#4f46e5" }}>{currency(numAmount)}</strong>
                                         </div>
                                     </div>
 
-                                    <button className={styles.nextBtn} style={{ width: "100%", justifyContent: "center", marginTop: 20 }} onClick={resetFlow}>
-                                        Rút thêm tiền
+                                    <button
+                                        className={styles.nextBtn}
+                                        style={{ width: "100%", justifyContent: "center", marginTop: 20 }}
+                                        onClick={resetFlow}
+                                    >
+                                        Withdraw more
                                     </button>
                                     <Link href="/profile" className={styles.backToProfileLink}>
-                                        Về hồ sơ của tôi
+                                        Back to profile
                                     </Link>
                                 </div>
                             )}
@@ -550,8 +597,7 @@ export default function WalletPage() {
                         {/* ── Right: Transaction history ── */}
                         <div className={styles.historyCard}>
                             <div className={styles.historyHeader}>
-                                <h3 className={styles.historyTitle}>Lịch sử giao dịch</h3>
-                                {/* Filter tabs */}
+                                <h3 className={styles.historyTitle}>Transaction History</h3>
                                 <div className={styles.txFilters}>
                                     {(["all", "refund", "cashback", "withdrawal", "deposit"] as const).map(f => (
                                         <button
@@ -559,20 +605,24 @@ export default function WalletPage() {
                                             className={`${styles.txFilter} ${txFilter === f ? styles.txFilterActive : ""}`}
                                             onClick={() => setTxFilter(f)}
                                         >
-                                            {f === "all" ? "Tất cả" : TX_CFG[f as TxType].label}
+                                            {f === "all" ? "All" : TX_CFG[f as TxType].label}
                                         </button>
                                     ))}
                                 </div>
                             </div>
 
                             <div className={styles.txList}>
-                                {filteredTx.length === 0 ? (
+                                {loading ? (
+                                    <div className={styles.txEmpty}>
+                                        <p style={{ color: "#9ca3af" }}>Loading transactions…</p>
+                                    </div>
+                                ) : filteredTx.length === 0 ? (
                                     <div className={styles.txEmpty}>
                                         <svg viewBox="0 0 24 24" fill="none" width="36" height="36">
                                             <rect x="3" y="4" width="18" height="18" rx="2" stroke="#d1d5db" strokeWidth="1.5"/>
                                             <path d="M7 8h10M7 12h6M7 16h4" stroke="#d1d5db" strokeWidth="1.5" strokeLinecap="round"/>
                                         </svg>
-                                        <p>Không có giao dịch nào</p>
+                                        <p>No transactions yet</p>
                                     </div>
                                 ) : filteredTx.map(tx => {
                                     const tc  = TX_CFG[tx.type];
@@ -598,7 +648,7 @@ export default function WalletPage() {
                                                 <div className={styles.txTop}>
                                                     <span className={styles.txDesc}>{tx.description}</span>
                                                     <span className={`${styles.txAmount} ${isOut ? styles.txOut : styles.txIn}`}>
-                                                        {tc.sign}{vnd(tx.amount)}
+                                                        {tc.sign}{currency(tx.amount)}
                                                     </span>
                                                 </div>
                                                 <div className={styles.txBottom}>

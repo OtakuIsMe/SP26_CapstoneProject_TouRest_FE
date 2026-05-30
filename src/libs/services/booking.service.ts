@@ -31,6 +31,14 @@ export interface BookingCreateResponse {
     status: BookingStatus;
 }
 
+export interface CancelBookingResult {
+    bookingId: string;
+    bookingCode: string;
+    refundPercent: number;
+    refundAmount: number;
+    message: string;
+}
+
 export const bookingService = {
     getMyBookings: (status?: BookingStatus): Promise<ApiResponse<BookingDTO[]>> =>
         axiosClient.get("/bookings/me", { params: status ? { status } : undefined }),
@@ -43,4 +51,7 @@ export const bookingService = {
 
     cancel: (id: string): Promise<ApiResponse<unknown>> =>
         axiosClient.put(`/bookings/${id}`, { status: "Cancelled" }),
+
+    cancelWithRefund: (id: string, reason?: string): Promise<ApiResponse<CancelBookingResult>> =>
+        axiosClient.post(`/bookings/${id}/cancel`, reason ?? null),
 };

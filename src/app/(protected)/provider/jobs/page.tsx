@@ -36,7 +36,6 @@ const WEEKDAYS = ["SUNDAY","MONDAY","TUESDAY","WEDNESDAY","THURSDAY","FRIDAY","S
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const parseDate = (s: string) => new Date(s + "T00:00:00");
 const isSameDay = (a: Date, b: Date) => a.toDateString() === b.toDateString();
-const inRange   = (d: Date, s: Date, e: Date) => d >= s && d <= e;
 
 function toDateStr(dt: string): string {
     const d = new Date(dt);
@@ -66,7 +65,7 @@ function mapToTourJob(s: ProviderScheduleDTO): TourJob {
         agency:       s.agencyName,
         arrivalDate:  toDateStr(s.startTime),
         departureDate:toDateStr(s.endTime),
-        arrivalTime:  fmtTime(s.startTime),
+        arrivalTime:  s.firstActivityTime ? fmtTime(s.firstActivityTime) : fmtTime(s.startTime),
         people:       s.spot,
         services:     [],
         status:       deriveStatus(s.startTime, s.endTime),
@@ -135,7 +134,7 @@ export default function ProviderJobsPage() {
     const isCurrentMonthView = curYear === today.getFullYear() && curMonth === today.getMonth();
 
     function jobsOnDate(date: Date): TourJob[] {
-        return jobs.filter(j => inRange(date, parseDate(j.arrivalDate), parseDate(j.departureDate)));
+        return jobs.filter(j => isSameDay(date, parseDate(j.arrivalDate)));
     }
 
     // Right panel: pending/unconfirmed groups
@@ -247,17 +246,14 @@ export default function ProviderJobsPage() {
                                     </div>
 
                                     <div className={styles.events}>
-                                        {visible.map(job => {
-                                            const isArrival = isSameDay(cell.date, parseDate(job.arrivalDate));
-                                            return (
-                                                <JobCard
-                                                    key={job.id}
-                                                    time={isArrival ? job.arrivalTime : "In stay"}
-                                                    title={job.groupName}
-                                                    status={job.status}
-                                                />
-                                            );
-                                        })}
+                                        {visible.map(job => (
+                                            <JobCard
+                                                key={job.id}
+                                                time={job.arrivalTime}
+                                                title={job.groupName}
+                                                status={job.status}
+                                            />
+                                        ))}
                                         {more > 0 && (
                                             <button
                                                 className={styles.viewMore}
@@ -294,18 +290,15 @@ export default function ProviderJobsPage() {
                                     </button>
                                 </div>
                                 <div className={styles.popupList}>
-                                    {popup.jobs.map(job => {
-                                        const isArrival = isSameDay(popup.date, parseDate(job.arrivalDate));
-                                        return (
-                                            <JobCard
-                                                key={job.id}
-                                                time={isArrival ? job.arrivalTime : "In stay"}
-                                                title={job.groupName}
-                                                status={job.status}
-                                                onCancel={() => setPopup(null)}
-                                            />
-                                        );
-                                    })}
+                                    {popup.jobs.map(job => (
+                                        <JobCard
+                                            key={job.id}
+                                            time={job.arrivalTime}
+                                            title={job.groupName}
+                                            status={job.status}
+                                            onCancel={() => setPopup(null)}
+                                        />
+                                    ))}
                                 </div>
                             </div>
                         </div>
