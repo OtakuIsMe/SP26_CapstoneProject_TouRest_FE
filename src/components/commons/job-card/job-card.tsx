@@ -4,7 +4,7 @@ import { useRef, useState, useEffect } from "react";
 import { createPortal } from "react-dom";
 import styles from "./job-card.module.scss";
 
-export type JobCardStatus = "confirmed" | "pending" | "completed" | "cancelled";
+export type JobCardStatus = "confirmed" | "pending" | "ongoing" | "completed" | "cancelled";
 
 export interface JobCardProps {
     time: string;
@@ -20,6 +20,7 @@ export interface JobCardProps {
 const STATUS_CFG: Record<JobCardStatus, { label: string; color: string; bg: string; border: string }> = {
     confirmed: { label: "CONFIRMED", color: "#065f46", bg: "#d1fae5", border: "#10b981" },
     pending:   { label: "PENDING",   color: "#92400e", bg: "#fef3c7", border: "#f59e0b" },
+    ongoing:   { label: "ONGOING",   color: "#1d4ed8", bg: "#dbeafe", border: "#3b82f6" },
     completed: { label: "DONE",      color: "#1e40af", bg: "#dbeafe", border: "#3b82f6" },
     cancelled: { label: "CANCELLED", color: "#991b1b", bg: "#fee2e2", border: "#ef4444" },
 };
