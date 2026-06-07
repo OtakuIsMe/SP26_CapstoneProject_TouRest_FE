@@ -23,6 +23,10 @@ function formatVND(n: number) {
     return n.toLocaleString("vi-VN") + "đ";
 }
 
+function isSelectableService(status: string) {
+    return status === "Active" || status === "Draft";
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function NewPackagePage() {
     const router = useRouter();
@@ -51,7 +55,7 @@ export default function NewPackagePage() {
             const providerId = meRes.data?.id;
             if (!providerId) return;
             const res = await providerService.getServicesByProvider(providerId);
-            setServices((res.data ?? []).filter(s => s.status === "Active"));
+            setServices((res.data ?? []).filter((s) => isSelectableService(s.status)));
         } catch {
             setServices([]);
         } finally {

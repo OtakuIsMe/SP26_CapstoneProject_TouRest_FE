@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { agencyService } from "@/libs/services/agency.service";
 import { trackingService, TrackingTypeActivity, TrackingDTO } from "@/libs/services/tracking.service";
 import { AgencyScheduleDTO, ItineraryStopWithActivitiesDTO, StopActivityDTO } from "@/types/itinerary.type";
+import { useSubRole } from "@/hooks/useSubRole";
 import styles from "./page.module.scss";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -16,12 +17,23 @@ function fmtTime(iso: string) {
 }
 
 function scheduleStatusLabel(s: AgencyScheduleDTO): { label: string; cls: string } {
+    const status = s.status?.toLowerCase();
+    if (status === "completed")
+        return { label: "Completed", cls: styles.badgeEnded };
+    if (status === "ongoing")
+        return { label: "In Progress", cls: styles.badgeActive };
+    if (status === "cancelled")
+        return { label: "Cancelled", cls: styles.badgeEnded };
     const now = Date.now();
     const start = new Date(s.startTime).getTime();
     const end   = new Date(s.endTime).getTime();
     if (now > end)             return { label: "Ended",      cls: styles.badgeEnded };
     if (now >= start)          return { label: "In Progress", cls: styles.badgeActive };
     return                            { label: s.status,      cls: styles.badgePending };
+}
+
+function isScheduleCompleted(s: AgencyScheduleDTO | null): boolean {
+    return s?.status?.toLowerCase() === "completed";
 }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -34,9 +46,15 @@ export default function GuidTrackingPage() {
     const [loadingStops, setLoadingStops] = useState(false);
     const [checking, setChecking]     = useState<Set<string>>(new Set());
 
-    // Load guide's schedules on mount
+    const { can, is } = useSubRole("agency");
+    const canSend = can("agency.tracking.send"); // tour_guide only
+
+    // Load schedules: guide sees own, manager sees all
     useEffect(() => {
-        agencyService.getMyGuideSchedules()
+        const fetch = is("tour_guide")
+            ? agencyService.getMyGuideSchedules()
+            : agencyService.getAgencySchedules();
+        fetch
             .then(r => {
                 const list = r.data ?? [];
                 setSchedules(list);
@@ -71,8 +89,22 @@ export default function GuidTrackingPage() {
         }
     }, []);
 
+    const refreshScheduleStatus = useCallback(async (scheduleId: string) => {
+        try {
+            const res = is("tour_guide")
+                ? await agencyService.getMyGuideSchedules()
+                : await agencyService.getAgencySchedules();
+            const updated = (res.data ?? []).find(s => s.id === scheduleId);
+            if (!updated) return;
+            setSchedules(prev => prev.map(s => s.id === scheduleId ? updated : s));
+            setSelected(prev => prev?.id === scheduleId ? updated : prev);
+        } catch {
+            // ignore — local tracking state still valid
+        }
+    }, [is]);
+
     const handleCheckIn = async (scheduleId: string, activity: StopActivityDTO) => {
-        if (checking.has(activity.id)) return;
+        if (checking.has(activity.id) || isScheduleCompleted(selected)) return;
         setChecking(prev => new Set([...prev, activity.id]));
         setTracked(prev => new Set([...prev, activity.id]));
         try {
@@ -81,6 +113,7 @@ export default function GuidTrackingPage() {
                 trackingId: activity.id,
                 type: TrackingTypeActivity,
             });
+            await refreshScheduleStatus(scheduleId);
         } catch {
             // rollback on error
             setTracked(prev => { const s = new Set(prev); s.delete(activity.id); return s; });
@@ -90,7 +123,7 @@ export default function GuidTrackingPage() {
     };
 
     const handleUncheck = async (scheduleId: string, activity: StopActivityDTO) => {
-        if (checking.has(activity.id)) return;
+        if (checking.has(activity.id) || isScheduleCompleted(selected)) return;
         setChecking(prev => new Set([...prev, activity.id]));
         setTracked(prev => { const s = new Set(prev); s.delete(activity.id); return s; });
         try {
@@ -177,6 +210,11 @@ export default function GuidTrackingPage() {
                                     {fmtDate(selected.startTime)} → {fmtDate(selected.endTime)}
                                 </span>
                             </div>
+                            {isScheduleCompleted(selected) && (
+                                <div className={styles.completedBanner}>
+                                    Tour completed — earnings have been distributed to agency, providers, and admin.
+                                </div>
+                            )}
                             <div className={styles.progressPill}>
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
                                     <path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
@@ -261,7 +299,11 @@ export default function GuidTrackingPage() {
                                                             </div>
 
                                                             <div className={styles.activityRight}>
-                                                                {isDone ? (
+                                                                {!canSend ? (
+                                                                    <span className={isDone ? styles.doneBadge : styles.pendingBadge}>
+                                                                        {isDone ? "Done" : "Pending"}
+                                                                    </span>
+                                                                ) : isDone ? (
                                                                     <>
                                                                         <span className={styles.doneBadge}>
                                                                             <svg viewBox="0 0 24 24" fill="none" width="11" height="11">
@@ -269,13 +311,15 @@ export default function GuidTrackingPage() {
                                                                             </svg>
                                                                             Done
                                                                         </span>
-                                                                        <button
-                                                                            className={styles.undoBtn}
-                                                                            disabled={isChecking}
-                                                                            onClick={() => handleUncheck(selected.id, act)}
-                                                                        >
-                                                                            Undo
-                                                                        </button>
+                                                                        {!isScheduleCompleted(selected) && (
+                                                                            <button
+                                                                                className={styles.undoBtn}
+                                                                                disabled={isChecking}
+                                                                                onClick={() => handleUncheck(selected.id, act)}
+                                                                            >
+                                                                                Undo
+                                                                            </button>
+                                                                        )}
                                                                     </>
                                                                 ) : (
                                                                     <button

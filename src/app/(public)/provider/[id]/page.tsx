@@ -14,16 +14,16 @@ import type { ServiceDTO } from "@/types/service.type";
 import styles from "./page.module.scss";
 
 const TABS = [
-    { key: "about", label: "Giới thiệu" },
-    { key: "services", label: "Dịch vụ" },
-    { key: "gallery", label: "Hình ảnh" },
+    { key: "about", label: "About" },
+    { key: "services", label: "Services" },
+    { key: "gallery", label: "Gallery" },
 ];
 
 function formatDuration(minutes: number): string {
-    if (minutes < 60) return `${minutes} phút`;
+    if (minutes < 60) return `${minutes} min`;
     const h = Math.floor(minutes / 60);
     const m = minutes % 60;
-    return m > 0 ? `${h} giờ ${m} phút` : `${h} giờ`;
+    return m > 0 ? `${h}h ${m}min` : `${h}h`;
 }
 
 export default function ProviderDetailPage() {
@@ -69,7 +69,7 @@ export default function ProviderDetailPage() {
         return (
             <>
                 <Header variant="solid" />
-                <div className={styles.notFound}>Không tìm thấy nhà cung cấp dịch vụ.</div>
+                <div className={styles.notFound}>Provider not found.</div>
                 <Footer />
             </>
         );
@@ -91,20 +91,20 @@ export default function ProviderDetailPage() {
                     <div className={styles.heroOverlay} />
                     <div className={styles.heroInner}>
                         <nav className={styles.breadcrumbs} aria-label="breadcrumb">
-                            <Link href="/">Trang chủ</Link>
+                            <Link href="/">Home</Link>
                             <span className={styles.breadSep}>/</span>
-                            <Link href="/providers">Nhà cung cấp</Link>
+                            <Link href="/providers">Providers</Link>
                             <span className={styles.breadSep}>/</span>
                             <span>{provider.name}</span>
                         </nav>
-                        <span className={styles.heroBadge}>Nhà cung cấp dịch vụ</span>
+                        <span className={styles.heroBadge}>Service Provider</span>
                         <div className={styles.heroTitleRow}>
                             <h1 className={styles.heroName}>{provider.name}</h1>
                             <button
                                 className={`${styles.wishlistBtn} ${wishlisted ? styles.wishlistBtnActive : ""}`}
                                 onClick={toggleWishlist}
                                 disabled={wishlistLoading}
-                                aria-label={wishlisted ? "Xóa khỏi danh sách yêu thích" : "Thêm vào danh sách yêu thích"}
+                                aria-label={wishlisted ? "Remove from wishlist" : "Add to wishlist"}
                             >
                                 <svg width="22" height="22" viewBox="0 0 24 24" fill={wishlisted ? "currentColor" : "none"} xmlns="http://www.w3.org/2000/svg">
                                     <path d="M20.84 4.61a5.5 5.5 0 00-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 00-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 000-7.78z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
@@ -160,18 +160,18 @@ export default function ProviderDetailPage() {
                             {/* About */}
                             {activeTab === "about" && (
                                 <div className={styles.tabPane}>
-                                    <h2 className={styles.sectionTitle}>Về {provider.name}</h2>
+                                    <h2 className={styles.sectionTitle}>About {provider.name}</h2>
                                     {provider.description ? (
                                         <p className={styles.description}>{provider.description}</p>
                                     ) : (
-                                        <p className={styles.emptyText}>Chưa có thông tin giới thiệu.</p>
+                                        <p className={styles.emptyText}>No description available.</p>
                                     )}
                                     <div className={styles.infoGrid}>
                                         {provider.address && (
                                             <div className={styles.infoChip}>
                                                 <span className={styles.infoChipIcon}>📍</span>
                                                 <div>
-                                                    <p className={styles.infoChipLabel}>Địa chỉ</p>
+                                                    <p className={styles.infoChipLabel}>Address</p>
                                                     <p className={styles.infoChipValue}>{provider.address}</p>
                                                 </div>
                                             </div>
@@ -180,7 +180,7 @@ export default function ProviderDetailPage() {
                                             <div className={styles.infoChip}>
                                                 <span className={styles.infoChipIcon}>📞</span>
                                                 <div>
-                                                    <p className={styles.infoChipLabel}>Điện thoại</p>
+                                                    <p className={styles.infoChipLabel}>Phone</p>
                                                     <a href={`tel:${provider.contactPhone}`} className={styles.infoChipValue}>{provider.contactPhone}</a>
                                                 </div>
                                             </div>
@@ -198,7 +198,7 @@ export default function ProviderDetailPage() {
                                             <div className={styles.infoChip}>
                                                 <span className={styles.infoChipIcon}>🕐</span>
                                                 <div>
-                                                    <p className={styles.infoChipLabel}>Giờ làm việc</p>
+                                                    <p className={styles.infoChipLabel}>Working Hours</p>
                                                     <p className={styles.infoChipValue}>{provider.startTime} – {provider.endTime}</p>
                                                 </div>
                                             </div>

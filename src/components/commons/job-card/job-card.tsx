@@ -1,6 +1,7 @@
 "use client";
 
 import { useRef, useState, useEffect } from "react";
+import { createPortal } from "react-dom";
 import styles from "./job-card.module.scss";
 
 export type JobCardStatus = "confirmed" | "pending" | "completed" | "cancelled";
@@ -9,9 +10,11 @@ export interface JobCardProps {
     time: string;
     title: string;
     status: JobCardStatus;
+    hasUnassignedStop?: boolean;
     onClick?: () => void;
     onEdit?: () => void;
     onCancel?: () => void;
+    onViewStaff?: () => void;
 }
 
 const STATUS_CFG: Record<JobCardStatus, { label: string; color: string; bg: string; border: string }> = {
@@ -21,27 +24,65 @@ const STATUS_CFG: Record<JobCardStatus, { label: string; color: string; bg: stri
     cancelled: { label: "CANCELLED", color: "#991b1b", bg: "#fee2e2", border: "#ef4444" },
 };
 
-export default function JobCard({ time, title, status, onClick, onEdit, onCancel }: JobCardProps) {
+export default function JobCard({ time, title, status, hasUnassignedStop, onClick, onEdit, onCancel, onViewStaff }: JobCardProps) {
     const [menuOpen, setMenuOpen] = useState(false);
-    const menuRef = useRef<HTMLDivElement>(null);
-    const cfg = STATUS_CFG[status];
+    const [dropPos, setDropPos] = useState({ top: 0, right: 0 });
+    const btnRef = useRef<HTMLButtonElement>(null);
 
     useEffect(() => {
+        if (!menuOpen) return;
         function handler(e: MouseEvent) {
-            if (menuRef.current && !menuRef.current.contains(e.target as Node))
-                setMenuOpen(false);
+            const target = e.target as Node;
+            if (btnRef.current && !btnRef.current.contains(target)) {
+                const drop = document.getElementById("job-card-drop");
+                if (!drop || !drop.contains(target)) setMenuOpen(false);
+            }
         }
         document.addEventListener("mousedown", handler);
         return () => document.removeEventListener("mousedown", handler);
-    }, []);
+    }, [menuOpen]);
+
+    function openMenu(e: React.MouseEvent) {
+        e.stopPropagation();
+        if (!btnRef.current) return;
+        const rect = btnRef.current.getBoundingClientRect();
+        setDropPos({
+            top: rect.bottom + 4,
+            right: window.innerWidth - rect.right,
+        });
+        setMenuOpen(o => !o);
+    }
+
+    const dropdown = menuOpen && (
+        <div
+            id="job-card-drop"
+            className={styles.dropdown}
+            style={{ top: dropPos.top, right: dropPos.right }}
+        >
+            <button className={styles.dropItem} onClick={e => { e.stopPropagation(); setMenuOpen(false); onClick?.(); }}>
+                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
+                View Details
+            </button>
+            {onViewStaff && (
+                <button className={styles.dropItem} onClick={e => { e.stopPropagation(); setMenuOpen(false); onViewStaff(); }}>
+                    <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    View Staff
+                </button>
+            )}
+            <div className={styles.dropDivider}/>
+            <button className={`${styles.dropItem} ${styles.dropItemDanger}`} onClick={e => { e.stopPropagation(); setMenuOpen(false); onCancel?.(); }}>
+                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                Cancel
+            </button>
+        </div>
+    );
 
     return (
         <div
             className={styles.card}
-            style={{ borderLeftColor: cfg.border }}
+            style={{ borderLeftColor: STATUS_CFG[status].border }}
             onClick={onClick}
         >
-            {/* Top row: time + 3-dot */}
             <div className={styles.top}>
                 <span className={styles.time}>
                     <svg viewBox="0 0 24 24" fill="none" width="11" height="11">
@@ -51,10 +92,15 @@ export default function JobCard({ time, title, status, onClick, onEdit, onCancel
                     {time}
                 </span>
 
-                <div className={styles.menuWrap} ref={menuRef}>
+                <div className={styles.rightActions}>
+                    {hasUnassignedStop && (
+                        <span className={styles.warnBadge} title="Some stops have no staff assigned">!</span>
+                    )}
+                <div className={styles.menuWrap}>
                     <button
+                        ref={btnRef}
                         className={styles.menuBtn}
-                        onClick={e => { e.stopPropagation(); setMenuOpen(o => !o); }}
+                        onClick={openMenu}
                         aria-label="Options"
                     >
                         <svg viewBox="0 0 24 24" fill="currentColor" width="14" height="14">
@@ -64,35 +110,18 @@ export default function JobCard({ time, title, status, onClick, onEdit, onCancel
                         </svg>
                     </button>
 
-                    {menuOpen && (
-                        <div className={styles.dropdown}>
-                            <button className={styles.dropItem} onClick={e => { e.stopPropagation(); setMenuOpen(false); onClick?.(); }}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
-                                View Details
-                            </button>
-                            <button className={styles.dropItem} onClick={e => { e.stopPropagation(); setMenuOpen(false); onEdit?.(); }}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                Edit
-                            </button>
-                            <div className={styles.dropDivider}/>
-                            <button className={`${styles.dropItem} ${styles.dropItemDanger}`} onClick={e => { e.stopPropagation(); setMenuOpen(false); onCancel?.(); }}>
-                                <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.8"/><path d="M15 9l-6 6M9 9l6 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                Cancel
-                            </button>
-                        </div>
-                    )}
+                    {typeof document !== "undefined" && createPortal(dropdown, document.body)}
+                </div>
                 </div>
             </div>
 
-            {/* Title */}
             <p className={styles.title}>{title}</p>
 
-            {/* Badge */}
             <span
                 className={styles.badge}
-                style={{ background: cfg.bg, color: cfg.color }}
+                style={{ background: STATUS_CFG[status].bg, color: STATUS_CFG[status].color }}
             >
-                {cfg.label}
+                {STATUS_CFG[status].label}
             </span>
         </div>
     );

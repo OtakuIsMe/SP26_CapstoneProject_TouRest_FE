@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSubRole } from "@/hooks/useSubRole";
 import styles from "./page.module.scss";
 import TourMapBuilder from "@/components/commons/tour-map-builder/tour-map-builder";
 import { agencyService, ProviderMarker, CreateItineraryPayload, AgencyUserDTO } from "@/libs/services/agency.service";
+import { walletService } from "@/libs/services/wallet.service";
 import type { ItineraryStopWithActivitiesDTO } from "@/types/itinerary.type";
 import { providerService } from "@/libs/services/provider.service";
 import type { ServiceDTO } from "@/types/service.type";
@@ -39,6 +41,77 @@ interface StopWithActivities extends TourStop {
     activities: ActivityItem[];
     providerId?: string;
     vehicleId?: string;
+    day: number;
+}
+
+// ── Day auto-detection ────────────────────────────────────────────────────────
+// Uses ABSOLUTE minutes from trip start (midnight Day 1 = 0).
+// Day of stop = which 1440-min block its first activity falls in + 1.
+//
+// Normal example:
+//   Stop 1: 08:00 → 17:00  →  Day 1  (abs: 480→1020)
+//   Stop 2: 08:00 → ...    →  08:00 < 17:00 (time went back) → abs jumps to 1440+480 → Day 2
+//   Stop 3: 18:00 → ...    →  18:00 > 17:00, same day block  → Day 2
+//
+// Overnight hotel example (endTime < startTime):
+//   Stop 1 (Hotel): 17:00 → 08:00  →  Day 1  (abs: 1020 → actAbsEnd=1920, crosses midnight)
+//   Stop 2:         09:00 → ...    →  base=1440, candidate=1440+540=1980 → Day 2  ✓
+//   Stop 3:         14:00 → ...    →  base=1440, candidate=1440+840=2280 → Day 2  ✓
+
+function timeToMins(t: string): number {
+    if (!t) return -1;
+    const [h, m] = t.split(":").map(Number);
+    return h * 60 + m;
+}
+
+function recomputeDays(stops: StopWithActivities[]): StopWithActivities[] {
+    let abs = 0; // absolute minutes elapsed from trip start
+
+    return stops.map(stop => {
+        const firstAct = stop.activities[0];
+        let stopAbsStart = abs;
+
+        if (firstAct?.startTime) {
+            const m = timeToMins(firstAct.startTime);
+            if (m >= 0) {
+                const base = Math.floor(abs / 1440) * 1440;
+                let candidate = base + m;
+                // If time went backwards (e.g. 08:00 after 17:00) → next calendar day
+                if (candidate < abs) candidate += 1440;
+                stopAbsStart = candidate;
+                abs = candidate;
+            }
+        }
+
+        // Advance abs through all activities, handling overnight crossing
+        for (const act of stop.activities) {
+            if (!act.startTime) continue;
+            const sm = timeToMins(act.startTime);
+            if (sm < 0) continue;
+
+            const sbase = Math.floor(abs / 1440) * 1440;
+            let actAbsStart = sbase + sm;
+            if (actAbsStart < abs) actAbsStart += 1440;
+            abs = actAbsStart;
+
+            if (!act.endTime) continue;
+            const em = timeToMins(act.endTime);
+            if (em < 0) continue;
+
+            let actAbsEnd: number;
+            if (em < sm) {
+                // endTime < startTime → overnight (e.g. 17:00 → 08:00 next day)
+                actAbsEnd = Math.floor(actAbsStart / 1440) * 1440 + 1440 + em;
+            } else {
+                actAbsEnd = Math.floor(actAbsStart / 1440) * 1440 + em;
+                if (actAbsEnd < actAbsStart) actAbsEnd += 1440;
+            }
+            if (actAbsEnd > abs) abs = actAbsEnd;
+        }
+
+        // Day = which 1440-min block the stop's first activity falls in
+        return { ...stop, day: Math.floor(stopAbsStart / 1440) + 1 };
+    });
 }
 
 interface TourSchedule {
@@ -75,6 +148,9 @@ function uid() { return Math.random().toString(36).slice(2); }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function AgencyToursPage() {
+    const { can } = useSubRole("agency");
+    const canManage = can("agency.tours.manage");
+
     const [tours, setTours] = useState<Itinerary[]>([]);
     const [toursLoading, setToursLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -92,6 +168,10 @@ export default function AgencyToursPage() {
     const [schedErr,     setSchedErr]     = useState("");
     const [agencyUsers,  setAgencyUsers]  = useState<AgencyUserDTO[]>([]);
     const [agencyId,     setAgencyId]     = useState<string>("");
+    // Deposit preview
+    const [depositPreview,     setDepositPreview]     = useState<import("@/libs/services/agency.service").DepositCalculationDTO | null>(null);
+    const [depositLoading,     setDepositLoading]     = useState(false);
+    const [walletBalance,      setWalletBalance]      = useState<number | null>(null);
 
     // Wizard modal
     const [wizOpen, setWizOpen]     = useState(false);
@@ -101,7 +181,6 @@ export default function AgencyToursPage() {
     // step1
     const [wName, setWName]         = useState("");
     const [wDesc, setWDesc]         = useState("");
-    const [wDays, setWDays]         = useState("");
     const [wPrice, setWPrice]       = useState("");
     const [wStatus, setWStatus]     = useState<TourStatus>("DRAFT");
     const [wImages, setWImages]     = useState<File[]>([]);
@@ -110,6 +189,7 @@ export default function AgencyToursPage() {
     const [originalStopIds, setOriginalStopIds] = useState<string[]>([]);
     // step 2 – map itinerary
     const [wStops, setWStops]     = useState<StopWithActivities[]>([]);
+    const computedDays = wStops.length > 0 ? Math.max(...wStops.map(s => s.day)) : 1;
     const [providerMarkers, setProviderMarkers] = useState<ProviderMarker[]>([]);
     const [confirmProvider, setConfirmProvider] = useState<ProviderMarker | null>(null);
     const [confirmProviderVehicleId, setConfirmProviderVehicleId] = useState("");
@@ -132,22 +212,43 @@ export default function AgencyToursPage() {
             })
             .then(res => {
                 if (res?.data) {
-                    setTours(res.data.map(dto => ({
-                        id: dto.id,
-                        name: dto.name,
-                        description: dto.description ?? "",
-                        price: dto.price,
-                        durationDays: dto.durationDays,
-                        status: dto.status.toUpperCase() as TourStatus,
-                        stopCount: dto.stopCount ?? 0,
-                        stops: [],
-                        schedules: [],
-                    })));
+                    setTours(res.data
+                        .filter(dto => dto.status.toUpperCase() !== "INACTIVE")
+                        .map(dto => ({
+                            id: dto.id,
+                            name: dto.name,
+                            description: dto.description ?? "",
+                            price: dto.price,
+                            durationDays: dto.durationDays,
+                            status: dto.status.toUpperCase() as TourStatus,
+                            stopCount: dto.stopCount ?? 0,
+                            stops: [],
+                            schedules: [],
+                        })));
                 }
             })
             .catch(() => {})
             .finally(() => setToursLoading(false));
     }, []);
+
+    // Fetch deposit preview + wallet balance when schedule start date is set
+    useEffect(() => {
+        if (!schedTarget || !schedStart) {
+            setDepositPreview(null);
+            return;
+        }
+        setDepositLoading(true);
+        Promise.all([
+            agencyService.calculateDeposit(schedTarget.id, new Date(schedStart).toISOString()),
+            walletService.getMyWallet(),
+        ])
+            .then(([depRes, walRes]) => {
+                if (depRes?.data) setDepositPreview(depRes.data);
+                if (walRes?.data) setWalletBalance(walRes.data.balance);
+            })
+            .catch(() => {})
+            .finally(() => setDepositLoading(false));
+    }, [schedTarget, schedStart]);
 
     useEffect(() => {
         agencyService.getProviderMarkers().then(res => {
@@ -242,6 +343,8 @@ export default function AgencyToursPage() {
                 }
             }
             setSchedTarget(null);
+            setDepositPreview(null);
+            setWalletBalance(null);
         } catch {
             setSchedErr("Failed to add schedule. Please try again.");
         }
@@ -277,15 +380,16 @@ export default function AgencyToursPage() {
 
     function confirmPendingStop() {
         if (!pendingMarker || !pendingName.trim()) return;
-        setWStops(prev => [...prev, {
+        setWStops(prev => recomputeDays([...prev, {
             id: uid(),
             name: pendingName.trim(),
             address: pendingAddress.trim(),
             latitude: pendingMarker.lat,
             longitude: pendingMarker.lng,
             activities: [],
+            day: 1,
             vehicleId: pendingVehicleId || undefined,
-        }]);
+        }]));
         setPendingMarker(null);
         setPendingName("");
         setPendingAddress("");
@@ -294,31 +398,44 @@ export default function AgencyToursPage() {
 
     function confirmProviderAsStop() {
         if (!confirmProvider) return;
-        setWStops(prev => [...prev, {
+        setWStops(prev => recomputeDays([...prev, {
             id: uid(),
             name: confirmProvider.name,
             address: confirmProvider.address ?? "",
             latitude: Number(confirmProvider.latitude),
             longitude: Number(confirmProvider.longitude),
             activities: [],
+            day: 1,
             providerId: confirmProvider.id,
             vehicleId: confirmProviderVehicleId || undefined,
-        }]);
+        }]));
         setConfirmProvider(null);
         setConfirmProviderVehicleId("");
     }
 
-    function removeStop(id: string) { setWStops(prev => prev.filter(s => s.id !== id)); }
+    function removeStop(id: string) { setWStops(prev => recomputeDays(prev.filter(s => s.id !== id))); }
 
     function openAddActivity(stopId: string) {
         const stop = wStops.find(s => s.id === stopId);
         const defaultType = stop?.providerId ? "service" : "custom";
+        const lastAct = stop?.activities[stop.activities.length - 1];
+
+        // If this stop has no activities yet, fall back to the last activity of the previous stop
+        let suggestedStart = lastAct?.endTime ?? "";
+        if (!suggestedStart) {
+            const stopIndex = wStops.findIndex(s => s.id === stopId);
+            for (let i = stopIndex - 1; i >= 0; i--) {
+                const prevLast = wStops[i].activities[wStops[i].activities.length - 1];
+                if (prevLast?.endTime) { suggestedStart = prevLast.endTime; break; }
+            }
+        }
+
         setActTarget(stopId);
         setActType(defaultType);
         setActServiceId("");
         setActPackageId("");
         setActCustomName("");
-        setActStart("");
+        setActStart(suggestedStart);
         setActEnd("");
         setActPrice("");
         setActNote("");
@@ -442,18 +559,18 @@ export default function AgencyToursPage() {
                     return act;
                 });
                 const finalActivities = [...candidateStop.activities.filter(a => !matchedIds.has(a.id)), ...pkgActs];
-                setWStops(prev => prev.map(s => s.id === actTarget ? { ...s, activities: finalActivities } : s));
+                setWStops(prev => recomputeDays(prev.map(s => s.id === actTarget ? { ...s, activities: finalActivities } : s)));
                 setActTarget(null);
                 return;
             }
         }
 
-        setWStops(prev => prev.map(s => s.id === actTarget ? candidateStop : s));
+        setWStops(prev => recomputeDays(prev.map(s => s.id === actTarget ? candidateStop : s)));
         setActTarget(null);
     }
 
     function removeActivity(stopId: string, actId: string) {
-        setWStops(prev => prev.map(s => {
+        setWStops(prev => recomputeDays(prev.map(s => {
             if (s.id !== stopId) return s;
             const target = s.activities.find(a => a.id === actId);
             if (target?.type === "package" && target.serviceName) {
@@ -468,7 +585,7 @@ export default function AgencyToursPage() {
                 };
             }
             return { ...s, activities: s.activities.filter(a => a.id !== actId) };
-        }));
+        })));
     }
 
     function detectBundle(stop: StopWithActivities): { pkg: PackageWithServicesDTO; matched: ActivityItem[]; savings: number } | null {
@@ -495,7 +612,6 @@ export default function AgencyToursPage() {
         setEditMode(true);
         setWName(tour.name);
         setWDesc(tour.description);
-        setWDays(String(tour.durationDays));
         setWPrice(String(tour.price));
         setWStatus(tour.status);
         setWStops([]);
@@ -514,6 +630,7 @@ export default function AgencyToursPage() {
                 longitude: stop.longitude,
                 providerId: stop.providerId,
                 vehicleId: stop.vehicleId,
+                day: 1,
                 activities: stop.activities.map(act => {
                     const isCustom = !act.serviceId;
                     return {
@@ -528,7 +645,7 @@ export default function AgencyToursPage() {
                     };
                 }),
             }));
-            setWStops(converted);
+            setWStops(recomputeDays(converted));
             setOriginalStopIds(res.data.map(s => s.id));
         }).catch(() => {});
     }
@@ -567,7 +684,7 @@ export default function AgencyToursPage() {
                 name: wName.trim(),
                 description: wDesc.trim(),
                 price: Number(editPrice) || editTour.price,
-                durationDays: Number(wDays) || 1,
+                durationDays: computedDays,
                 status: wStatus,
             });
             if (res.data) {
@@ -617,7 +734,7 @@ export default function AgencyToursPage() {
         setWizStep(1);
         setEditMode(false);
         setEditTargetId(null);
-        setWName(""); setWDesc(""); setWDays(""); setWPrice(""); setWStatus("DRAFT");
+        setWName(""); setWDesc(""); setWPrice(""); setWStatus("DRAFT");
         setWImages([]); setWImagePreviews([]);
         setWStops([]);
         setOriginalStopIds([]);
@@ -638,7 +755,7 @@ export default function AgencyToursPage() {
                     name: wName.trim(),
                     description: wDesc.trim(),
                     price: Number(wPrice) || target.price,
-                    durationDays: Number(wDays) || 1,
+                    durationDays: computedDays,
                     status: wStatus,
                 });
 
@@ -648,7 +765,7 @@ export default function AgencyToursPage() {
                 }
 
                 // 3. Re-create all current stops + their activities
-                const BASE_DATE = "2000-01-01";
+                const BASE_DATE_MS = Date.UTC(2000, 0, 1);
                 for (const [idx, stop] of wStops.entries()) {
                     const stopRes = await agencyService.addStop(editTargetId, {
                         stopOrder: idx,
@@ -662,9 +779,10 @@ export default function AgencyToursPage() {
                     const newStopId = stopRes.data?.id;
                     if (!newStopId) continue;
                     const saveable = stop.activities.filter(a => a.serviceId || (a.type === "custom" && a.name));
+                    const dateStr = new Date(BASE_DATE_MS + (stop.day - 1) * 86400000).toISOString().split('T')[0];
                     for (const [jdx, act] of saveable.entries()) {
-                        const startISO = act.startTime ? `${BASE_DATE}T${act.startTime}:00Z` : `${BASE_DATE}T00:00:00Z`;
-                        const endISO   = act.endTime   ? `${BASE_DATE}T${act.endTime}:00Z`   : `${BASE_DATE}T00:00:00Z`;
+                        const startISO = act.startTime ? `${dateStr}T${act.startTime}:00Z` : `${dateStr}T00:00:00Z`;
+                        const endISO   = act.endTime   ? `${dateStr}T${act.endTime}:00Z`   : `${dateStr}T00:00:00Z`;
                         await agencyService.addActivity(newStopId, {
                             itineraryStopId: newStopId,
                             serviceId: act.serviceId || undefined,
@@ -712,30 +830,34 @@ export default function AgencyToursPage() {
                 return sum + a.price;
             }, 0);
         }, 0);
-        const stops = wStops.map((stop, idx) => ({
-            stopOrder: idx,
-            name: stop.name,
-            longitude: stop.longitude,
-            latitude: stop.latitude,
-            address: stop.address ?? "",
-            providerId: stop.providerId,
-            vehicleId: stop.vehicleId || undefined,
-            activities: stop.activities
-                .filter(a => a.serviceId || (a.type === "custom" && a.name))
-                .map((act, jdx) => ({
-                    serviceId: act.serviceId || undefined,
-                    customName: act.type === "custom" ? act.name : undefined,
-                    activityOrder: jdx,
-                    startTime: act.startTime || "",
-                    endTime: act.endTime || "",
-                    price: act.price,
-                    note: act.note,
-                })),
-        }));
+        const CREATE_BASE_MS = Date.UTC(2000, 0, 1);
+        const stops = wStops.map((stop, idx) => {
+            const dateStr = new Date(CREATE_BASE_MS + (stop.day - 1) * 86400000).toISOString().split('T')[0];
+            return {
+                stopOrder: idx,
+                name: stop.name,
+                longitude: stop.longitude,
+                latitude: stop.latitude,
+                address: stop.address ?? "",
+                providerId: stop.providerId,
+                vehicleId: stop.vehicleId || undefined,
+                activities: stop.activities
+                    .filter(a => a.serviceId || (a.type === "custom" && a.name))
+                    .map((act, jdx) => ({
+                        serviceId: act.serviceId || undefined,
+                        customName: act.type === "custom" ? act.name : undefined,
+                        activityOrder: jdx,
+                        startTime: act.startTime ? `${dateStr}T${act.startTime}:00Z` : "",
+                        endTime: act.endTime ? `${dateStr}T${act.endTime}:00Z` : "",
+                        price: act.price,
+                        note: act.note,
+                    })),
+            };
+        });
         const formData = new FormData();
         formData.append("name", wName.trim());
         formData.append("description", wDesc.trim());
-        formData.append("duration", String(Number(wDays) || 1));
+        formData.append("duration", String(computedDays));
         formData.append("price", String(totalPrice));
         formData.append("stopsJson", JSON.stringify(stops));
         wImages.forEach(f => formData.append("images", f));
@@ -805,13 +927,14 @@ export default function AgencyToursPage() {
                         <option value="">All Status</option>
                         <option value="ACTIVE">Active</option>
                         <option value="DRAFT">Draft</option>
-                        <option value="INACTIVE">Inactive</option>
                     </select>
                 </div>
-                <button className={styles.addBtn} onClick={() => { setWizOpen(true); setWizStep(1); }}>
-                    <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
-                    New Tour
-                </button>
+                {canManage && (
+                    <button className={styles.addBtn} onClick={() => { setWizOpen(true); setWizStep(1); }}>
+                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                        New Tour
+                    </button>
+                )}
             </div>
 
             {/* ── Tour cards ── */}
@@ -892,14 +1015,16 @@ export default function AgencyToursPage() {
                                     <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" stroke="currentColor" strokeWidth="1.8"/><circle cx="12" cy="12" r="3" stroke="currentColor" strokeWidth="1.8"/></svg>
                                     View
                                 </button>
-                                <button className={styles.actionBtn} onClick={() => openEdit(tour)}>
-                                    <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                    Edit
-                                </button>
-                                <button className={`${styles.actionBtn} ${styles.actionBtnGreen}`} onClick={() => openSched(tour)}>
-                                    <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
-                                    + Schedule
-                                </button>
+                                {canManage && <>
+                                    <button className={styles.actionBtn} onClick={() => openEdit(tour)}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                        Edit
+                                    </button>
+                                    <button className={`${styles.actionBtn} ${styles.actionBtnGreen}`} onClick={() => openSched(tour)}>
+                                        <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18M12 14v4M10 16h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                                        + Schedule
+                                    </button>
+                                </>}
                             </div>
                         </div>
                     );
@@ -1204,11 +1329,114 @@ export default function AgencyToursPage() {
                                 </div>
                             )}
 
+                            {/* ── Deposit preview ── */}
+                            {schedStart && (() => {
+                                const slots      = parseInt(schedSpot) || 0;
+                                // CalculateAsync returns per-pax values → multiply by slots
+                                const totalDeposit = depositPreview
+                                    ? depositPreview.providers.reduce((s, p) => s + p.depositAmount * slots, 0)
+                                    : 0;
+                                const shortfall  = walletBalance !== null ? totalDeposit - walletBalance : 0;
+                                const insufficient = shortfall > 0;
+                                return (
+                                    <div style={{ marginTop: 14, border: `1px solid ${insufficient ? "#fecaca" : "#e5e7eb"}`, borderRadius: 10, overflow: "hidden", background: insufficient ? "#fff5f5" : "#fff" }}>
+                                        <div style={{ padding: "10px 14px", background: insufficient ? "#fef2f2" : "#fafafa", borderBottom: "1px solid #f0f0f0", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                                            <span style={{ fontSize: 12, fontWeight: 700, color: "#374151" }}>
+                                                Required Deposit (provider × {slots || "?"} slots × 20%)
+                                            </span>
+                                            {depositLoading && <span style={{ fontSize: 11, color: "#9ca3af" }}>Calculating...</span>}
+                                        </div>
+
+                                        {!depositLoading && depositPreview && (
+                                            <div style={{ padding: "10px 14px" }}>
+                                                {depositPreview.providers.length === 0 ? (
+                                                    <p style={{ fontSize: 12, color: "#9ca3af", margin: 0 }}>No provider stops — no deposit required.</p>
+                                                ) : (
+                                                    <>
+                                                        {depositPreview.providers.map((p, i) => {
+                                                            const lineDeposit = p.depositAmount * slots;
+                                                            return (
+                                                                <div key={i} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "5px 0", borderBottom: i < depositPreview.providers.length - 1 ? "1px solid #f3f4f6" : "none" }}>
+                                                                    <div>
+                                                                        <span style={{ fontSize: 12, fontWeight: 600, color: "#374151" }}>{p.providerName}</span>
+                                                                        <span style={{ fontSize: 11, color: "#9ca3af", marginLeft: 6 }}>
+                                                                            {p.serviceTotal.toLocaleString("vi-VN")}đ/pax × {slots} × 20%
+                                                                        </span>
+                                                                    </div>
+                                                                    <span style={{ fontSize: 13, fontWeight: 700, color: "#f97316" }}>
+                                                                        {lineDeposit.toLocaleString("vi-VN")}đ
+                                                                    </span>
+                                                                </div>
+                                                            );
+                                                        })}
+
+                                                        {/* Total row */}
+                                                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: 8, paddingTop: 8, borderTop: "2px solid #e5e7eb" }}>
+                                                            <span style={{ fontSize: 13, fontWeight: 700, color: "#111827" }}>Total Deposit</span>
+                                                            <span style={{ fontSize: 15, fontWeight: 800, color: insufficient ? "#ef4444" : "#059669" }}>
+                                                                {totalDeposit.toLocaleString("vi-VN")}đ
+                                                            </span>
+                                                        </div>
+
+                                                        {/* Wallet status */}
+                                                        {walletBalance !== null && (
+                                                            <div style={{ marginTop: 8 }}>
+                                                                <div style={{ fontSize: 12, color: insufficient ? "#ef4444" : "#6b7280", display: "flex", alignItems: "center", gap: 5, marginBottom: insufficient ? 10 : 0 }}>
+                                                                    {insufficient ? (
+                                                                        <>
+                                                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="2"/><path d="M12 8v4m0 4h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                                                            Wallet: <strong>{walletBalance.toLocaleString("vi-VN")}đ</strong>
+                                                                            &nbsp;—&nbsp;Short by <strong>{shortfall.toLocaleString("vi-VN")}đ</strong>
+                                                                        </>
+                                                                    ) : (
+                                                                        <>
+                                                                            <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
+                                                                            Wallet: <strong>{walletBalance.toLocaleString("vi-VN")}đ</strong> — Sufficient balance
+                                                                        </>
+                                                                    )}
+                                                                </div>
+
+                                                                {/* Top-up CTA when insufficient */}
+                                                                {insufficient && (
+                                                                    <div style={{ background: "#fef3c7", border: "1px solid #fde68a", borderRadius: 8, padding: "10px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", gap: 10 }}>
+                                                                        <div style={{ fontSize: 12, color: "#92400e" }}>
+                                                                            Need to top up <strong>{shortfall.toLocaleString("vi-VN")}đ</strong> more to create this schedule.
+                                                                        </div>
+                                                                        <a
+                                                                            href="/profile/wallet"
+                                                                            target="_blank"
+                                                                            rel="noopener noreferrer"
+                                                                            style={{ flexShrink: 0, display: "inline-flex", alignItems: "center", gap: 5, padding: "6px 12px", background: "#f59e0b", color: "#fff", borderRadius: 7, fontSize: 12, fontWeight: 700, textDecoration: "none", whiteSpace: "nowrap" }}
+                                                                        >
+                                                                            <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="2"/><path d="M2 10h20" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                                                                            Top Up Now
+                                                                        </a>
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                        )}
+                                                    </>
+                                                )}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+
                             {schedErr && <p className={styles.errorMsg} style={{ marginTop:10 }}>{schedErr}</p>}
                         </div>
                         <div className={styles.modalFooter}>
                             <button className={styles.btnCancel} onClick={() => setSchedTarget(null)}>Cancel</button>
-                            <button className={styles.btnSubmit} onClick={submitSched}>
+                            <button
+                                className={styles.btnSubmit}
+                                onClick={submitSched}
+                                disabled={depositLoading || (() => {
+                                    if (!depositPreview || walletBalance === null) return false;
+                                    const slots = parseInt(schedSpot) || 0;
+                                    const total = depositPreview.providers.reduce((s, p) => s + p.depositAmount * slots, 0);
+                                    return total > walletBalance;
+                                })()}
+                            >
                                 <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"/></svg>
                                 Add Schedule
                             </button>
@@ -1263,10 +1491,6 @@ export default function AgencyToursPage() {
                                     <textarea className={styles.textarea} rows={3} value={wDesc} onChange={e => setWDesc(e.target.value)} placeholder="Mô tả hành trình…" />
                                 </div>
                                 <div className={styles.fieldRow}>
-                                    <div className={styles.field}>
-                                        <label className={styles.label}>Thời gian (ngày) <span className={styles.required}>*</span></label>
-                                        <input className={styles.input} type="number" min="1" value={wDays} onChange={e => setWDays(e.target.value)} />
-                                    </div>
                                     <div className={styles.field}>
                                         <label className={styles.label}>Trạng thái</label>
                                         <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
@@ -1421,22 +1645,16 @@ export default function AgencyToursPage() {
                                     <label className={styles.label}>Description</label>
                                     <textarea className={styles.textarea} placeholder="Briefly describe this tour…" rows={3} value={wDesc} onChange={e => setWDesc(e.target.value)} />
                                 </div>
-                                <div className={styles.fieldRow}>
+                                {editMode && (
                                     <div className={styles.field}>
-                                        <label className={styles.label}>Duration (days) <span className={styles.required}>*</span></label>
-                                        <input className={styles.input} type="number" min="1" placeholder="3" value={wDays} onChange={e => setWDays(e.target.value)} />
+                                        <label className={styles.label}>Trạng thái</label>
+                                        <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
+                                            <option value="DRAFT">Draft</option>
+                                            <option value="ACTIVE">Active</option>
+                                            <option value="INACTIVE">Inactive</option>
+                                        </select>
                                     </div>
-                                    {editMode && (
-                                        <div className={styles.field}>
-                                            <label className={styles.label}>Trạng thái</label>
-                                            <select className={`${styles.input} ${styles.select}`} value={wStatus} onChange={e => setWStatus(e.target.value as TourStatus)}>
-                                                <option value="DRAFT">Draft</option>
-                                                <option value="ACTIVE">Active</option>
-                                                <option value="INACTIVE">Inactive</option>
-                                            </select>
-                                        </div>
-                                    )}
-                                </div>
+                                )}
                                 {editMode && (
                                     <div className={styles.field}>
                                         <label className={styles.label}>Giá (VNĐ)</label>
@@ -1445,7 +1663,12 @@ export default function AgencyToursPage() {
                                 )}
                                 {!editMode && (
                                     <div className={styles.field}>
-                                        <label className={styles.label}>Tour Images</label>
+                                        <label className={styles.label}>
+                                            Tour Images
+                                            <span style={{ fontWeight: 400, fontSize: 12, color: wImages.length >= 5 ? "#16a34a" : "#9ca3af", marginLeft: 8 }}>
+                                                {wImages.length}/5 minimum
+                                            </span>
+                                        </label>
                                         <label className={styles.imageUploadArea}>
                                             <input
                                                 type="file" accept="image/*" multiple style={{ display: "none" }}
@@ -1461,6 +1684,11 @@ export default function AgencyToursPage() {
                                             </svg>
                                             <span style={{ fontSize: 13, color: "#6b7280" }}>Click to upload images</span>
                                         </label>
+                                        {wImages.length > 0 && wImages.length < 5 && (
+                                            <p style={{ fontSize: 12, color: "#d97706", margin: "4px 0 0" }}>
+                                                Please upload at least 5 images ({5 - wImages.length} more needed)
+                                            </p>
+                                        )}
                                         {wImagePreviews.length > 0 && (
                                             <div className={styles.imagePreviews}>
                                                 {wImagePreviews.map((src, i) => (
@@ -1507,7 +1735,16 @@ export default function AgencyToursPage() {
                                                 </div>
                                             ) : (
                                                 wStops.map((stop, idx) => (
-                                                    <div key={stop.id} className={styles.stopPanelCard}>
+                                                    <div key={stop.id}>
+                                                        {/* Day separator: show when day changes */}
+                                                        {(idx === 0 || stop.day !== wStops[idx - 1].day) && (
+                                                            <div className={styles.daySeparator}>
+                                                                <div className={styles.daySeparatorLine}/>
+                                                                <span className={styles.daySeparatorLabel}>Day {stop.day}</span>
+                                                                <div className={styles.daySeparatorLine}/>
+                                                            </div>
+                                                        )}
+                                                    <div className={styles.stopPanelCard}>
                                                         <div className={styles.stopPanelHead}>
                                                             <span className={styles.stopNumBadge}>{idx + 1}</span>
                                                             <div className={styles.stopPanelInfo}>
@@ -1544,6 +1781,7 @@ export default function AgencyToursPage() {
                                                             Add Activity
                                                         </button>
                                                     </div>
+                                                    </div>
                                                 ))
                                             )}
                                         </div>
@@ -1575,18 +1813,18 @@ export default function AgencyToursPage() {
                         {wizStep === 3 && (
                             <div className={styles.wizardBody}>
                                 <div>
-                                    <p className={styles.stepTitle}>{editMode ? "Xem lại & Lưu" : "Review & Create"}</p>
-                                    <p className={styles.stepSubtitle}>{editMode ? "Kiểm tra lại trước khi lưu thay đổi." : "Double-check everything before creating the tour."}</p>
+                                    <p className={styles.stepTitle}>{editMode ? "Review & Save" : "Review & Create"}</p>
+                                    <p className={styles.stepSubtitle}>{editMode ? "Double-check everything before saving changes." : "Double-check everything before creating the tour."}</p>
                                 </div>
                                 <div className={styles.reviewSection}>
                                     <p className={styles.reviewSectionTitle}>
                                         <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M14 2v6h6" stroke="currentColor" strokeWidth="1.8"/></svg>
-                                        {editMode ? "Thông tin chung" : "Basic Info"}
+                                        Basic Info
                                     </p>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Tên</span><span className={styles.reviewVal}>{wName || "—"}</span></div>
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Số ngày</span><span className={styles.reviewVal}>{wDays || "—"} ngày</span></div>
-                                    {editMode && <div className={styles.reviewRow}><span className={styles.reviewKey}>Giá</span><span className={styles.reviewVal}>{wPrice ? fmtPrice(Number(wPrice)) : "—"}</span></div>}
-                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Trạng thái</span><span className={styles.reviewVal}>{wStatus}</span></div>
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Name</span><span className={styles.reviewVal}>{wName || "—"}</span></div>
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Duration</span><span className={styles.reviewVal}>{computedDays} {computedDays === 1 ? "day" : "days"} (auto)</span></div>
+                                    {editMode && <div className={styles.reviewRow}><span className={styles.reviewKey}>Price</span><span className={styles.reviewVal}>{wPrice ? fmtPrice(Number(wPrice)) : "—"}</span></div>}
+                                    <div className={styles.reviewRow}><span className={styles.reviewKey}>Status</span><span className={styles.reviewVal}>{wStatus}</span></div>
                                 </div>
                                 <div className={styles.reviewSection}>
                                     <p className={styles.reviewSectionTitle}>
@@ -1621,20 +1859,20 @@ export default function AgencyToursPage() {
                             </button>
                             <div className={styles.wizardFooterRight}>
                                 <span style={{ fontSize:12, color:"#9ca3af" }}>
-                                    {editMode ? `Bước ${wizStep}/3` : `Step ${wizStep} of 3`}
+                                    {`Step ${wizStep} of 3`}
                                 </span>
                                 {wizStep < 3
-                                    ? <button className={styles.btnNext} onClick={() => { setWizError(""); setWizStep(s => s + 1); }} disabled={wizStep === 1 && !wName.trim()}>
-                                        {editMode ? "Tiếp theo" : "Next"}
+                                    ? <button className={styles.btnNext} onClick={() => { setWizError(""); setWizStep(s => s + 1); }} disabled={wizStep === 1 && (!wName.trim() || (!editMode && wImages.length < 5))}>
+                                        Next
                                         <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M9 18l6-6-6-6" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                       </button>
                                     : <button className={styles.btnNext} onClick={submitWizard} disabled={wizSubmitting}>
                                         {wizSubmitting
-                                            ? (editMode ? "Đang lưu…" : "Creating…")
+                                            ? "Saving…"
                                             : (
                                                 <>
                                                     <svg viewBox="0 0 24 24" fill="none" width="13" height="13"><path d="M20 6L9 17l-5-5" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-                                                    {editMode ? "Lưu thay đổi" : "Create Tour"}
+                                                    {editMode ? "Save Changes" : "Create Tour"}
                                                 </>
                                             )
                                         }

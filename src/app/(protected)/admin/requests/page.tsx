@@ -85,8 +85,7 @@ function ApproveModal({
                 phone: form.phone || undefined,
             };
             if (target.kind === "agency") {
-                await adminService.approveAgency(target.id);
-                await adminService.createAgencyAccount(target.id, body);
+                await adminService.approveAgency(target.id, body);
             } else {
                 await adminService.approveProvider(target.id);
                 await adminService.createProviderAccount(target.id, body);

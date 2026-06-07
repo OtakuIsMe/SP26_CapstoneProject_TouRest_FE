@@ -35,6 +35,7 @@ const Ico = {
     Schedule:  () => <svg viewBox="0 0 24 24" fill="none"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/><path d="M8 14h.01M12 14h.01M16 14h.01M8 18h.01M12 18h.01M16 18h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>,
     Tracking:  () => <svg viewBox="0 0 24 24" fill="none"><path d="M9 11l3 3L22 4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/></svg>,
     Inbox:     () => <svg viewBox="0 0 24 24" fill="none"><rect x="2" y="7" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.7"/><path d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><path d="M12 12v.01M8 12v.01M16 12v.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/><path d="M2 13h20" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
+    Earnings:  () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7"/><path d="M12 6v2M12 16v2M9.5 9.5a2.5 2.5 0 015 0c0 1.5-1.5 2-2.5 2.5S9.5 13 9.5 14.5a2.5 2.5 0 005 0" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Flag:      () => <svg viewBox="0 0 24 24" fill="none"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><line x1="4" y1="22" x2="4" y2="15" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Help:      () => <svg viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="1.7"/><path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3M12 17h.01" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
     Logout:    () => <svg viewBox="0 0 24 24" fill="none"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><polyline points="16 17 21 12 16 7" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round"/><line x1="21" y1="12" x2="9" y2="12" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round"/></svg>,
@@ -52,64 +53,36 @@ const MENU: Record<Role, Entry[]> = {
     admin: [
         { items: [
             { label: "Dashboard", href: "/admin/dashboard", icon: <Ico.Dashboard /> },
-            { label: "Orders",    href: "/admin/orders",    icon: <Ico.Orders />,    badge: 46 },
-            { label: "Tours",     href: "/admin/tours",     icon: <Ico.Tours />,     badge: 12 },
+            { label: "Schedule",  href: "/admin/schedule",  icon: <Ico.Schedule />  },
             { label: "Agencies",  href: "/admin/agencies",  icon: <Ico.Agencies />  },
             { label: "Providers", href: "/admin/providers", icon: <Ico.Providers /> },
             { label: "Requests",  href: "/admin/requests",  icon: <Ico.Requests />  },
             { label: "Users",     href: "/admin/users",     icon: <Ico.Customers /> },
             { label: "Reports",   href: "/admin/reports",   icon: <Ico.Flag />      },
+            { label: "Earnings",  href: "/admin/earnings",  icon: <Ico.Earnings />  },
             { label: "Payouts",   href: "/admin/payouts",   icon: <Ico.Payout />    },
-            { label: "Content",   href: "/admin/content",   icon: <Ico.Content />   },
-        ]},
-        { isFinance: true, sub: [
-            { label: "Invoices",     href: "/admin/invoices"     },
-            { label: "Transactions", href: "/admin/transactions" },
-            { label: "Reports",      href: "/admin/reports"      },
-        ]},
-        { items: [
-            { label: "Analytics", href: "/admin/analytics", icon: <Ico.Analytics /> },
             { label: "Vouchers",  href: "/admin/vouchers",  icon: <Ico.Discounts /> },
         ]},
     ],
     agency: [
         { items: [
             { label: "Dashboard", href: "/agency/dashboard", icon: <Ico.Dashboard />, permission: "agency.dashboard.view" },
-            { label: "Bookings",  href: "/agency/bookings",  icon: <Ico.Orders />,    badge: 8, permission: "agency.bookings.view" },
             { label: "Tours",     href: "/agency/tours",     icon: <Ico.Tours />,     permission: "agency.tours.view"     },
             { label: "Vehicles",  href: "/agency/vehicles",  icon: <Ico.Vehicles />,  permission: "agency.vehicles.view"  },
             { label: "Schedule",  href: "/agency/schedule",  icon: <Ico.Schedule />,  permission: "agency.schedule.view"  },
+            { label: "Jobs",      href: "/agency/jobs",      icon: <Ico.Jobs />,      permission: "agency.jobs.view"      },
             { label: "Guides",    href: "/agency/guides",    icon: <Ico.Guides />,    permission: "agency.guides.view"    },
-            { label: "Jobs",      href: "/agency/jobs",      icon: <Ico.Inbox />,     permission: "agency.jobs.view"      },
             { label: "Tracking",  href: "/agency/tracking",  icon: <Ico.Tracking />,  permission: "agency.tracking.view"  },
-        ]},
-        { isFinance: true, permission: "agency.finance.view", sub: [
-            { label: "Invoices",     href: "/agency/invoices"     },
-            { label: "Transactions", href: "/agency/transactions" },
-            { label: "Reports",      href: "/agency/reports"      },
-        ]},
-        { items: [
-            { label: "Analytics", href: "/agency/analytics", icon: <Ico.Analytics />, permission: "agency.analytics.view" },
         ]},
     ],
     provider: [
         { items: [
             { label: "Dashboard", href: "/provider/dashboard", icon: <Ico.Dashboard />, permission: "provider.dashboard.view" },
-            { label: "Bookings",  href: "/provider/bookings",  icon: <Ico.Orders />,    badge: 5, permission: "provider.bookings.view"  },
             { label: "Services",  href: "/provider/services",  icon: <Ico.Services />,  permission: "provider.services.view"  },
             { label: "Packages",  href: "/provider/packages",  icon: <Ico.Packages />,  permission: "provider.packages.view"  },
-            { label: "Customers", href: "/provider/customers", icon: <Ico.Customers />, permission: "provider.customers.view" },
             { label: "Results",   href: "/provider/results",   icon: <Ico.Results />,   permission: "provider.results.view"   },
             { label: "Jobs",      href: "/provider/jobs",      icon: <Ico.Jobs />,      permission: "provider.jobs.view"      },
-            { label: "Groups",    href: "/provider/groups",    icon: <Ico.Customers />, permission: "provider.groups.view"    },
-        ]},
-        { isFinance: true, permission: "provider.finance.view", sub: [
-            { label: "Invoices",     href: "/provider/invoices"     },
-            { label: "Transactions", href: "/provider/transactions" },
-            { label: "Reports",      href: "/provider/reports"      },
-        ]},
-        { items: [
-            { label: "Analytics", href: "/provider/analytics", icon: <Ico.Analytics />, permission: "provider.analytics.view" },
+            { label: "Staff",     href: "/provider/staff",     icon: <Ico.Guides />,    permission: "provider.staff.view"     },
         ]},
     ],
 };

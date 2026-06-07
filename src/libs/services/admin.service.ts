@@ -1,7 +1,10 @@
 import { AgencyDetailDTO, AgencyDTO } from "@/types/agency.type";
+import { AdminScheduleDTO } from "@/types/itinerary.type";
 import { ProviderDetailDTO, ProviderDTO } from "@/types/provider.type";
 import { AdminDashboardStats, AdminTrend, PendingApproval, TopAgency } from "@/types/dashboard.type";
 import { VoucherDTO, VoucherCreateRequest, VoucherUpdateRequest } from "@/types/voucher.type";
+import { ScheduleEarningDTO } from "@/types/earning.type";
+import { AgencyCancelResultDTO } from "@/libs/services/agency.service";
 import axiosClient from "../http/axios-client";
 
 export type PagedResult<T> = {
@@ -13,6 +16,13 @@ export type PagedResult<T> = {
     hasNextPage: boolean;
     hasPreviousPage: boolean;
 };
+
+export interface AdminScheduleCancelPreviewDTO {
+    scheduleId: string;
+    affectedBookings: number;
+    totalDepositRefund: number;
+    totalCustomerRefund: number;
+}
 
 export const adminService = {
     getProviders: (): Promise<ApiResponse<ProviderDTO[]>> =>
@@ -33,8 +43,11 @@ export const adminService = {
     rejectProvider: (id: string): Promise<ApiResponse<void>> =>
         axiosClient.put(`/admins/providers/${id}/reject`),
 
-    approveAgency: (id: string): Promise<ApiResponse<void>> =>
-        axiosClient.put(`/admins/agencies/${id}/approve`),
+    approveAgency: (
+        id: string,
+        body: { email: string; password: string; username: string; phone?: string; role?: number }
+    ): Promise<ApiResponse<void>> =>
+        axiosClient.put(`/admins/agencies/${id}/approve`, { ...body, role: body.role ?? 0 }),
 
     rejectAgency: (id: string): Promise<ApiResponse<void>> =>
         axiosClient.put(`/admins/agencies/${id}/reject`),
@@ -47,9 +60,9 @@ export const adminService = {
 
     createProviderAccount: (
         id: string,
-        body: { email: string; password: string; username: string; phone?: string }
+        body: { email: string; password: string; username: string; phone?: string; role?: number }
     ): Promise<ApiResponse<void>> =>
-        axiosClient.post(`/admins/providers/${id}/create-account`, body),
+        axiosClient.post(`/admins/providers/${id}/create-account`, { ...body, role: body.role ?? 0 }),
 
     getProviderDetail: (id: string): Promise<ApiResponse<ProviderDetailDTO>> =>
         axiosClient.get(`/providers/${id}/detail`),
@@ -84,4 +97,21 @@ export const adminService = {
 
     deleteVoucher: (id: string): Promise<ApiResponse<void>> =>
         axiosClient.delete(`/vouchers/${id}`),
+
+    // ── Schedules ───────────────────────────────────────────────────────────
+    getAllSchedules: (): Promise<ApiResponse<AdminScheduleDTO[]>> =>
+        axiosClient.get("/admins/schedules"),
+
+    previewCancelSchedule: (scheduleId: string): Promise<ApiResponse<AdminScheduleCancelPreviewDTO>> =>
+        axiosClient.get(`/admins/schedules/${scheduleId}/cancel-preview`),
+
+    cancelSchedule: (scheduleId: string): Promise<ApiResponse<AgencyCancelResultDTO>> =>
+        axiosClient.post(`/admins/schedules/${scheduleId}/cancel`),
+
+    // ── Earnings ──────────────────────────────────────────────────────────────
+    getScheduleEarnings: (): Promise<ApiResponse<ScheduleEarningDTO[]>> =>
+        axiosClient.get("/admins/schedule-earnings"),
+
+    releaseEarnings: (scheduleId: string): Promise<ApiResponse<void>> =>
+        axiosClient.post(`/admins/schedule-earnings/${scheduleId}/release`),
 };

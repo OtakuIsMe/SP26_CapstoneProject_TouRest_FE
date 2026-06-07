@@ -2,8 +2,12 @@
 
 import { useState, useMemo, useRef, useEffect } from "react";
 import JobCard from "@/components/commons/job-card/job-card";
+import StaffAssignmentModal from "@/components/commons/staff-assignment-modal/staff-assignment-modal";
+import JobDetailModal from "@/components/commons/job-detail-modal/job-detail-modal";
 import { providerService } from "@/libs/services/provider.service";
-import type { ProviderScheduleDTO } from "@/types/itinerary.type";
+import type { ProviderScheduleDTO, ProviderJobWithStopsDTO } from "@/types/itinerary.type";
+import { useSubRole } from "@/hooks/useSubRole";
+import { authService } from "@/libs/services/auth.service";
 import styles from "./page.module.scss";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -81,18 +85,58 @@ export default function ProviderJobsPage() {
     const [filter,   setFilter]   = useState<"all" | JobStatus>("all");
     const [catOpen,  setCatOpen]  = useState(false);
     const [popup,    setPopup]    = useState<{ date: Date; jobs: TourJob[]; x: number; y: number } | null>(null);
-    const [jobs,     setJobs]     = useState<TourJob[]>([]);
-    const [loading,  setLoading]  = useState(true);
+    const [jobs,        setJobs]        = useState<TourJob[]>([]);
+    const [jobsWithStops, setJobsWithStops] = useState<Map<string, ProviderJobWithStopsDTO>>(new Map());
+    const [staffModal,  setStaffModal]  = useState<ProviderJobWithStopsDTO | null>(null);
+    const [detailModal, setDetailModal] = useState<ProviderJobWithStopsDTO | null>(null);
+    const [loading,     setLoading]     = useState(true);
+    const [myUserId,    setMyUserId]    = useState<string | null>(null);
     const catRef   = useRef<HTMLDivElement>(null);
     const popupRef = useRef<HTMLDivElement>(null);
 
-    // Fetch schedules for this provider
+    const { can } = useSubRole("provider");
+    const canAssign = can("provider.jobs.manage"); // manager only
+
+    // Fetch schedules + stops/staff data
     useEffect(() => {
-        providerService.getJobSchedules()
-            .then(res => { if (res?.data) setJobs(res.data.map(mapToTourJob)); })
-            .catch(() => {})
-            .finally(() => setLoading(false));
-    }, []);
+        Promise.all([
+            providerService.getJobSchedules(),
+            providerService.getJobsWithStops(),
+            authService.getMe(),
+        ]).then(([schedRes, stopsRes, meRes]) => {
+            const uid = meRes?.data?.id ?? null;
+            setMyUserId(uid);
+
+            if (stopsRes?.data) {
+                let jobData = stopsRes.data;
+
+                // Staff: only show schedules where they're assigned to at least 1 stop
+                if (!canAssign && uid) {
+                    jobData = jobData
+                        .filter(j => j.stops.some(s => s.assignedStaffId === uid))
+                        .map(j => ({
+                            ...j,
+                            stops: j.stops.filter(s => s.assignedStaffId === uid),
+                        }));
+                }
+
+                const map = new Map<string, ProviderJobWithStopsDTO>();
+                jobData.forEach(j => map.set(j.scheduleId, j));
+                setJobsWithStops(map);
+
+                if (schedRes?.data) {
+                    const visibleIds = new Set(jobData.map(j => j.scheduleId));
+                    const filtered = canAssign
+                        ? schedRes.data
+                        : schedRes.data.filter(s => visibleIds.has(s.id));
+                    setJobs(filtered.map(mapToTourJob));
+                }
+            } else if (schedRes?.data) {
+                setJobs(schedRes.data.map(mapToTourJob));
+            }
+        }).catch(() => {}).finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canAssign]);
 
     // Close category dropdown on outside click
     useEffect(() => {
@@ -155,6 +199,7 @@ export default function ProviderJobsPage() {
     }
 
     return (
+        <>
         <div className={styles.page}>
 
             {/* ── Top bar ── */}
@@ -246,14 +291,21 @@ export default function ProviderJobsPage() {
                                     </div>
 
                                     <div className={styles.events}>
-                                        {visible.map(job => (
-                                            <JobCard
-                                                key={job.id}
-                                                time={job.arrivalTime}
-                                                title={job.groupName}
-                                                status={job.status}
-                                            />
-                                        ))}
+                                        {visible.map(job => {
+                                                const jws = jobsWithStops.get(job.id);
+                                                const hasUnassigned = jws?.stops.some(s => !s.assignedStaffId) ?? false;
+                                                return (
+                                                    <JobCard
+                                                        key={job.id}
+                                                        time={job.arrivalTime}
+                                                        title={job.groupName}
+                                                        status={job.status}
+                                                        hasUnassignedStop={canAssign && hasUnassigned}
+                                                        onClick={jws ? () => setDetailModal(jws) : undefined}
+                                                        onViewStaff={canAssign && jws ? () => setStaffModal(jws) : undefined}
+                                                    />
+                                                );
+                                            })}
                                         {more > 0 && (
                                             <button
                                                 className={styles.viewMore}
@@ -367,5 +419,38 @@ export default function ProviderJobsPage() {
                 </div>
             </div>
         </div>
+
+        {detailModal && (
+            <JobDetailModal
+                job={detailModal}
+                onClose={() => setDetailModal(null)}
+                onViewStaff={canAssign ? () => { setDetailModal(null); setStaffModal(detailModal); } : undefined}
+            />
+        )}
+
+        {staffModal && (
+            <StaffAssignmentModal
+                job={staffModal}
+                onClose={() => setStaffModal(null)}
+                onAssigned={(stopId, staff) => {
+                    setJobsWithStops(prev => {
+                        const next = new Map(prev);
+                        const job = next.get(staffModal.scheduleId);
+                        if (job) {
+                            next.set(staffModal.scheduleId, {
+                                ...job,
+                                stops: job.stops.map(s =>
+                                    s.stopId === stopId
+                                        ? { ...s, assignedStaffId: staff.userId, assignedStaffName: staff.userFullName, assignedStaffEmail: staff.email }
+                                        : s
+                                ),
+                            });
+                        }
+                        return next;
+                    });
+                }}
+            />
+        )}
+        </>
     );
 }

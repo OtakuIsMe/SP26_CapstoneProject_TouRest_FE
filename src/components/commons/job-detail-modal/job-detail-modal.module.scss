@@ -1,0 +1,415 @@
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.4);
+    backdrop-filter: blur(3px);
+    z-index: 9000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    animation: fadeIn 0.15s ease;
+}
+@keyframes fadeIn { from { opacity:0; } to { opacity:1; } }
+
+.panel {
+    background: #fff;
+    border-radius: 20px;
+    box-shadow: 0 32px 80px rgba(0,0,0,.22);
+    width: 580px;
+    max-width: calc(100vw - 32px);
+    max-height: 88vh;
+    display: flex;
+    flex-direction: column;
+    animation: slideUp 0.18s ease;
+    overflow: hidden;
+}
+@keyframes slideUp {
+    from { opacity:0; transform:translateY(14px) scale(.97); }
+    to   { opacity:1; transform:translateY(0)    scale(1);   }
+}
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.header {
+    padding: 20px 22px 0;
+    flex-shrink: 0;
+    border-bottom: 1px solid #f3f4f6;
+}
+
+.headerTop {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.badge {
+    display: inline-flex;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .04em;
+    margin-bottom: 6px;
+}
+
+.title {
+    font-size: 19px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 4px;
+    line-height: 1.25;
+}
+
+.agency {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12.5px;
+    color: #6b7280;
+    margin: 0;
+}
+
+.closeBtn {
+    width: 32px;
+    height: 32px;
+    border: 1px solid #e5e7eb;
+    border-radius: 9px;
+    background: #fff;
+    color: #6b7280;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s, color 0.15s;
+    &:hover { background: #fee2e2; color: #ef4444; border-color: #fecaca; }
+}
+
+// ── Info chips row ────────────────────────────────────────────────────────────
+.infoRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+    padding-bottom: 16px;
+}
+
+.infoChip {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: #f9fafb;
+    border: 1px solid #f0f0f0;
+    border-radius: 20px;
+    font-size: 12.5px;
+    font-weight: 600;
+    color: #374151;
+    white-space: nowrap;
+
+    svg { flex-shrink: 0; color: #9ca3af; }
+}
+
+// ── Body ──────────────────────────────────────────────────────────────────────
+.body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 16px 22px 22px;
+
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: #e5e7eb; border-radius: 4px; }
+}
+
+.sectionHead {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 14px;
+}
+
+.sectionLabel {
+    font-size: 11px;
+    font-weight: 700;
+    color: #9ca3af;
+    letter-spacing: .07em;
+    text-transform: uppercase;
+}
+
+.manageBtn {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    padding: 5px 12px;
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    border-radius: 7px;
+    font-size: 12px;
+    font-weight: 600;
+    color: #3b82f6;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: #dbeafe; }
+}
+
+.empty {
+    font-size: 13px;
+    color: #9ca3af;
+    text-align: center;
+    padding: 20px 0;
+}
+
+// ── Stop cards ────────────────────────────────────────────────────────────────
+.stopList {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.stopCard {
+    position: relative;
+}
+
+.stopConnector {
+    width: 2px;
+    height: 16px;
+    background: #e5e7eb;
+    margin-left: 13px;
+}
+
+.stopHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 10px;
+    padding: 12px 14px;
+    background: #f9fafb;
+    border: 1px solid #f0f0f0;
+    border-radius: 12px;
+}
+
+.stopLeft {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+    flex: 1;
+    min-width: 0;
+}
+
+.stopDot {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: #3b82f6;
+    color: #fff;
+    font-size: 11px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    margin-top: 1px;
+}
+
+.stopName {
+    display: block;
+    font-size: 13.5px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+}
+
+.stopDate {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #6366f1;
+    margin-top: 3px;
+
+    svg { color: #a5b4fc; flex-shrink: 0; }
+}
+
+.stopAddr {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11.5px;
+    color: #9ca3af;
+    margin-top: 3px;
+}
+
+// Staff chip
+.staffChip {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 4px 10px 4px 5px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    flex-shrink: 0;
+}
+
+.staffAvatar {
+    width: 24px;
+    height: 24px;
+    background: #6366f1;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.staffName {
+    display: block;
+    font-size: 12px;
+    font-weight: 600;
+    color: #065f46;
+    white-space: nowrap;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.staffEmail {
+    display: block;
+    font-size: 10px;
+    color: #6b7280;
+    white-space: nowrap;
+    max-width: 110px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.unassigned {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 11.5px;
+    color: #92400e;
+    padding: 4px 10px;
+    background: #fffbeb;
+    border: 1px dashed #fde68a;
+    border-radius: 20px;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+.warnDot {
+    width: 15px;
+    height: 15px;
+    background: #f59e0b;
+    color: #fff;
+    border-radius: 50%;
+    font-size: 9px;
+    font-weight: 800;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+// ── Activities timeline ───────────────────────────────────────────────────────
+.actList {
+    padding: 8px 14px 4px 28px;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+}
+
+.actRow {
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    padding: 6px 0;
+    position: relative;
+
+    &:not(:last-child)::after {
+        content: "";
+        position: absolute;
+        left: 44px;
+        top: 28px;
+        bottom: -6px;
+        width: 1px;
+        background: #f0f0f0;
+    }
+}
+
+.actTime {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    flex-shrink: 0;
+    width: 44px;
+    padding-top: 2px;
+}
+
+.actTimeStart {
+    font-size: 12px;
+    font-weight: 700;
+    color: #374151;
+    line-height: 1.2;
+}
+
+.actTimeDur {
+    font-size: 10px;
+    color: #9ca3af;
+}
+
+.actDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #d1d5db;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 1px #d1d5db;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+
+.actBody {
+    flex: 1;
+    padding-top: 1px;
+}
+
+.actName {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #111827;
+    line-height: 1.3;
+}
+
+.actMeta {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 2px;
+    flex-wrap: wrap;
+}
+
+.actPrice {
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #3b82f6;
+}
+
+.actNote {
+    font-size: 11px;
+    color: #6b7280;
+    font-style: italic;
+}
+
+.noAct {
+    font-size: 12px;
+    color: #d1d5db;
+    font-style: italic;
+    padding: 6px 14px 6px 56px;
+    margin: 0;
+}

@@ -7,6 +7,7 @@ import { useParams, useSearchParams } from "next/navigation";
 import Header from "@/components/layouts/header/header";
 import Footer from "@/components/layouts/footer/footer";
 import { agencyService } from "@/libs/services/agency.service";
+import { walletService, type WalletDTO } from "@/libs/services/wallet.service";
 import { ItineraryDTO } from "@/types/itinerary.type";
 import styles from "./page.module.scss";
 
@@ -34,6 +35,10 @@ export default function PaymentPage() {
     const [finalAmount, setFinalAmount] = useState<number>(0);
     const [qrStatus, setQrStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
     const [qrError, setQrError] = useState("");
+    const [wallet, setWallet] = useState<WalletDTO | null>(null);
+    const [walletLoading, setWalletLoading] = useState(false);
+    const [walletError, setWalletError] = useState<string | null>(null);
+    const [walletPayLoading, setWalletPayLoading] = useState(false);
     const [secondsLeft, setSecondsLeft] = useState(QR_EXPIRE_SECONDS);
     const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
     const pollRef  = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -49,6 +54,14 @@ export default function PaymentPage() {
             if (res.data) setItinerary(res.data);
         });
     }, [tourId]);
+
+    useEffect(() => {
+        setWalletLoading(true);
+        walletService.getMyWallet()
+            .then(res => { if (res.data) setWallet(res.data); })
+            .catch(() => setWalletError("Unable to load wallet. Please sign in or try again."))
+            .finally(() => setWalletLoading(false));
+    }, []);
 
     const generateQr = useCallback(async () => {
         if (!bookingId) return;
@@ -120,7 +133,28 @@ export default function PaymentPage() {
     const timerColor = expirePercent > 40 ? "#2a9d8f" : expirePercent > 15 ? "#f59e0b" : "#ef4444";
 
     const displayAmount = finalAmount || (itinerary?.price ?? 0) * travelers;
+    const hasWalletBalance = wallet?.balance != null && wallet.balance >= displayAmount;
+    const walletButtonLabel = walletLoading ? "Checking wallet…" : hasWalletBalance ? "Pay with wallet" : "Insufficient wallet balance";
     const tourImage = itinerary?.images?.[0]?.url ?? "/images/landing/explore_1.avif";
+
+    const handlePayWithWallet = async () => {
+        if (!bookingId || walletPayLoading) return;
+        setWalletPayLoading(true);
+        setWalletError(null);
+
+        try {
+            await agencyService.payWithWallet(bookingId);
+            // Refresh wallet to show updated balance
+            await walletService.getMyWallet().then(res => {
+                if (res.data) setWallet(res.data);
+            });
+            window.location.href = "/payment/success?status=PAID&source=WALLET";
+        } catch (err) {
+            setWalletError("Wallet payment failed. Please try again or use QR payment.");
+        } finally {
+            setWalletPayLoading(false);
+        }
+    };
 
     return (
         <>
@@ -315,6 +349,16 @@ export default function PaymentPage() {
                                             <strong className={styles.summaryTotalPrice}>
                                                 {displayAmount.toLocaleString("vi-VN")}đ
                                             </strong>
+                                        </div>
+
+                                        <div className={styles.walletBoxSummary}>
+                                            <button
+                                                className={styles.walletPayBtn}
+                                                onClick={handlePayWithWallet}
+                                                disabled={!hasWalletBalance || walletLoading || walletPayLoading}
+                                            >
+                                                {walletPayLoading ? "Processing…" : "Pay with wallet"}
+                                            </button>
                                         </div>
                                     </>
                                 ) : (

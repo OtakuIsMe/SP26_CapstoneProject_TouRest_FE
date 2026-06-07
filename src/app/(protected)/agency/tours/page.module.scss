@@ -1113,6 +1113,32 @@ $r:      12px;
 }
 
 // ── Stop panel card ───────────────────────────────────────────────────────────
+// ── Day separator ─────────────────────────────────────────────────────────────
+.daySeparator {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 10px 0 6px;
+}
+
+.daySeparatorLine {
+    flex: 1;
+    height: 1px;
+    background: #e0e7ff;
+}
+
+.daySeparatorLabel {
+    font-size: 10.5px;
+    font-weight: 700;
+    color: #4f46e5;
+    background: #eef2ff;
+    padding: 2px 10px;
+    border-radius: 20px;
+    white-space: nowrap;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
 .stopPanelCard {
     background: $white;
     border: 1.5px solid $border;

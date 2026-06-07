@@ -1,12 +1,19 @@
 "use client";
 
-import { useEffect, useRef, useState, useCallback } from "react";
+import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import styles from "./manage-layout.module.scss";
 import type { Role } from "./manage-sidebar";
 import { authService } from "@/libs/services/auth.service";
-import { notificationService, NotificationDTO, NotificationEntityType } from "@/libs/services/notification.service";
+import { walletService, type WalletDTO } from "@/libs/services/wallet.service";
 import { StorageKeys } from "@/constants/storage";
+import { useNotifications } from "@/contexts/notification.context";
+import {
+    entityTypeToNotifType,
+    timeAgo,
+    NOTIF_COLOR,
+    type NotifType,
+} from "@/utils/notification.utils";
 
 // Dùng chung cho cả 3 role — tên trang theo pathname
 const TITLES: Record<string, string> = {
@@ -28,9 +35,10 @@ const TITLES: Record<string, string> = {
     "/dashboard/discounts":   "Discounts",
     "/dashboard/settings":    "Settings",
     "/dashboard/help":        "Help & Support",
-    // Agency
+    "/admin/schedule":        "Schedule",
     "/agency/dashboard":      "Dashboard",
     "/agency/tours":          "Tours",
+    "/agency/jobs":           "Jobs",
     "/agency/bookings":       "Bookings",
     "/agency/customers":      "Customers",
     "/agency/content":        "Content",
@@ -39,7 +47,6 @@ const TITLES: Record<string, string> = {
     "/agency/reports":        "Reports",
     "/agency/analytics":      "Analytics",
     "/agency/discounts":      "Discounts",
-    // Provider
     "/provider/dashboard":    "Dashboard",
     "/provider/services":     "Services",
     "/provider/packages":     "Packages",
@@ -78,32 +85,6 @@ const ExportIcon = () => (
 const AVATAR:      Record<Role, string> = { admin: "AD", agency: "AG", provider: "PR" };
 const AVATAR_NAME: Record<Role, string> = { admin: "Admin", agency: "Agency", provider: "Provider" };
 
-// ── Notification helpers ────────────────────────────────────────────────────────
-type NotifType = "booking" | "tour" | "system" | "payment";
-
-function entityTypeToNotifType(entityType: NotificationEntityType): NotifType {
-    switch (entityType) {
-        case "Booking":   return "booking";
-        case "Refund":    return "payment";
-        case "Itinerary":
-        case "Package":
-        case "Service":   return "tour";
-        default:          return "system";
-    }
-}
-
-function timeAgo(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1)   return "Just now";
-    if (m < 60)  return `${m} min ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24)  return `${h} hr ago`;
-    const d = Math.floor(h / 24);
-    if (d === 1) return "Yesterday";
-    return `${d} days ago`;
-}
-
 const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
     booking: (
         <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
@@ -131,64 +112,40 @@ const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
     ),
 };
 
-const NOTIF_COLOR: Record<NotifType, { bg: string; color: string }> = {
-    booking: { bg: "#eff6ff", color: "#3b82f6" },
-    tour:    { bg: "#f0fdf4", color: "#22c55e" },
-    system:  { bg: "#fffbeb", color: "#f59e0b" },
-    payment: { bg: "#f5f3ff", color: "#8b5cf6" },
-};
-
 export default function ManageHeader({ role }: { role: Role }) {
     const pathname = usePathname();
     const router   = useRouter();
     const title    = TITLES[pathname] ?? "Dashboard";
     const isDashboard = pathname === "/dashboard";
 
+    const {
+        notifs,
+        unreadCount,
+        fetchNotifications,
+        markAllRead,
+        handleNotificationClick,
+    } = useNotifications();
+
     const [avatarOpen,   setAvatarOpen]   = useState(false);
     const [notifOpen,    setNotifOpen]    = useState(false);
-    const [notifs,       setNotifs]       = useState<NotificationDTO[]>([]);
-    const [unreadCount,  setUnreadCount]  = useState(0);
     const [activeTab,    setActiveTab]    = useState<"all" | "unread">("all");
+    const [wallet,       setWallet]       = useState<WalletDTO | null>(null);
+    const [walletLoading, setWalletLoading] = useState(false);
     const avatarRef = useRef<HTMLDivElement>(null);
     const notifRef  = useRef<HTMLDivElement>(null);
-
-    const fetchNotifications = useCallback(async () => {
-        try {
-            const res = await notificationService.getMyNotifications();
-            if (res.data) setNotifs(res.data);
-        } catch { /* ignore */ }
-    }, []);
-
-    const fetchUnreadCount = useCallback(async () => {
-        try {
-            const res = await notificationService.getUnreadCount();
-            if (res.data !== undefined) setUnreadCount(res.data);
-        } catch { /* ignore */ }
-    }, []);
-
-    useEffect(() => {
-        fetchUnreadCount();
-        const interval = setInterval(fetchUnreadCount, 30000);
-        return () => clearInterval(interval);
-    }, [fetchUnreadCount]);
 
     useEffect(() => {
         if (notifOpen) fetchNotifications();
     }, [notifOpen, fetchNotifications]);
 
-    async function markAllRead() {
-        setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
-        setUnreadCount(0);
-        try { await notificationService.markAllAsRead(); } catch { /* ignore */ }
-    }
-
-    async function markRead(id: string) {
-        const notif = notifs.find(n => n.id === id);
-        if (!notif || notif.isRead) return;
-        setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-        setUnreadCount(c => Math.max(0, c - 1));
-        try { await notificationService.markAsRead(id); } catch { /* ignore */ }
-    }
+    useEffect(() => {
+        if (!avatarOpen || wallet || walletLoading) return;
+        setWalletLoading(true);
+        walletService.getMyWallet()
+            .then(res => { if (res.data) setWallet(res.data); })
+            .catch(() => {})
+            .finally(() => setWalletLoading(false));
+    }, [avatarOpen, wallet, walletLoading]);
 
     const displayedNotifs = activeTab === "unread" ? notifs.filter(n => !n.isRead) : notifs;
 
@@ -250,7 +207,6 @@ export default function ManageHeader({ role }: { role: Role }) {
 
                     {notifOpen && (
                         <div className={styles.notifDropdown}>
-                            {/* Header */}
                             <div className={styles.notifDropHeader}>
                                 <span className={styles.notifDropTitle}>Notifications</span>
                                 {unreadCount > 0 && (
@@ -260,7 +216,6 @@ export default function ManageHeader({ role }: { role: Role }) {
                                 )}
                             </div>
 
-                            {/* Tabs */}
                             <div className={styles.notifTabs}>
                                 <span
                                     className={`${styles.notifTab} ${activeTab === "all" ? styles.notifTabActive : ""}`}
@@ -272,7 +227,6 @@ export default function ManageHeader({ role }: { role: Role }) {
                                 >Unread {unreadCount > 0 && <b>{unreadCount}</b>}</span>
                             </div>
 
-                            {/* List */}
                             <div className={styles.notifList}>
                                 {displayedNotifs.length === 0 ? (
                                     <div style={{ padding: "24px 16px", textAlign: "center", color: "#9ca3af", fontSize: 13 }}>
@@ -285,7 +239,7 @@ export default function ManageHeader({ role }: { role: Role }) {
                                         <div
                                             key={n.id}
                                             className={`${styles.notifItem} ${!n.isRead ? styles.notifItemUnread : ""}`}
-                                            onClick={() => markRead(n.id)}
+                                            onClick={() => handleNotificationClick(n)}
                                         >
                                             <div className={styles.notifItemIcon} style={{ background: cfg.bg, color: cfg.color }}>
                                                 {NOTIF_ICON[type]}
@@ -301,7 +255,6 @@ export default function ManageHeader({ role }: { role: Role }) {
                                 })}
                             </div>
 
-                            {/* Footer */}
                             <div className={styles.notifDropFooter}>
                                 <button className={styles.notifViewAll}>View all notifications</button>
                             </div>
@@ -329,6 +282,17 @@ export default function ManageHeader({ role }: { role: Role }) {
                                     <p className={styles.avatarDropName}>{AVATAR_NAME[role]}</p>
                                     <p className={styles.avatarDropRole}>{role}</p>
                                 </div>
+                            </div>
+                            <div className={styles.avatarBalance}>
+                                <div className={styles.avatarBalanceLabel}>Wallet balance</div>
+                                <div className={styles.avatarBalanceAmount}>
+                                    {walletLoading ? "Loading…" : wallet ? `₫${wallet.balance.toLocaleString("vi-VN")}` : "—"}
+                                </div>
+                                {wallet?.pendingBalance ? (
+                                    <div className={styles.avatarBalancePending}>
+                                        Pending +{wallet.pendingBalance.toLocaleString("vi-VN")}₫
+                                    </div>
+                                ) : null}
                             </div>
                             <div className={styles.avatarDropDivider} />
                             <button className={styles.avatarDropItem}>

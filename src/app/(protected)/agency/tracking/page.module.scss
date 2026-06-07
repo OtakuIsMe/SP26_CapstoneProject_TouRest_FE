@@ -141,6 +141,17 @@ $grey:  #6b7280;
 
 .mainDates { font-size: 12.5px; color: $grey; }
 
+.completedBanner {
+    flex: 1 1 100%;
+    padding: 10px 14px;
+    border-radius: 8px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    color: #065f46;
+    font-size: 13px;
+    font-weight: 600;
+}
+
 .progressPill {
     display: flex;
     align-items: center;

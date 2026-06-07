@@ -1,7 +1,7 @@
 import axiosClient from "../http/axios-client";
 
 export type WalletTransactionType   = "Credit" | "Debit";
-export type WalletTransactionReason = "BookingEarning" | "Refund" | "Payout" | "PayoutRejected";
+export type WalletTransactionReason = "BookingEarning" | "Refund" | "Payout" | "PayoutRejected" | "BookingPayment";
 
 export interface WalletDTO {
     id: string;

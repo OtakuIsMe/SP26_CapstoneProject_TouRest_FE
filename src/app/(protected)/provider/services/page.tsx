@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { useSubRole } from "@/hooks/useSubRole";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
 import { providerService } from "@/libs/services/provider.service";
 import { ServiceDTO } from "@/types/service.type";
@@ -79,6 +80,9 @@ const columns: ColumnDef<ServiceDTO>[] = [
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProviderServicesPage() {
+    const { can } = useSubRole("provider");
+    const canManage = can("provider.services.manage");
+
     const [data, setData]         = useState<ServiceDTO[]>([]);
     const [loading, setLoading]   = useState(true);
     const [totalCount, setTotal]  = useState(0);
@@ -119,16 +123,8 @@ export default function ProviderServicesPage() {
     const handleStatusChange   = (st: string) => { setStatus(st); setPage(1); };
 
     const actions: ActionDef<ServiceDTO>[] = [
-        {
-            label: "View",
-            variant: "view",
-            onClick: (row) => setViewService(row),
-        },
-        {
-            label: "Edit",
-            variant: "edit",
-            onClick: (row) => setEditService(row),
-        },
+        { label: "View", variant: "view", onClick: (row) => setViewService(row) },
+        ...(canManage ? [{ label: "Edit", variant: "edit" as const, onClick: (row: ServiceDTO) => setEditService(row) }] : []),
     ];
 
     return (
@@ -149,12 +145,14 @@ export default function ProviderServicesPage() {
                             <option key={s} value={s}>{s}</option>
                         ))}
                     </select>
-                    <button className={styles.btnAdd} onClick={() => setAddOpen(true)}>
-                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Add Service
-                    </button>
+                    {canManage && (
+                        <button className={styles.btnAdd} onClick={() => setAddOpen(true)}>
+                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            Add Service
+                        </button>
+                    )}
                 </div>
             </div>
 

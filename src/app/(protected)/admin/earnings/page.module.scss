@@ -1,0 +1,317 @@
+.page {
+    padding: 28px 32px;
+    max-width: 960px;
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+.toast {
+    position: fixed;
+    top: 20px;
+    right: 24px;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 18px;
+    border-radius: 10px;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: 0 8px 24px rgba(0,0,0,.14);
+    animation: slideIn .2s ease;
+}
+@keyframes slideIn { from { opacity:0; transform:translateY(-8px); } to { opacity:1; transform:none; } }
+.toastOk  { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+.toastErr { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+
+// ── Header ────────────────────────────────────────────────────────────────────
+.pageHeader {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 16px;
+    margin-bottom: 22px;
+}
+.title {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0 0 4px;
+}
+.subtitle {
+    font-size: 13.5px;
+    color: #6b7280;
+    margin: 0;
+    strong { color: #111827; }
+}
+.refreshBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 14px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+    &:hover { background: #f9fafb; }
+}
+
+// ── Summary chips ─────────────────────────────────────────────────────────────
+.summaryRow {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 20px;
+}
+.chip {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    padding: 12px 20px;
+    border-radius: 12px;
+    border: 1px solid transparent;
+    min-width: 130px;
+}
+.chipNum {
+    font-size: 20px;
+    font-weight: 800;
+    line-height: 1.2;
+}
+.chipLabel {
+    font-size: 11px;
+    font-weight: 600;
+    color: #6b7280;
+    margin-top: 2px;
+    text-align: center;
+}
+
+// ── Filter tabs ───────────────────────────────────────────────────────────────
+.filterRow {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 20px;
+}
+.filterBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    background: #f9fafb;
+    border: 1px solid #e5e7eb;
+    border-radius: 20px;
+    font-size: 13px;
+    font-weight: 600;
+    color: #6b7280;
+    cursor: pointer;
+    transition: all .15s;
+    &:hover { background: #f3f4f6; }
+}
+.filterBtnActive {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+.badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 10px;
+    font-size: 10px;
+    font-weight: 700;
+}
+
+// ── Loading / empty ───────────────────────────────────────────────────────────
+.loadingWrap {
+    display: flex;
+    justify-content: center;
+    padding: 60px 0;
+}
+.spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid #e5e7eb;
+    border-top-color: #6366f1;
+    border-radius: 50%;
+    animation: spin .7s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+.emptyWrap {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 60px 0;
+    color: #9ca3af;
+    font-size: 14px;
+}
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
+.list {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.card {
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    overflow: hidden;
+    transition: box-shadow .15s;
+    &:hover { box-shadow: 0 4px 20px rgba(0,0,0,.07); }
+}
+.cardReleased {
+    opacity: .85;
+}
+
+.cardHead {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f3f4f6;
+}
+.cardHeadLeft {
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+.statusDot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+.dotGreen { background: #22c55e; }
+.dotAmber { background: #f59e0b; }
+
+.tourName {
+    display: block;
+    font-size: 14.5px;
+    font-weight: 700;
+    color: #111827;
+    line-height: 1.3;
+}
+.agencyName {
+    display: block;
+    font-size: 12px;
+    color: #6b7280;
+    margin-top: 2px;
+}
+
+.cardHeadRight {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 8px;
+    flex-shrink: 0;
+}
+.dateRange {
+    font-size: 12px;
+    color: #6b7280;
+    white-space: nowrap;
+}
+.releasedBadge {
+    padding: 4px 12px;
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 20px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #15803d;
+    white-space: nowrap;
+}
+.releaseBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px 16px;
+    background: #4f46e5;
+    color: #fff;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 700;
+    cursor: pointer;
+    white-space: nowrap;
+    transition: background .15s;
+    &:hover:not(:disabled) { background: #4338ca; }
+    &:disabled { opacity: .6; cursor: not-allowed; }
+}
+.btnSpinner {
+    display: inline-block;
+    width: 13px;
+    height: 13px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+}
+
+// ── Breakdown ─────────────────────────────────────────────────────────────────
+.breakdown {
+    padding: 14px 20px 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+.bRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+}
+.bLabel {
+    font-size: 13px;
+    color: #6b7280;
+    font-weight: 600;
+}
+.bTotal {
+    font-size: 15px;
+    font-weight: 800;
+    color: #111827;
+}
+.bDivider {
+    height: 1px;
+    background: #f3f4f6;
+}
+.bPartyCell {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+}
+.partyDot {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    margin-top: 5px;
+}
+.bPartyName {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+.bSub {
+    display: block;
+    font-size: 11px;
+    color: #9ca3af;
+    margin-top: 1px;
+}
+.bPayout {
+    font-size: 14px;
+    font-weight: 800;
+    white-space: nowrap;
+}

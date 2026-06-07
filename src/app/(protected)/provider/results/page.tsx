@@ -2,6 +2,8 @@
 
 import { useState, useRef, useEffect } from "react";
 import { providerService } from "@/libs/services/provider.service";
+import { useSubRole } from "@/hooks/useSubRole";
+import { authService } from "@/libs/services/auth.service";
 import type { ProviderTourGroupDTO, ProviderPassengerDTO } from "@/types/provider-staff.type";
 import styles from "./page.module.scss";
 
@@ -91,6 +93,10 @@ const STATUS_LABEL: Record<GroupStatus, string> = {
 
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ResultsPage() {
+    const { can } = useSubRole("provider");
+    const canSend = can("provider.results.send"); // staff only
+    const [myUserId, setMyUserId]           = useState<string | null>(null);
+
     const [groups, setGroups]               = useState<TourGroup[]>([]);
     const [loadingGroups, setLoadingGroups] = useState(true);
     const [loadingPats, setLoadingPats]     = useState(false);
@@ -104,16 +110,30 @@ export default function ResultsPage() {
     const [search, setSearch]               = useState("");
     const fileRef = useRef<HTMLInputElement>(null);
 
-    // Fetch group list on mount
+    // Fetch userId + groups on mount
     useEffect(() => {
-        providerService.getTourGroups()
-            .then(res => {
-                const mapped = (res.data ?? []).map(mapGroup);
-                setGroups(mapped);
-                if (mapped.length > 0) setSelectedId(mapped[0].id);
-            })
-            .finally(() => setLoadingGroups(false));
-    }, []);
+        Promise.all([
+            authService.getMe(),
+            providerService.getTourGroups(),
+            canSend ? providerService.getJobsWithStops() : Promise.resolve(null),
+        ]).then(([meRes, groupRes, stopsRes]) => {
+            const uid = meRes.data?.id ?? null;
+            setMyUserId(uid);
+            let mapped = (groupRes.data ?? []).map(mapGroup);
+            // Staff: filter to schedules where they are assigned to at least one stop
+            if (canSend && uid && stopsRes?.data) {
+                const assignedScheduleIds = new Set(
+                    stopsRes.data
+                        .filter(j => j.stops.some(s => s.assignedStaffId === uid))
+                        .map(j => j.scheduleId)
+                );
+                mapped = mapped.filter(g => assignedScheduleIds.has(g.id));
+            }
+            setGroups(mapped);
+            if (mapped.length > 0) setSelectedId(mapped[0].id);
+        }).finally(() => setLoadingGroups(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [canSend]);
 
     // Fetch patients when selected group changes (only once per group)
     useEffect(() => {
@@ -377,7 +397,7 @@ export default function ResultsPage() {
                                 {p.phone ?? "—"}
                             </div>
 
-                            <button
+                            {canSend && <button
                                 className={p.resultSent ? styles.resendBtn : styles.sendBtn}
                                 onClick={() => openModal(p)}
                             >
@@ -397,7 +417,7 @@ export default function ResultsPage() {
                                         Send Result
                                     </>
                                 )}
-                            </button>
+                            </button>}
                         </div>
                     ))}
 

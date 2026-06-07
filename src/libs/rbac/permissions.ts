@@ -16,72 +16,54 @@ import { Permission, SubRole } from "./types";
 export const ROLE_PERMISSIONS: Record<SubRole, Permission[]> = {
 
     // ── Provider: Manager ─────────────────────────────────────────────────────
-    // Full control over the provider workspace.
     manager: [
         "provider.dashboard.view",
-        "provider.bookings.view",
-        "provider.bookings.manage",
         "provider.services.view",
-        "provider.services.create",
-        "provider.services.edit",
-        "provider.services.delete",
+        "provider.services.manage",   // create / edit / delete
         "provider.packages.view",
-        "provider.packages.create",
-        "provider.packages.edit",
-        "provider.packages.delete",
-        "provider.results.view",
-        "provider.results.send",
-        "provider.customers.view",
+        "provider.packages.manage",
+        "provider.results.view",      // view only, cannot send
         "provider.jobs.view",
-        "provider.groups.view",
-        "provider.analytics.view",
+        "provider.jobs.manage",       // assign staff to stops
+        "provider.staff.view",        // staff management page
         "provider.finance.view",
         "provider.settings.manage",
     ],
 
     // ── Provider: Staff ───────────────────────────────────────────────────────
-    // Day-to-day work only: view bookings, send medical results, see customers.
-    // Cannot create/edit services or packages, cannot see finance or analytics.
     staff: [
         "provider.dashboard.view",
-        "provider.bookings.view",
+        "provider.services.view",     // view only
+        "provider.packages.view",     // view only
         "provider.results.view",
-        "provider.results.send",
-        "provider.customers.view",
-        "provider.jobs.view",
-        "provider.groups.view",
+        "provider.results.send",      // only staff can send medical results
+        "provider.jobs.view",         // only assigned stops
     ],
 
-    // ── Agency: Admin ─────────────────────────────────────────────────────────
-    // Full control over the agency workspace.
+    // ── Agency: Manager (admin) ───────────────────────────────────────────────
     admin: [
         "agency.dashboard.view",
-        "agency.bookings.view",
-        "agency.bookings.manage",
         "agency.tours.view",
-        "agency.tours.create",
-        "agency.tours.edit",
-        "agency.tours.delete",
+        "agency.tours.manage",        // create / edit / delete
         "agency.vehicles.view",
         "agency.vehicles.manage",
         "agency.schedule.view",
         "agency.schedule.manage",
-        "agency.guides.view",
-        "agency.guides.assign",
-        "agency.analytics.view",
+        "agency.guides.view",         // only managers see guides page
+        "agency.tracking.view",       // manager view only
         "agency.finance.view",
         "agency.settings.manage",
     ],
 
     // ── Agency: Tour Guide ────────────────────────────────────────────────────
-    // Can view their assigned schedule, tour info, and mark activities as done.
     tour_guide: [
         "agency.dashboard.view",
-        "agency.tours.view",
-        "agency.schedule.view",
-        "agency.guides.view",
+        "agency.tours.view",          // view only
+        "agency.vehicles.view",       // view only
+        "agency.schedule.view",       // own assigned schedules only
+        "agency.jobs.view",           // accept / reject job assignments
         "agency.tracking.view",
-        "agency.jobs.view",
+        "agency.tracking.send",       // only tour guide can mark activities
     ],
 };
 

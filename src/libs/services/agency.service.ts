@@ -6,6 +6,46 @@ import { PagedResult } from "@/types/common.type";
 import { VehicleDTO, VehicleCreateRequest, VehicleUpdateRequest } from "@/types/vehicle.type";
 import axiosClient from "../http/axios-client";
 
+export interface ProviderDepositItem {
+    providerId: string;
+    providerName: string;
+    serviceTotal: number;
+    depositAmount: number;
+    actualFirstActivityTime: string;
+}
+
+export interface DepositCalculationDTO {
+    itineraryId: string;
+    totalDepositAmount: number;
+    providers: ProviderDepositItem[];
+}
+
+export interface DepositCancelDetail {
+    bookingId: string;
+    bookingCode: string;
+    providerName: string;
+    depositAmount: number;
+    actualFirstActivityTime: string;
+    outcome: "Refunded" | "Forfeited" | "NotPaid";
+    reason: string;
+}
+
+export interface ScheduleCancelPreviewDTO {
+    scheduleId: string;
+    affectedBookings: number;
+    totalToRefund: number;
+    totalToForfeit: number;
+    details: DepositCancelDetail[];
+}
+
+export interface AgencyCancelResultDTO {
+    scheduleId: string;
+    bookingsCancelled: number;
+    totalRefunded: number;
+    totalForfeited: number;
+    details: DepositCancelDetail[];
+}
+
 export type AgencyUserDTO = {
     agencyId: string;
     userId: string;
@@ -165,6 +205,16 @@ export const agencyService = {
     rejectSchedule: (scheduleId: string): Promise<ApiResponse<void>> =>
         axiosClient.put(`/itineraries/schedules/${scheduleId}/reject`),
 
+    // ── Deposit ───────────────────────────────────────────────────────────────
+    calculateDeposit: (itineraryId: string, scheduleStart: string): Promise<ApiResponse<DepositCalculationDTO>> =>
+        axiosClient.get(`/deposits/calculate`, { params: { itineraryId, scheduleStart } }),
+
+    previewCancelSchedule: (scheduleId: string): Promise<ApiResponse<ScheduleCancelPreviewDTO>> =>
+        axiosClient.get(`/deposits/schedules/${scheduleId}/cancel-preview`),
+
+    cancelScheduleWithDeposit: (scheduleId: string): Promise<ApiResponse<AgencyCancelResultDTO>> =>
+        axiosClient.post(`/deposits/schedules/${scheduleId}/cancel`),
+
     getDashboardStats: (): Promise<ApiResponse<AgencyDashboardStats>> =>
         axiosClient.get("/agencies/dashboard/stats"),
 
@@ -233,6 +283,9 @@ export const agencyService = {
 
     finalizePayment: (orderCode: string | number): Promise<ApiResponse<string>> =>
         axiosClient.post(`/payment/finalize/${orderCode}`),
+
+    payWithWallet: (bookingId: string): Promise<ApiResponse<{ id: string; bookingId: string; orderCode: number; amount: number; finalAmount: number; status: string; checkoutUrl?: string; qrCode?: string; expiredAt: string }>> =>
+        axiosClient.post(`/payment/wallet/${bookingId}`),
 
     addStop: (itineraryId: string, payload: {
         stopOrder?: number;

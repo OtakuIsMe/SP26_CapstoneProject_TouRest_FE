@@ -1,0 +1,339 @@
+$indigo: #6366f1;
+$dark:   #111827;
+$mid:    #6b7280;
+$light:  #9ca3af;
+$border: #e5e7eb;
+$bg:     #f9fafb;
+$white:  #ffffff;
+$red:    #ef4444;
+
+.page {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    height: 100%;
+    overflow-y: auto;
+    &::-webkit-scrollbar { width: 4px; }
+    &::-webkit-scrollbar-thumb { background: $border; border-radius: 4px; }
+}
+
+.header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 12px;
+    flex-shrink: 0;
+}
+
+.title {
+    font-size: 20px;
+    font-weight: 800;
+    color: $dark;
+    margin: 0 0 2px;
+}
+
+.subtitle {
+    font-size: 13px;
+    color: $mid;
+    margin: 0;
+}
+
+.createBtn {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $white;
+    background: $indigo;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    &:hover { background: #4f46e5; }
+}
+
+.searchWrap {
+    position: relative;
+    width: 280px;
+    flex-shrink: 0;
+}
+
+.searchIcon {
+    position: absolute;
+    left: 10px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 14px;
+    height: 14px;
+    color: $light;
+    pointer-events: none;
+}
+
+.searchInput {
+    width: 100%;
+    padding: 8px 12px 8px 32px;
+    border: 1.5px solid $border;
+    border-radius: 9px;
+    font-size: 13px;
+    color: $dark;
+    background: $white;
+    outline: none;
+    transition: border-color 0.15s;
+    &:focus { border-color: $indigo; }
+    &::placeholder { color: $light; }
+}
+
+.guideGrid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 12px;
+}
+
+.guideCard {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 16px;
+    background: $white;
+    border: 1px solid $border;
+    border-radius: 12px;
+    transition: box-shadow 0.15s;
+    &:hover { box-shadow: 0 4px 14px rgba(0,0,0,.07); }
+}
+
+.guideAvatar {
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: $white;
+    font-size: 14px;
+    font-weight: 700;
+    flex-shrink: 0;
+}
+
+.guideInfo {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.guideName {
+    font-size: 14px;
+    font-weight: 600;
+    color: $dark;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.guideEmail {
+    font-size: 12px;
+    color: $light;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.guidePhone {
+    font-size: 11.5px;
+    color: $light;
+}
+
+.guideBadge {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 2px 7px;
+    border-radius: 20px;
+    background: #eef2ff;
+    color: $indigo;
+    width: fit-content;
+    margin-top: 2px;
+}
+
+.deleteBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 30px;
+    height: 30px;
+    border: 1.5px solid #fee2e2;
+    border-radius: 8px;
+    color: $red;
+    background: $white;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.15s;
+    &:hover { background: #fee2e2; }
+}
+
+.emptyState, .loadingState, .accessDenied {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    padding: 60px 0;
+    color: $light;
+    font-size: 14px;
+    text-align: center;
+}
+
+.accessDenied { color: $red; }
+
+.overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,.45);
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(2px);
+}
+
+.modal {
+    background: $white;
+    border-radius: 16px;
+    width: 100%;
+    max-width: 460px;
+    box-shadow: 0 20px 60px rgba(0,0,0,.18);
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modalHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 20px 0;
+}
+
+.modalTitle {
+    font-size: 16px;
+    font-weight: 800;
+    color: $dark;
+    margin: 0;
+}
+
+.modalClose {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+    border: 1px solid $border;
+    border-radius: 7px;
+    color: $mid;
+    background: $white;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: $bg; }
+}
+
+.modalBody {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px 20px;
+}
+
+.field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.label {
+    font-size: 12.5px;
+    font-weight: 600;
+    color: $dark;
+}
+
+.required { color: $red; }
+
+.input {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid $border;
+    border-radius: 9px;
+    font-size: 13px;
+    color: $dark;
+    background: $white;
+    outline: none;
+    transition: border-color 0.15s;
+    &:focus { border-color: $indigo; }
+    &::placeholder { color: $light; }
+}
+
+.errorMsg {
+    font-size: 12.5px;
+    color: $red;
+    margin: 0;
+}
+
+.confirmText {
+    font-size: 13.5px;
+    color: $dark;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.modalFooter {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+    padding: 14px 20px;
+    border-top: 1px solid $bg;
+}
+
+.cancelBtn {
+    padding: 8px 16px;
+    border: 1.5px solid $border;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    background: $white;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover { background: $bg; }
+}
+
+.confirmBtn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $white;
+    background: $indigo;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover:not(:disabled) { background: #4f46e5; }
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+}
+
+.deleteConfirmBtn {
+    padding: 8px 18px;
+    border: none;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: $white;
+    background: $red;
+    cursor: pointer;
+    transition: background 0.15s;
+    &:hover:not(:disabled) { background: #dc2626; }
+    &:disabled { opacity: 0.45; cursor: not-allowed; }
+}

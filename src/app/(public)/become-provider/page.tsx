@@ -60,6 +60,12 @@ export default function BecomeProviderPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError("");
+
+        if (!latitude || !longitude) {
+            setError("Please pick your location on the map.");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -71,8 +77,8 @@ export default function BecomeProviderPage() {
             formData.append("Address", address.trim());
             formData.append("StartTime", openingTime);
             formData.append("EndTime", closingTime);
-            if (latitude)  formData.append("Latitude", latitude);
-            if (longitude) formData.append("Longitude", longitude);
+            formData.append("Latitude", latitude);
+            formData.append("Longitude", longitude);
             images.forEach((img) => formData.append("Images", img.file));
 
             await providerService.register(formData);

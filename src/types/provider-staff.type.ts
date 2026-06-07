@@ -1,3 +1,13 @@
+export interface ProviderStaffDTO {
+    providerId: string;
+    userId: string;
+    userFullName: string;
+    email: string;
+    phone?: string | null;
+    avatar?: string | null;
+    role: string;
+}
+
 export interface ProviderTourGroupDTO {
     scheduleId: string;
     agencyName: string;

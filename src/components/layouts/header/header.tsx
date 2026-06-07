@@ -1,46 +1,19 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { authService } from "@/libs/services/auth.service";
-import { notificationService, NotificationDTO, NotificationEntityType } from "@/libs/services/notification.service";
 import { walletService, type WalletDTO } from "@/libs/services/wallet.service";
 import { StorageKeys } from "@/constants/storage";
+import { useNotifications } from "@/contexts/notification.context";
+import {
+    entityTypeToNotifType,
+    timeAgo,
+    NOTIF_COLOR,
+    type NotifType,
+} from "@/utils/notification.utils";
 import styles from "./header.module.scss";
-
-// ── Notification helpers ──────────────────────────────────────────────────────
-type NotifType = "booking" | "tour" | "system" | "payment";
-
-function entityTypeToNotifType(entityType: NotificationEntityType): NotifType {
-    switch (entityType) {
-        case "Booking":   return "booking";
-        case "Refund":    return "payment";
-        case "Itinerary":
-        case "Package":
-        case "Service":   return "tour";
-        default:          return "system";
-    }
-}
-
-function timeAgo(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.floor(diff / 60000);
-    if (m < 1)   return "Just now";
-    if (m < 60)  return `${m} min ago`;
-    const h = Math.floor(m / 60);
-    if (h < 24)  return `${h} hr ago`;
-    const d = Math.floor(h / 24);
-    if (d === 1) return "Yesterday";
-    return `${d} days ago`;
-}
-
-const NOTIF_COLOR: Record<NotifType, { bg: string; color: string }> = {
-    booking: { bg: "#eff6ff", color: "#3b82f6" },
-    tour:    { bg: "#f0fdf4", color: "#16a34a" },
-    system:  { bg: "#fffbeb", color: "#d97706" },
-    payment: { bg: "#f5f3ff", color: "#7c3aed" },
-};
 
 const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
     booking: <svg viewBox="0 0 24 24" fill="none" width="14" height="14"><rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>,
@@ -67,42 +40,27 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
   const [loggedIn,    setLoggedIn]    = useState(false);
   const [menuOpen,    setMenuOpen]    = useState(false);
   const [notifOpen,   setNotifOpen]   = useState(false);
-  const [notifs,      setNotifs]      = useState<NotificationDTO[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
   const [wallet,      setWallet]      = useState<WalletDTO | null>(null);
   const menuRef  = useRef<HTMLDivElement>(null);
   const notifRef = useRef<HTMLDivElement>(null);
 
-  const fetchNotifications = useCallback(async () => {
-    try {
-      const res = await notificationService.getMyNotifications();
-      if (res.data) setNotifs(res.data);
-    } catch { /* ignore */ }
-  }, []);
-
-  const fetchUnreadCount = useCallback(async () => {
-    try {
-      const res = await notificationService.getUnreadCount();
-      if (res.data !== undefined) setUnreadCount(res.data);
-    } catch { /* ignore */ }
-  }, []);
+  const {
+    notifs,
+    unreadCount,
+    fetchNotifications,
+    markAllRead,
+    handleNotificationClick,
+  } = useNotifications();
 
   useEffect(() => {
     const token = localStorage.getItem(StorageKeys.ACCESS_TOKEN);
     setLoggedIn(!!token);
-    if (token) {
-      fetchUnreadCount();
-      const interval = setInterval(fetchUnreadCount, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [fetchUnreadCount]);
+  }, []);
 
-  // Fetch full list when dropdown opens
   useEffect(() => {
-    if (notifOpen) fetchNotifications();
-  }, [notifOpen, fetchNotifications]);
+    if (notifOpen && loggedIn) fetchNotifications();
+  }, [notifOpen, loggedIn, fetchNotifications]);
 
-  // Fetch wallet when user menu opens
   useEffect(() => {
     if (menuOpen && loggedIn && !wallet) {
       walletService.getMyWallet()
@@ -121,20 +79,6 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
-
-  async function markRead(id: string) {
-    const notif = notifs.find(n => n.id === id);
-    if (!notif || notif.isRead) return;
-    setNotifs(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
-    setUnreadCount(c => Math.max(0, c - 1));
-    try { await notificationService.markAsRead(id); } catch { /* ignore */ }
-  }
-
-  async function markAllRead() {
-    setNotifs(prev => prev.map(n => ({ ...n, isRead: true })));
-    setUnreadCount(0);
-    try { await notificationService.markAllAsRead(); } catch { /* ignore */ }
-  }
 
   async function handleLogout() {
     try {
@@ -176,7 +120,6 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
       <div className={styles.actions}>
         {loggedIn ? (
           <>
-            {/* ── Notification bell ── */}
             <div className={styles.notifWrap} ref={notifRef}>
               <button
                 type="button"
@@ -218,7 +161,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
                         <div
                           key={n.id}
                           className={`${styles.notifItem} ${!n.isRead ? styles.notifItemUnread : ""}`}
-                          onClick={() => markRead(n.id)}
+                          onClick={() => handleNotificationClick(n)}
                         >
                           <div className={styles.notifIcon} style={{ background: cfg.bg, color: cfg.color }}>
                             {NOTIF_ICON[type]}
@@ -251,7 +194,6 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
             </button>
             {menuOpen && (
               <div className={styles.dropdown}>
-                {/* ── Wallet card ── */}
                 <div className={styles.walletCard}>
                   <div className={styles.walletCardTop}>
                     <div className={styles.walletIconWrap}>

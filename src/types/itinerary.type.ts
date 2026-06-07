@@ -30,6 +30,12 @@ export interface AgencyScheduleDTO {
     guideId?: string;
     guideName?: string;
     status: string;
+    firstActivityTime?: string | null; // "HH:mm" of first activity across all stops
+}
+
+export interface AdminScheduleDTO extends AgencyScheduleDTO {
+    agencyId: string;
+    agencyName: string;
 }
 
 export interface ProviderScheduleDTO {
@@ -44,6 +50,30 @@ export interface ProviderScheduleDTO {
     guideId?: string;
     guideName?: string;
     firstActivityTime?: string | null;
+}
+
+export interface ProviderStopDetailDTO {
+    stopId: string;
+    name: string;
+    stopOrder: number;
+    address?: string;
+    assignedStaffId?: string | null;
+    assignedStaffName?: string | null;
+    assignedStaffEmail?: string | null;
+    activities: ProviderStopActivityDTO[];
+}
+
+export interface ProviderJobWithStopsDTO {
+    scheduleId: string;
+    itineraryId: string;
+    itineraryName: string;
+    agencyName: string;
+    startTime: string;
+    endTime: string;
+    spot: number;
+    spotLeft: number;
+    status: string;
+    stops: ProviderStopDetailDTO[];
 }
 
 export interface ItineraryDTO {
@@ -81,6 +111,16 @@ export interface StopActivityDTO {
     endTime: string;
     price: number;
     note?: string;
+}
+
+export interface ProviderStopActivityDTO {
+    activityId: string;
+    activityOrder: number;
+    name: string;
+    startTime: string;
+    endTime: string;
+    price: number;
+    note?: string | null;
 }
 
 export interface ItineraryProviderDTO {

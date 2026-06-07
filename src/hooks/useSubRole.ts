@@ -25,13 +25,17 @@ export function useSubRole(mainRole?: "provider" | "agency") {
 
     useEffect(() => {
         const raw = localStorage.getItem(StorageKeys.SUB_ROLE);
-        // Normalise legacy values written before the RBAC rename
-        const LEGACY: Record<string, SubRole> = { manager: "admin", tourguide: "tour_guide" };
-        const stored = raw ? ((LEGACY[raw] ?? raw) as SubRole) : null;
+
+        // Legacy map only for agency accounts (agency manager was stored as "manager"
+        // before the RBAC rename to "admin"; provider "manager" must stay as "manager").
+        const AGENCY_LEGACY: Record<string, SubRole> = { manager: "admin", tourguide: "tour_guide" };
+        const normalize = (v: string): SubRole =>
+            mainRole === "agency" ? ((AGENCY_LEGACY[v] ?? v) as SubRole) : (v as SubRole);
+
+        const stored = raw ? normalize(raw) : null;
         if (stored) {
             setSubRole(stored);
         } else if (mainRole) {
-            // API hasn't returned a subRole yet → use the default for this role
             setSubRole(DEFAULT_SUB_ROLE[mainRole]);
         }
     }, [mainRole]);

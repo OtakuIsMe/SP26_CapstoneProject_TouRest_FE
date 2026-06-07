@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSubRole } from "@/hooks/useSubRole";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
 import { providerService } from "@/libs/services/provider.service";
 import { PackageDTO } from "@/types/package.type";
@@ -75,6 +76,8 @@ const columns: ColumnDef<PackageDTO>[] = [
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function ProviderPackagesPage() {
     const router = useRouter();
+    const { can } = useSubRole("provider");
+    const canManage = can("provider.packages.manage");
 
     const [data, setData]         = useState<PackageDTO[]>([]);
     const [loading, setLoading]   = useState(true);
@@ -116,16 +119,8 @@ export default function ProviderPackagesPage() {
     const handleStatusChange   = (st: string) => { setStatus(st); setPage(1); };
 
     const actions: ActionDef<PackageDTO>[] = [
-        {
-            label: "View",
-            variant: "view",
-            onClick: (row) => router.push(`/provider/packages/${row.id}`),
-        },
-        {
-            label: "Edit",
-            variant: "edit",
-            onClick: (row) => router.push(`/provider/packages/${row.id}/edit`),
-        },
+        { label: "View", variant: "view", onClick: (row) => router.push(`/provider/packages/${row.id}`) },
+        ...(canManage ? [{ label: "Edit", variant: "edit" as const, onClick: (row: PackageDTO) => router.push(`/provider/packages/${row.id}/edit`) }] : []),
     ];
 
     return (
@@ -146,12 +141,14 @@ export default function ProviderPackagesPage() {
                             <option key={s} value={s}>{s}</option>
                         ))}
                     </select>
-                    <button className={styles.btnAdd} onClick={() => router.push("/provider/packages/new")}>
-                        <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
-                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Add Package
-                    </button>
+                    {canManage && (
+                        <button className={styles.btnAdd} onClick={() => router.push("/provider/packages/new")}>
+                            <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            Add Package
+                        </button>
+                    )}
                 </div>
             </div>
 

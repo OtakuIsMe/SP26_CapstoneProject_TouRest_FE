@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import styles from "./page.module.scss";
 import { agencyService } from "@/libs/services/agency.service";
 import { VehicleDTO, VEHICLE_TYPE_OPTIONS, VEHICLE_TYPE_LABELS, VehicleType } from "@/types/vehicle.type";
+import { useSubRole } from "@/hooks/useSubRole";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 const TYPE_COLORS: Record<VehicleType, { bg: string; color: string }> = {
@@ -34,6 +35,9 @@ const EMPTY_FORM = { name: "", description: "", capacity: 1, type: 0 };
 
 // ── Component ─────────────────────────────────────────────────────────────────
 export default function AgencyVehiclesPage() {
+    const { can } = useSubRole("agency");
+    const canManage = can("agency.vehicles.manage");
+
     const [vehicles, setVehicles] = useState<VehicleDTO[]>([]);
     const [loading, setLoading] = useState(true);
     const [search, setSearch] = useState("");
@@ -159,12 +163,14 @@ export default function AgencyVehiclesPage() {
                             onChange={e => setSearch(e.target.value)}
                         />
                     </div>
-                    <button className={styles.addBtn} onClick={openCreate}>
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
-                            <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-                        </svg>
-                        Thêm phương tiện
-                    </button>
+                    {canManage && (
+                        <button className={styles.addBtn} onClick={openCreate}>
+                            <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
+                                <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                            </svg>
+                            Thêm phương tiện
+                        </button>
+                    )}
                 </div>
             </div>
 
@@ -215,19 +221,21 @@ export default function AgencyVehiclesPage() {
                                     )}
                                 </div>
                                 <div className={styles.cardActions}>
-                                    <button className={styles.editBtn} onClick={() => openEdit(v)}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                            <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                            <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                    </button>
-                                    <button className={styles.deleteBtn} onClick={() => setDeleteTarget(v)}>
-                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
-                                            <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
-                                            <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                            <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
-                                        </svg>
-                                    </button>
+                                    {canManage && <>
+                                        <button className={styles.editBtn} onClick={() => openEdit(v)}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                                <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                        </button>
+                                        <button className={styles.deleteBtn} onClick={() => setDeleteTarget(v)}>
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+                                                <polyline points="3 6 5 6 21 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                                <path d="M19 6l-1 14a2 2 0 01-2 2H8a2 2 0 01-2-2L5 6" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                                <path d="M10 11v6M14 11v6M9 6V4a1 1 0 011-1h4a1 1 0 011 1v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                                            </svg>
+                                        </button>
+                                    </>}
                                 </div>
                             </div>
                         );

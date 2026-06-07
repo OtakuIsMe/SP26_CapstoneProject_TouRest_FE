@@ -4,46 +4,32 @@ export type AgencySubRole   = "admin" | "tour_guide";
 export type SubRole         = ProviderSubRole | AgencySubRole;
 
 // ── Permission keys ────────────────────────────────────────────────────────────
-// Naming convention: "<main-role>.<resource>.<action>"
-// Add new keys here, then grant them in permissions.ts.
 export type Permission =
     // ── Provider ──────────────────────────────────────────────────────────────
     | "provider.dashboard.view"
-    | "provider.bookings.view"
-    | "provider.bookings.manage"       // approve / reject requests
     | "provider.services.view"
-    | "provider.services.create"
-    | "provider.services.edit"
-    | "provider.services.delete"
+    | "provider.services.manage"      // create / edit / delete
     | "provider.packages.view"
-    | "provider.packages.create"
-    | "provider.packages.edit"
-    | "provider.packages.delete"
+    | "provider.packages.manage"      // create / edit / delete
     | "provider.results.view"
-    | "provider.results.send"
-    | "provider.customers.view"
+    | "provider.results.send"         // only staff can send results
     | "provider.jobs.view"
-    | "provider.groups.view"
-    | "provider.analytics.view"
+    | "provider.jobs.manage"          // assign staff to stops
+    | "provider.staff.view"           // staff management page (manager only)
     | "provider.finance.view"
     | "provider.settings.manage"
     // ── Agency ────────────────────────────────────────────────────────────────
     | "agency.dashboard.view"
-    | "agency.bookings.view"
-    | "agency.bookings.manage"         // approve / cancel bookings
     | "agency.tours.view"
-    | "agency.tours.create"
-    | "agency.tours.edit"
-    | "agency.tours.delete"
+    | "agency.tours.manage"           // create / edit / delete
     | "agency.vehicles.view"
     | "agency.vehicles.manage"
     | "agency.schedule.view"
     | "agency.schedule.manage"
-    | "agency.guides.view"
-    | "agency.guides.assign"
+    | "agency.guides.view"            // manager only
+    | "agency.jobs.view"              // tour guide job acceptance
     | "agency.tracking.view"
-    | "agency.jobs.view"
-    | "agency.analytics.view"
+    | "agency.tracking.send"          // only tour guide can mark activities
     | "agency.finance.view"
     | "agency.settings.manage";
 

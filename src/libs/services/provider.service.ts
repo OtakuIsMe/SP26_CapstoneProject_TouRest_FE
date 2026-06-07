@@ -1,9 +1,9 @@
 import { CreatePackagePayload, PackageDTO, PackageQuery, PackageWithServicesDTO, UpdatePackagePayload } from "@/types/package.type";
 import { ServiceDTO, ServiceQuery } from "@/types/service.type";
 import { ProviderDTO, ProviderDetailDTO } from "@/types/provider.type";
-import { ProviderScheduleDTO } from "@/types/itinerary.type";
+import { ProviderScheduleDTO, ProviderJobWithStopsDTO } from "@/types/itinerary.type";
 import { ProviderDashboardStats, ProviderJobsTrend, ProviderPendingRequest, ProviderActivePackage, ProviderTopAgency } from "@/types/dashboard.type";
-import { ProviderTourGroupDTO, ProviderPatientDTO, ProviderPassengerDTO, BookingStopMedicalResultDTO } from "@/types/provider-staff.type";
+import { ProviderTourGroupDTO, ProviderPatientDTO, ProviderPassengerDTO, BookingStopMedicalResultDTO, ProviderStaffDTO } from "@/types/provider-staff.type";
 import axiosClient from "../http/axios-client";
 
 // Matches TouRest.Domain.Enums.ServiceStatus: Inactive=0, Active=1, Discontinued=2
@@ -79,6 +79,21 @@ export const providerService = {
 
     getJobSchedules: (): Promise<ApiResponse<ProviderScheduleDTO[]>> =>
         axiosClient.get("/providers/jobs/schedules"),
+
+    getJobsWithStops: (): Promise<ApiResponse<ProviderJobWithStopsDTO[]>> =>
+        axiosClient.get("/providers/jobs/with-stops"),
+
+    getMyStaff: (): Promise<ApiResponse<ProviderStaffDTO[]>> =>
+        axiosClient.get("/providers/staff"),
+
+    createStaffAccount: (providerId: string, payload: { email: string; fullName: string; password: string; phone?: string }): Promise<ApiResponse<ProviderStaffDTO>> =>
+        axiosClient.post(`/providers/${providerId}/create-staff`, payload),
+
+    removeStaff: (providerId: string, userId: string): Promise<ApiResponse<unknown>> =>
+        axiosClient.post(`/providers/${providerId}/remove-staff`, { userId }),
+
+    assignStaffToStop: (stopId: string, scheduleId: string, staffId: string): Promise<ApiResponse<unknown>> =>
+        axiosClient.put(`/providers/stops/${stopId}/assign-staff`, { scheduleId, staffId }),
 
     getDashboardStats: (providerId: string): Promise<ApiResponse<ProviderDashboardStats>> =>
         axiosClient.get("/providers/dashboard/stats", { params: { providerId } }),
