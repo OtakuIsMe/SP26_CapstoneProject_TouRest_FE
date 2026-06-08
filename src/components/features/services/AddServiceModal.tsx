@@ -4,13 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { providerService, ServiceStatus } from "@/libs/services/provider.service";
 import styles from "./add-service-modal.module.scss";
 
-const MAX_TAGS = 30;
-
 interface AddServiceForm {
     name: string;
     description: string;
     price: string;
-    basePrice: string;
     durationMinutes: string;
 }
 
@@ -18,7 +15,6 @@ const INITIAL_FORM: AddServiceForm = {
     name: "",
     description: "",
     price: "",
-    basePrice: "",
     durationMinutes: "",
 };
 
@@ -33,54 +29,20 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
     const [errors, setErrors]   = useState<Partial<AddServiceForm>>({});
     const [loading, setLoading] = useState(false);
     const [submitErr, setSubmitErr] = useState("");
-    const [tags, setTags]       = useState<string[]>([]);
-    const [tagInput, setTagInput] = useState("");
     const [providerId, setProviderId] = useState<string | null>(null);
     const overlayRef = useRef<HTMLDivElement>(null);
     const firstInputRef = useRef<HTMLInputElement>(null);
-    const tagInputRef = useRef<HTMLInputElement>(null);
 
-    // Reset form and fetch provider ID when opened
     useEffect(() => {
         if (open) {
             setForm(INITIAL_FORM);
             setErrors({});
             setSubmitErr("");
-            setTags([]);
-            setTagInput("");
             setTimeout(() => firstInputRef.current?.focus(), 50);
             providerService.getMe().then((res) => setProviderId(res.data?.id ?? null)).catch(() => {});
         }
     }, [open]);
 
-    function addTag(raw: string) {
-        const value = raw.trim().toLowerCase();
-        if (!value || tags.includes(value) || tags.length >= MAX_TAGS) return;
-        setTags((prev) => [...prev, value]);
-    }
-
-    function handleTagKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-        if (e.key === "Enter" || e.key === ",") {
-            e.preventDefault();
-            addTag(tagInput);
-            setTagInput("");
-        } else if (e.key === "Backspace" && tagInput === "" && tags.length > 0) {
-            setTags((prev) => prev.slice(0, -1));
-        }
-    }
-
-    function handleTagBlur() {
-        if (tagInput.trim()) {
-            addTag(tagInput);
-            setTagInput("");
-        }
-    }
-
-    function removeTag(index: number) {
-        setTags((prev) => prev.filter((_, i) => i !== index));
-    }
-
-    // Close on Escape
     useEffect(() => {
         if (!open) return;
         const handler = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -88,7 +50,6 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
         return () => document.removeEventListener("keydown", handler);
     }, [open, onClose]);
 
-    // Lock body scroll
     useEffect(() => {
         document.body.style.overflow = open ? "hidden" : "";
         return () => { document.body.style.overflow = ""; };
@@ -102,14 +63,19 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
         setSubmitErr("");
     };
 
+    const changePrice = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const n = e.target.value.replace(/\D/g, "");
+        const formatted = n ? Number(n).toLocaleString("en-US") : "";
+        setForm((f) => ({ ...f, price: formatted }));
+        setErrors((err) => ({ ...err, price: undefined }));
+        setSubmitErr("");
+    };
+
     const validate = (): boolean => {
         const errs: Partial<AddServiceForm> = {};
         if (!form.name.trim())              errs.name = "Service name is required.";
-        const price = Number(form.price);
+        const price = Number(form.price.replace(/,/g, ""));
         if (!form.price || isNaN(price) || price < 0) errs.price = "Enter a valid price.";
-        const bp = form.basePrice ? Number(form.basePrice) : null;
-        if (form.basePrice && (isNaN(Number(form.basePrice)) || Number(form.basePrice) < 0))
-            errs.basePrice = "Enter a valid base price.";
         const dur = Number(form.durationMinutes);
         if (!form.durationMinutes || isNaN(dur) || dur <= 0 || !Number.isInteger(dur))
             errs.durationMinutes = "Enter a whole number of minutes (> 0).";
@@ -131,8 +97,8 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
                 providerId,
                 name: form.name.trim(),
                 description: form.description.trim() || undefined,
-                price: Math.round(Number(form.price)),
-                basePrice: form.basePrice ? Math.round(Number(form.basePrice)) : Math.round(Number(form.price)),
+                price: Math.round(Number(form.price.replace(/,/g, ""))),
+                basePrice: Math.round(Number(form.price.replace(/,/g, ""))),
                 durationMinutes: parseInt(form.durationMinutes, 10),
                 status: ServiceStatus.Active,
             });
@@ -207,85 +173,23 @@ export default function AddServiceModal({ open, onClose, onCreated }: Props) {
                             />
                         </div>
 
-                        {/* Tags */}
+                        {/* Price */}
                         <div className={styles.field}>
-                            <div className={styles.tagLabelRow}>
-                                <label className={styles.label}>Tags</label>
-                                <span className={styles.tagCounter}>
-                                    {tags.length}/{MAX_TAGS}
-                                </span>
+                            <label className={styles.label}>
+                                Price (đ) <span className={styles.required}>*</span>
+                            </label>
+                            <div className={styles.inputAddon}>
+                                <span className={styles.addonPrefix}>đ</span>
+                                <input
+                                    className={`${styles.input} ${styles.inputWithAddon} ${errors.price ? styles.inputError : ""}`}
+                                    type="text"
+                                    inputMode="numeric"
+                                    placeholder="0"
+                                    value={form.price}
+                                    onChange={changePrice}
+                                />
                             </div>
-                            <div
-                                className={styles.tagBox}
-                                onClick={() => tagInputRef.current?.focus()}
-                            >
-                                {tags.map((tag, i) => (
-                                    <span key={i} className={styles.tag}>
-                                        {tag}
-                                        <button
-                                            type="button"
-                                            className={styles.tagRemove}
-                                            onClick={(e) => { e.stopPropagation(); removeTag(i); }}
-                                            aria-label={`Remove ${tag}`}
-                                        >
-                                            ×
-                                        </button>
-                                    </span>
-                                ))}
-                                {tags.length < MAX_TAGS && (
-                                    <input
-                                        ref={tagInputRef}
-                                        className={styles.tagInput}
-                                        type="text"
-                                        placeholder={tags.length === 0 ? "e.g. herbs, vegetables..." : ""}
-                                        value={tagInput}
-                                        onChange={(e) => setTagInput(e.target.value)}
-                                        onKeyDown={handleTagKeyDown}
-                                        onBlur={handleTagBlur}
-                                    />
-                                )}
-                            </div>
-                            <span className={styles.hint}>Press Enter or comma to add · Backspace to remove last</span>
-                        </div>
-
-                        {/* Price row */}
-                        <div className={styles.row}>
-                            <div className={styles.field}>
-                                <label className={styles.label}>
-                                    Price ($) <span className={styles.required}>*</span>
-                                </label>
-                                <div className={styles.inputAddon}>
-                                    <span className={styles.addonPrefix}>$</span>
-                                    <input
-                                        className={`${styles.input} ${styles.inputWithAddon} ${errors.price ? styles.inputError : ""}`}
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="0.00"
-                                        value={form.price}
-                                        onChange={change("price")}
-                                    />
-                                </div>
-                                {errors.price && <span className={styles.errorMsg}>{errors.price}</span>}
-                            </div>
-
-                            <div className={styles.field}>
-                                <label className={styles.label}>Base Price ($)</label>
-                                <div className={styles.inputAddon}>
-                                    <span className={styles.addonPrefix}>$</span>
-                                    <input
-                                        className={`${styles.input} ${styles.inputWithAddon} ${errors.basePrice ? styles.inputError : ""}`}
-                                        type="number"
-                                        min="0"
-                                        step="0.01"
-                                        placeholder="Original price"
-                                        value={form.basePrice}
-                                        onChange={change("basePrice")}
-                                    />
-                                </div>
-                                {errors.basePrice && <span className={styles.errorMsg}>{errors.basePrice}</span>}
-                                <span className={styles.hint}>Leave blank to use the price above</span>
-                            </div>
+                            {errors.price && <span className={styles.errorMsg}>{errors.price}</span>}
                         </div>
 
                         {/* Duration */}

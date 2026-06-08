@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useSubRole } from "@/hooks/useSubRole";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
 import { providerService } from "@/libs/services/provider.service";
@@ -83,44 +83,35 @@ export default function ProviderServicesPage() {
     const { can } = useSubRole("provider");
     const canManage = can("provider.services.manage");
 
-    const [data, setData]         = useState<ServiceDTO[]>([]);
+    const [allData, setAllData]   = useState<ServiceDTO[]>([]);
     const [loading, setLoading]   = useState(true);
-    const [totalCount, setTotal]  = useState(0);
-    const [page, setPage]         = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [search, setSearch]     = useState("");
     const [status, setStatus]     = useState("");
 
     const [addOpen, setAddOpen]         = useState(false);
     const [viewService, setViewService] = useState<ServiceDTO | null>(null);
     const [editService, setEditService] = useState<ServiceDTO | null>(null);
 
-    const fetchData = useCallback(async (p: number, ps: number, q: string, st: string) => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const meRes = await providerService.getMe();
             const providerId = meRes.data?.id;
             if (!providerId) return;
             const res = await providerService.getServicesByProvider(providerId);
-            let items = res.data ?? [];
-            if (q)  items = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()));
-            if (st) items = items.filter(i => i.status === st);
-            const start = (p - 1) * ps;
-            setData(items.slice(start, start + ps));
-            setTotal(items.length);
+            setAllData(res.data ?? []);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => {
-        fetchData(page, pageSize, search, status);
-    }, [page, pageSize, status, fetchData]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handlePageChange     = (p: number)  => setPage(p);
-    const handlePageSizeChange = (ps: number) => { setPageSize(ps); setPage(1); };
-    const handleSearchChange   = (q: string)  => { setSearch(q); setPage(1); fetchData(1, pageSize, q, status); };
-    const handleStatusChange   = (st: string) => { setStatus(st); setPage(1); };
+    const data = useMemo(
+        () => status ? allData.filter(i => i.status === status) : allData,
+        [allData, status]
+    );
+
+    const handleStatusChange = (st: string) => setStatus(st);
 
     const actions: ActionDef<ServiceDTO>[] = [
         { label: "View", variant: "view", onClick: (row) => setViewService(row) },
@@ -161,24 +152,17 @@ export default function ProviderServicesPage() {
                 data={data}
                 actions={actions}
                 searchPlaceholder="Search by name or description..."
+                searchKeys={["name", "description"]}
                 loading={loading}
                 selectable
                 exportable
                 emptyText="No services found"
-                serverSide={{
-                    totalCount,
-                    page,
-                    pageSize,
-                    onPageChange: handlePageChange,
-                    onPageSizeChange: handlePageSizeChange,
-                    onSearchChange: handleSearchChange,
-                }}
             />
 
             <AddServiceModal
                 open={addOpen}
                 onClose={() => setAddOpen(false)}
-                onCreated={() => fetchData(page, pageSize, search, status)}
+                onCreated={() => fetchData()}
             />
 
             <ViewServiceModal
@@ -193,7 +177,7 @@ export default function ProviderServicesPage() {
             <EditServiceModal
                 service={editService}
                 onClose={() => setEditService(null)}
-                onUpdated={() => fetchData(page, pageSize, search, status)}
+                onUpdated={() => fetchData()}
             />
         </div>
     );

@@ -13,6 +13,8 @@ import {
     NOTIF_COLOR,
     type NotifType,
 } from "@/utils/notification.utils";
+import type { NotificationDTO } from "@/libs/services/notification.service";
+import NotificationModal from "@/components/commons/notification-modal/NotificationModal";
 import styles from "./header.module.scss";
 
 const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
@@ -49,8 +51,11 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
     unreadCount,
     fetchNotifications,
     markAllRead,
+    markRead,
     handleNotificationClick,
   } = useNotifications();
+
+  const [selectedNotif, setSelectedNotif] = useState<NotificationDTO | null>(null);
 
   useEffect(() => {
     const token = localStorage.getItem(StorageKeys.ACCESS_TOKEN);
@@ -94,6 +99,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
   }
 
   return (
+  <>
     <header className={`${styles.header} ${variant === "solid" ? styles.headerSolid : ""}`}>
       <Link href="/" className={styles.logo}>
         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
@@ -161,7 +167,7 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
                         <div
                           key={n.id}
                           className={`${styles.notifItem} ${!n.isRead ? styles.notifItemUnread : ""}`}
-                          onClick={() => handleNotificationClick(n)}
+                          onClick={() => { setSelectedNotif(n); markRead(n.id); setNotifOpen(false); }}
                         >
                           <div className={styles.notifIcon} style={{ background: cfg.bg, color: cfg.color }}>
                             {NOTIF_ICON[type]}
@@ -190,7 +196,10 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
               onClick={() => setMenuOpen(!menuOpen)}
               type="button"
             >
-              <img src="/avatar.png" alt="User" />
+              <svg viewBox="0 0 24 24" fill="none" width="20" height="20">
+                <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/>
+                <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
+              </svg>
             </button>
             {menuOpen && (
               <div className={styles.dropdown}>
@@ -204,8 +213,8 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
                       </svg>
                     </div>
                     <span className={styles.walletLabel}>My Wallet</span>
-                    <Link href="/profile/wallet" className={styles.walletTopUpBtn} onClick={() => setMenuOpen(false)}>
-                      Withdraw
+                    <Link href="/profile/wallet/topup" className={styles.walletTopUpBtn} onClick={() => setMenuOpen(false)}>
+                      Top Up
                     </Link>
                   </div>
                   <div className={styles.walletBalance}>
@@ -230,13 +239,21 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
                   </svg>
                   Profile
                 </Link>
+                <Link href="/profile/wallet/topup" className={styles.dropdownItem} onClick={() => setMenuOpen(false)}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+                    <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.5"/>
+                    <path d="M2 10h20" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                    <path d="M12 13v4M10 15h4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                  </svg>
+                  Top Up Wallet
+                </Link>
                 <Link href="/profile/wallet" className={styles.dropdownItem} onClick={() => setMenuOpen(false)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
                     <path d="M21 18V7a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2z" stroke="currentColor" strokeWidth="1.5"/>
                     <path d="M3 10h18" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
                     <circle cx="16.5" cy="14.5" r="1.5" fill="currentColor"/>
                   </svg>
-                  Wallet History
+                  Wallet & Withdraw
                 </Link>
                 <Link href="/settings" className={styles.dropdownItem} onClick={() => setMenuOpen(false)}>
                   <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
@@ -261,5 +278,14 @@ export default function Header({ variant = "transparent" }: HeaderProps) {
         )}
       </div>
     </header>
+
+      {selectedNotif && (
+        <NotificationModal
+          notification={selectedNotif}
+          onClose={() => setSelectedNotif(null)}
+          onView={() => { setSelectedNotif(null); handleNotificationClick(selectedNotif); }}
+        />
+      )}
+  </>
   );
 }

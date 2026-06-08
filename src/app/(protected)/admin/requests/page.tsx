@@ -87,13 +87,18 @@ function ApproveModal({
             if (target.kind === "agency") {
                 await adminService.approveAgency(target.id, body);
             } else {
-                await adminService.approveProvider(target.id);
                 await adminService.createProviderAccount(target.id, body);
             }
             onSuccess(target.id);
             onClose();
-        } catch {
-            setError("Failed to approve. Please try again.");
+        } catch (err: any) {
+            const data = err?.response?.data;
+            const modelErrors = data?.errors ?? data?.Errors;
+            if (modelErrors && typeof modelErrors === "object") {
+                const msg = Object.values(modelErrors).flat().filter(Boolean).join(" ");
+                if (msg) { setError(msg); setSubmitting(false); return; }
+            }
+            setError(data?.Message || data?.message || data?.title || "Failed to approve. Please try again.");
         } finally {
             setSubmitting(false);
         }

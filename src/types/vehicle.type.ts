@@ -33,15 +33,15 @@ export interface VehicleUpdateRequest {
 }
 
 export const VEHICLE_TYPE_LABELS: Record<VehicleType, string> = {
-    Bus:        "Xe buýt",
-    MiniVan:    "Xe Van",
-    PrivateCar: "Xe riêng",
-    Motorbike:  "Xe máy",
-    Bicycle:    "Xe đạp",
-    Boat:       "Thuyền",
-    Ferry:      "Phà",
-    Train:      "Tàu hỏa",
-    Walking:    "Đi bộ",
+    Bus:        "Bus",
+    MiniVan:    "Minivan",
+    PrivateCar: "Private Car",
+    Motorbike:  "Motorbike",
+    Bicycle:    "Bicycle",
+    Boat:       "Boat",
+    Ferry:      "Ferry",
+    Train:      "Train",
+    Walking:    "Walking",
 };
 
 export const VEHICLE_TYPE_OPTIONS = (Object.keys(VEHICLE_TYPE_LABELS) as VehicleType[]).map(

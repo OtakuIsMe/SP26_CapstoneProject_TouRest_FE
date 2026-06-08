@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useSubRole } from "@/hooks/useSubRole";
 import DataTable, { ActionDef, ColumnDef } from "@/components/commons/data-table/DataTable";
@@ -79,44 +79,36 @@ export default function ProviderPackagesPage() {
     const { can } = useSubRole("provider");
     const canManage = can("provider.packages.manage");
 
-    const [data, setData]         = useState<PackageDTO[]>([]);
+    const [allData, setAllData]   = useState<PackageDTO[]>([]);
     const [loading, setLoading]   = useState(true);
-    const [totalCount, setTotal]  = useState(0);
-    const [page, setPage]         = useState(1);
-    const [pageSize, setPageSize] = useState(10);
-    const [search, setSearch]     = useState("");
     const [status, setStatus]     = useState("");
 
-    const fetchData = useCallback(async (p: number, ps: number, q: string, st: string) => {
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const meRes = await providerService.getMe();
             const providerId = meRes.data?.id;
             if (!providerId) return;
             const res = await providerService.getPackagesByProvider(providerId);
-            let items: PackageDTO[] = (res.data ?? []).map(p => ({
+            const items: PackageDTO[] = (res.data ?? []).map(p => ({
                 id: p.id, code: p.code, name: p.name, basePrice: p.basePrice,
                 status: p.status, createdAt: p.createdAt,
                 serviceCount: p.services?.length ?? 0,
             }));
-            if (q) items = items.filter(i => i.name.toLowerCase().includes(q.toLowerCase()));
-            if (st) items = items.filter(i => i.status === st);
-            const start = (p - 1) * ps;
-            setData(items.slice(start, start + ps));
-            setTotal(items.length);
+            setAllData(items);
         } finally {
             setLoading(false);
         }
     }, []);
 
-    useEffect(() => {
-        fetchData(page, pageSize, search, status);
-    }, [page, pageSize, status, fetchData]);
+    useEffect(() => { fetchData(); }, [fetchData]);
 
-    const handlePageChange     = (p: number)  => setPage(p);
-    const handlePageSizeChange = (ps: number) => { setPageSize(ps); setPage(1); };
-    const handleSearchChange   = (q: string)  => { setSearch(q); setPage(1); fetchData(1, pageSize, q, status); };
-    const handleStatusChange   = (st: string) => { setStatus(st); setPage(1); };
+    const data = useMemo(
+        () => status ? allData.filter(i => i.status === status) : allData,
+        [allData, status]
+    );
+
+    const handleStatusChange = (st: string) => setStatus(st);
 
     const actions: ActionDef<PackageDTO>[] = [
         { label: "View", variant: "view", onClick: (row) => router.push(`/provider/packages/${row.id}`) },
@@ -157,18 +149,11 @@ export default function ProviderPackagesPage() {
                 data={data}
                 actions={actions}
                 searchPlaceholder="Search by name or code..."
+                searchKeys={["name", "code"]}
                 loading={loading}
                 selectable
                 exportable
                 emptyText="No packages found"
-                serverSide={{
-                    totalCount,
-                    page,
-                    pageSize,
-                    onPageChange: handlePageChange,
-                    onPageSizeChange: handlePageSizeChange,
-                    onSearchChange: handleSearchChange,
-                }}
             />
         </div>
     );

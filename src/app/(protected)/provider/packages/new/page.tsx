@@ -73,7 +73,7 @@ export default function NewPackagePage() {
     // ── Derived values ────────────────────────────────────────────────────────
     const selectedServices = services.filter((s) => selected.has(s.id));
     const servicesTotal    = selectedServices.reduce((sum, s) => sum + s.price, 0);
-    const basePriceNum     = parseFloat(basePrice) || 0;
+    const basePriceNum     = parseFloat(basePrice.replace(/,/g, "")) || 0;
     const discount         = servicesTotal > 0 && basePriceNum > 0
         ? Math.round((1 - basePriceNum / servicesTotal) * 100)
         : 0;
@@ -281,12 +281,11 @@ export default function NewPackagePage() {
                                 <div className={styles.priceInputWrap}>
                                     <input
                                         className={`${styles.input} ${errors.basePrice ? styles.inputErr : ""}`}
-                                        type="number"
-                                        min="0"
-                                        step="1000"
-                                        placeholder="e.g. 1500000"
+                                        type="text"
+                                        inputMode="numeric"
+                                        placeholder="e.g. 1,500,000"
                                         value={basePrice}
-                                        onChange={(e) => setBasePrice(e.target.value)}
+                                        onChange={(e) => { const n = e.target.value.replace(/\D/g, ""); setBasePrice(n ? Number(n).toLocaleString("en-US") : ""); }}
                                     />
                                     <span className={styles.priceSuffix}>₫</span>
                                 </div>

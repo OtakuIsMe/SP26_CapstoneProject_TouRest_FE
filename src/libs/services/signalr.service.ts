@@ -34,19 +34,20 @@ export async function startNotificationHub(
 
     if (!connection) {
         connection = new signalR.HubConnectionBuilder()
-            .withUrl(`${getHubUrl()}?access_token=${encodeURIComponent(token)}`, {
+            .withUrl(getHubUrl(), {
+                accessTokenFactory: () => localStorage.getItem(StorageKeys.ACCESS_TOKEN) ?? "",
                 withCredentials: true,
             })
             .withAutomaticReconnect([0, 2000, 5000, 10000, 30000])
-            .configureLogging(signalR.LogLevel.Warning)
+            .configureLogging(signalR.LogLevel.Information)
             .build();
 
         connection.on("ReceiveNotification", onNotification);
 
-        connection.onreconnected(async () => {
+        connection.onreconnected(() => {
             const freshToken = localStorage.getItem(StorageKeys.ACCESS_TOKEN);
             if (!freshToken) {
-                await stopNotificationHub();
+                stopNotificationHub();
             }
         });
     }
@@ -58,7 +59,8 @@ export async function startNotificationHub(
     try {
         await starting;
         return connection;
-    } catch {
+    } catch (err) {
+        console.error("[SignalR] Failed to connect to notification hub:", err);
         connection = null;
         return null;
     }

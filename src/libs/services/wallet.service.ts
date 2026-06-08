@@ -38,6 +38,15 @@ export interface PayoutRequestDTO {
     accountHolder: string;
 }
 
+export interface WalletTopUpDTO {
+    orderCode: number;
+    amount: number;
+    status: string;
+    checkoutUrl?: string;
+    qrCode?: string;
+    expiredAt?: string;
+}
+
 export const walletService = {
     getMyWallet: (): Promise<ApiResponse<WalletDTO>> =>
         axiosClient.get("/wallet"),
@@ -50,4 +59,13 @@ export const walletService = {
 
     requestPayout: (data: PayoutRequestDTO): Promise<ApiResponse<unknown>> =>
         axiosClient.post("/wallet/payout", data),
+
+    createTopUp: (amount: number): Promise<ApiResponse<WalletTopUpDTO>> =>
+        axiosClient.post("/wallet/topup", { amount }),
+
+    getTopUpStatus: (orderCode: number): Promise<ApiResponse<WalletTopUpDTO>> =>
+        axiosClient.get(`/wallet/topup/${orderCode}/status`),
+
+    finalizeTopUp: (orderCode: number): Promise<ApiResponse<unknown>> =>
+        axiosClient.post(`/wallet/topup/finalize/${orderCode}`),
 };

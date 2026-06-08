@@ -15,6 +15,31 @@ interface ImagePreview {
     preview: string;
 }
 
+type FieldErrors = Partial<Record<
+    "name" | "contactEmail" | "contactPhone" | "address" | "location" | "openingTime" | "closingTime",
+    string
+>>;
+
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const PHONE_RE = /^[0-9]{8,11}$/;
+
+function extractApiError(err: any): string {
+    const data = err?.response?.data;
+    if (!data) return "Registration failed. Please try again.";
+
+    // ASP.NET Core ModelState errors object
+    const modelErrors = data?.errors ?? data?.Errors;
+    if (modelErrors && typeof modelErrors === "object") {
+        const messages = Object.values(modelErrors)
+            .flat()
+            .filter(Boolean)
+            .join(" ");
+        if (messages) return messages;
+    }
+
+    return data?.Message || data?.message || data?.title || "Registration failed. Please try again.";
+}
+
 export default function BecomeProviderPage() {
     const router = useRouter();
     const pathname = usePathname();
@@ -35,9 +60,14 @@ export default function BecomeProviderPage() {
     const [closingTime, setClosingTime] = useState("");
     const [images, setImages] = useState<ImagePreview[]>([]);
     const [error, setError] = useState("");
+    const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
     const [loading, setLoading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    function clearFieldError(field: keyof FieldErrors) {
+        setFieldErrors(prev => { const next = { ...prev }; delete next[field]; return next; });
+    }
 
     function handleImageChange(e: React.ChangeEvent<HTMLInputElement>) {
         const files = Array.from(e.target.files ?? []);
@@ -46,7 +76,6 @@ export default function BecomeProviderPage() {
             preview: URL.createObjectURL(file),
         }));
         setImages((prev) => [...prev, ...previews]);
-        // reset so same file can be re-selected
         e.target.value = "";
     }
 
@@ -57,15 +86,41 @@ export default function BecomeProviderPage() {
         });
     }
 
+    function validate(): boolean {
+        const errs: FieldErrors = {};
+
+        if (!name.trim())
+            errs.name = "Business name is required.";
+        else if (name.trim().length < 2)
+            errs.name = "Business name must be at least 2 characters.";
+
+        if (!contactEmail.trim())
+            errs.contactEmail = "Contact email is required.";
+        else if (!EMAIL_RE.test(contactEmail.trim()))
+            errs.contactEmail = "Please enter a valid email address.";
+
+        if (!contactPhone.trim())
+            errs.contactPhone = "Contact phone is required.";
+        else if (!PHONE_RE.test(contactPhone.trim().replace(/\s/g, "")))
+            errs.contactPhone = "Please enter a valid phone number (8–11 digits).";
+
+        if (!address.trim())
+            errs.address = "Address is required.";
+
+        if (!latitude || !longitude)
+            errs.location = "Please pick your business location on the map.";
+
+        if (openingTime && closingTime && closingTime <= openingTime)
+            errs.closingTime = "Closing time must be after opening time.";
+
+        setFieldErrors(errs);
+        return Object.keys(errs).length === 0;
+    }
+
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError("");
-
-        if (!latitude || !longitude) {
-            setError("Please pick your location on the map.");
-            return;
-        }
-
+        if (!validate()) return;
         setLoading(true);
 
         try {
@@ -84,17 +139,15 @@ export default function BecomeProviderPage() {
             await providerService.register(formData);
             router.push("/");
         } catch (err: any) {
-            const msg =
-                err?.response?.data?.Message ||
-                err?.response?.data?.message ||
-                "Registration failed. Please try again.";
-            setError(msg);
+            setError(extractApiError(err));
         } finally {
             setLoading(false);
         }
     }
 
     if (isLoggedIn === null) return null;
+
+    const fe = fieldErrors;
 
     return (
         <main>
@@ -134,7 +187,7 @@ export default function BecomeProviderPage() {
                             <Link href="/" className={styles.loginGateBack}>← Back to home</Link>
                         </div>
                     ) : (
-                    <form className={styles.form} onSubmit={handleSubmit}>
+                    <form className={styles.form} onSubmit={handleSubmit} noValidate>
                         {error && <p className={styles.error}>{error}</p>}
 
                         {/* ── Section: Business Info ── */}
@@ -158,13 +211,13 @@ export default function BecomeProviderPage() {
                                         Business Name <span className={styles.required}>*</span>
                                     </label>
                                     <input
-                                        className={styles.input}
+                                        className={`${styles.input} ${fe.name ? styles.inputError ?? "" : ""}`}
                                         type="text"
                                         placeholder="e.g. Sunrise Travel & Tours"
                                         value={name}
-                                        onChange={(e) => setName(e.target.value)}
-                                        required
+                                        onChange={(e) => { setName(e.target.value); clearFieldError("name"); }}
                                     />
+                                    {fe.name && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fe.name}</p>}
                                 </div>
 
                                 <div className={styles.fieldFull}>
@@ -204,9 +257,9 @@ export default function BecomeProviderPage() {
                                         type="email"
                                         placeholder="contact@yourbusiness.com"
                                         value={contactEmail}
-                                        onChange={(e) => setContactEmail(e.target.value)}
-                                        required
+                                        onChange={(e) => { setContactEmail(e.target.value); clearFieldError("contactEmail"); }}
                                     />
+                                    {fe.contactEmail && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fe.contactEmail}</p>}
                                 </div>
 
                                 <div className={styles.field}>
@@ -220,10 +273,10 @@ export default function BecomeProviderPage() {
                                             type="tel"
                                             placeholder="9x xxx xxxx"
                                             value={contactPhone}
-                                            onChange={(e) => setContactPhone(e.target.value)}
-                                            required
+                                            onChange={(e) => { setContactPhone(e.target.value); clearFieldError("contactPhone"); }}
                                         />
                                     </div>
+                                    {fe.contactPhone && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fe.contactPhone}</p>}
                                 </div>
                             </div>
                         </section>
@@ -253,9 +306,9 @@ export default function BecomeProviderPage() {
                                         type="text"
                                         placeholder="e.g. 45 Le Loi Street, District 1, Ho Chi Minh City"
                                         value={address}
-                                        onChange={(e) => setAddress(e.target.value)}
-                                        required
+                                        onChange={(e) => { setAddress(e.target.value); clearFieldError("address"); }}
                                     />
+                                    {fe.address && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fe.address}</p>}
                                 </div>
                             </div>
 
@@ -265,8 +318,10 @@ export default function BecomeProviderPage() {
                                 onChange={(lat, lng) => {
                                     setLatitude(String(lat));
                                     setLongitude(String(lng));
+                                    clearFieldError("location");
                                 }}
                             />
+                            {fe.location && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 8 }}>{fe.location}</p>}
                         </section>
 
                         {/* ── Section: Hours ── */}
@@ -291,8 +346,9 @@ export default function BecomeProviderPage() {
                                         className={styles.input}
                                         type="time"
                                         value={openingTime}
-                                        onChange={(e) => setOpeningTime(e.target.value)}
+                                        onChange={(e) => { setOpeningTime(e.target.value); clearFieldError("openingTime"); }}
                                     />
+                                    {fe.openingTime && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fe.openingTime}</p>}
                                 </div>
 
                                 <div className={styles.field}>
@@ -301,8 +357,9 @@ export default function BecomeProviderPage() {
                                         className={styles.input}
                                         type="time"
                                         value={closingTime}
-                                        onChange={(e) => setClosingTime(e.target.value)}
+                                        onChange={(e) => { setClosingTime(e.target.value); clearFieldError("closingTime"); }}
                                     />
+                                    {fe.closingTime && <p style={{ fontSize: 12, color: "#ef4444", marginTop: 4 }}>{fe.closingTime}</p>}
                                 </div>
                             </div>
                         </section>

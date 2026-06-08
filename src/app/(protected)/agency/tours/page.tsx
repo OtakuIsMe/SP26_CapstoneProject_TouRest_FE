@@ -144,6 +144,7 @@ const STATUS_CFG: Record<TourStatus, { label: string; color: string; bg: string;
 };
 
 function fmtPrice(n: number) { return n.toLocaleString("vi-VN") + "đ"; }
+function fmtInput(v: string) { const n = v.replace(/\D/g, ""); return n ? Number(n).toLocaleString("en-US") : ""; }
 function uid() { return Math.random().toString(36).slice(2); }
 
 // ── Page ──────────────────────────────────────────────────────────────────────
@@ -525,7 +526,7 @@ export default function AgencyToursPage() {
 
         if (actType === "service" && actServiceId) {
             const svc = actServices.find(s => s.id === actServiceId)!;
-            newActs.push({ id: uid(), type: "service", name: svc.name, serviceId: svc.id, startTime: actStart, endTime: actEnd, price: Number(actPrice) || svc.price, note: actNote });
+            newActs.push({ id: uid(), type: "service", name: svc.name, serviceId: svc.id, startTime: actStart, endTime: actEnd, price: Number(actPrice.replace(/,/g, "")) || svc.price, note: actNote });
         } else if (actType === "package" && actPackageId) {
             const pkg = actPackages.find(p => p.id === actPackageId)!;
             let cursor = actStart;
@@ -536,7 +537,7 @@ export default function AgencyToursPage() {
                 if (end) cursor = end;
             }
         } else if (actType === "custom" && actCustomName) {
-            newActs.push({ id: uid(), type: "custom", name: actCustomName, startTime: actStart, endTime: actEnd, price: Number(actPrice) || 0, note: actNote });
+            newActs.push({ id: uid(), type: "custom", name: actCustomName, startTime: actStart, endTime: actEnd, price: Number(actPrice.replace(/,/g, "")) || 0, note: actNote });
         }
 
         if (!newActs.length) return;
@@ -612,7 +613,7 @@ export default function AgencyToursPage() {
         setEditMode(true);
         setWName(tour.name);
         setWDesc(tour.description);
-        setWPrice(String(tour.price));
+        setWPrice(tour.price.toLocaleString("en-US"));
         setWStatus(tour.status);
         setWStops([]);
         setOriginalStopIds([]);
@@ -683,7 +684,7 @@ export default function AgencyToursPage() {
                 agencyId,
                 name: wName.trim(),
                 description: wDesc.trim(),
-                price: Number(editPrice) || editTour.price,
+                price: Number(editPrice.replace(/,/g, "")) || editTour.price,
                 durationDays: computedDays,
                 status: wStatus,
             });
@@ -754,7 +755,7 @@ export default function AgencyToursPage() {
                     agencyId,
                     name: wName.trim(),
                     description: wDesc.trim(),
-                    price: Number(wPrice) || target.price,
+                    price: Number(wPrice.replace(/,/g, "")) || target.price,
                     durationDays: computedDays,
                     status: wStatus,
                 });
@@ -1502,7 +1503,7 @@ export default function AgencyToursPage() {
                                 </div>
                                 <div className={styles.field}>
                                     <label className={styles.label}>Giá (VNĐ)</label>
-                                    <input className={styles.input} type="number" min="0" value={editPrice} onChange={e => setEditPrice(e.target.value)} placeholder="0" />
+                                    <input className={styles.input} type="text" inputMode="numeric" value={editPrice} onChange={e => setEditPrice(fmtInput(e.target.value))} placeholder="0" />
                                 </div>
                                 {editError && <p style={{ fontSize:12.5, color:"#ef4444", margin:0 }}>{editError}</p>}
                             </div>
@@ -1658,7 +1659,7 @@ export default function AgencyToursPage() {
                                 {editMode && (
                                     <div className={styles.field}>
                                         <label className={styles.label}>Giá (VNĐ)</label>
-                                        <input className={styles.input} type="number" min="0" placeholder="0" value={wPrice} onChange={e => setWPrice(e.target.value)} />
+                                        <input className={styles.input} type="text" inputMode="numeric" placeholder="0" value={wPrice} onChange={e => setWPrice(fmtInput(e.target.value))} />
                                     </div>
                                 )}
                                 {!editMode && (
@@ -1823,7 +1824,7 @@ export default function AgencyToursPage() {
                                     </p>
                                     <div className={styles.reviewRow}><span className={styles.reviewKey}>Name</span><span className={styles.reviewVal}>{wName || "—"}</span></div>
                                     <div className={styles.reviewRow}><span className={styles.reviewKey}>Duration</span><span className={styles.reviewVal}>{computedDays} {computedDays === 1 ? "day" : "days"} (auto)</span></div>
-                                    {editMode && <div className={styles.reviewRow}><span className={styles.reviewKey}>Price</span><span className={styles.reviewVal}>{wPrice ? fmtPrice(Number(wPrice)) : "—"}</span></div>}
+                                    {editMode && <div className={styles.reviewRow}><span className={styles.reviewKey}>Price</span><span className={styles.reviewVal}>{wPrice ? fmtPrice(Number(wPrice.replace(/,/g, ""))) : "—"}</span></div>}
                                     <div className={styles.reviewRow}><span className={styles.reviewKey}>Status</span><span className={styles.reviewVal}>{wStatus}</span></div>
                                 </div>
                                 <div className={styles.reviewSection}>
@@ -1980,7 +1981,7 @@ export default function AgencyToursPage() {
                             {actType !== "package" && (
                                 <div className={styles.field}>
                                     <label className={styles.label}>Price (₫) {actType === "service" && <span className={styles.hint}>— leave blank to use service default</span>}</label>
-                                    <input className={styles.input} type="number" min="0" placeholder="0" value={actPrice} onChange={e => setActPrice(e.target.value)} />
+                                    <input className={styles.input} type="text" inputMode="numeric" placeholder="0" value={actPrice} onChange={e => setActPrice(fmtInput(e.target.value))} />
                                 </div>
                             )}
                             <div className={styles.field}>
@@ -2049,7 +2050,7 @@ export default function AgencyToursPage() {
                                     <option value="">— Chọn phương tiện —</option>
                                     {agencyVehicles.map(v => (
                                         <option key={v.id} value={v.id}>
-                                            {v.name} · {VEHICLE_TYPE_LABELS[v.type as keyof typeof VEHICLE_TYPE_LABELS] ?? v.type} · {v.capacity} chỗ
+                                            {v.name} · {VEHICLE_TYPE_LABELS[v.type as keyof typeof VEHICLE_TYPE_LABELS] ?? v.type} · {v.capacity} seat{v.capacity !== 1 ? "s" : ""}
                                         </option>
                                     ))}
                                 </select>
@@ -2105,7 +2106,7 @@ export default function AgencyToursPage() {
                                     <option value="">— Chọn phương tiện —</option>
                                     {agencyVehicles.map(v => (
                                         <option key={v.id} value={v.id}>
-                                            {v.name} · {VEHICLE_TYPE_LABELS[v.type as keyof typeof VEHICLE_TYPE_LABELS] ?? v.type} · {v.capacity} chỗ
+                                            {v.name} · {VEHICLE_TYPE_LABELS[v.type as keyof typeof VEHICLE_TYPE_LABELS] ?? v.type} · {v.capacity} seat{v.capacity !== 1 ? "s" : ""}
                                         </option>
                                     ))}
                                 </select>

@@ -11,7 +11,6 @@ interface Form {
     name: string;
     description: string;
     price: string;
-    basePrice: string;
     durationMinutes: string;
     status: string;
 }
@@ -23,7 +22,7 @@ interface Props {
 }
 
 export default function EditServiceModal({ service, onClose, onUpdated }: Props) {
-    const [form, setForm]         = useState<Form>({ name: "", description: "", price: "", basePrice: "", durationMinutes: "", status: "Active" });
+    const [form, setForm]         = useState<Form>({ name: "", description: "", price: "", durationMinutes: "", status: "Active" });
     const [errors, setErrors]     = useState<Partial<Record<keyof Form, string>>>({});
     const [loading, setLoading]   = useState(false);
     const [submitErr, setSubmitErr] = useState("");
@@ -34,8 +33,7 @@ export default function EditServiceModal({ service, onClose, onUpdated }: Props)
             setForm({
                 name:            service.name,
                 description:     service.description ?? "",
-                price:           String(service.price),
-                basePrice:       String(service.basePrice),
+                price:           service.price.toLocaleString("en-US"),
                 durationMinutes: String(service.durationMinutes),
                 status:          service.status ?? "Active",
             });
@@ -63,13 +61,19 @@ export default function EditServiceModal({ service, onClose, onUpdated }: Props)
         setSubmitErr("");
     };
 
+    const changePrice = (field: "price") => (e: React.ChangeEvent<HTMLInputElement>) => {
+        const n = e.target.value.replace(/\D/g, "");
+        const formatted = n ? Number(n).toLocaleString("en-US") : "";
+        setForm((f) => ({ ...f, [field]: formatted }));
+        setErrors((err) => ({ ...err, [field]: undefined }));
+        setSubmitErr("");
+    };
+
     const validate = (): boolean => {
         const errs: Partial<Record<keyof Form, string>> = {};
         if (!form.name.trim()) errs.name = "Service name is required.";
-        const price = Number(form.price);
+        const price = Number(form.price.replace(/,/g, ""));
         if (!form.price || isNaN(price) || price < 0) errs.price = "Enter a valid price.";
-        if (form.basePrice && (isNaN(Number(form.basePrice)) || Number(form.basePrice) < 0))
-            errs.basePrice = "Enter a valid base price.";
         const dur = Number(form.durationMinutes);
         if (!form.durationMinutes || isNaN(dur) || dur <= 0 || !Number.isInteger(dur))
             errs.durationMinutes = "Enter a whole number of minutes (> 0).";
@@ -86,8 +90,8 @@ export default function EditServiceModal({ service, onClose, onUpdated }: Props)
             const payload: UpdateServicePayload = {
                 name:            form.name.trim(),
                 description:     form.description.trim() || undefined,
-                price:           Math.round(Number(form.price)),
-                basePrice:       form.basePrice ? Math.round(Number(form.basePrice)) : Math.round(Number(form.price)),
+                price:           Math.round(Number(form.price.replace(/,/g, ""))),
+                basePrice:       Math.round(Number(form.price.replace(/,/g, ""))),
                 durationMinutes: parseInt(form.durationMinutes, 10),
                 status:          form.status,   // string e.g. "Active"
             };
@@ -160,35 +164,19 @@ export default function EditServiceModal({ service, onClose, onUpdated }: Props)
                             />
                         </div>
 
-                        {/* Price row */}
-                        <div className={styles.row}>
-                            <div className={styles.field}>
-                                <label className={styles.label}>
-                                    Price (đ) <span className={styles.required}>*</span>
-                                </label>
-                                <input
-                                    className={`${styles.input} ${errors.price ? styles.inputError : ""}`}
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={form.price}
-                                    onChange={change("price")}
-                                />
-                                {errors.price && <span className={styles.errorMsg}>{errors.price}</span>}
-                            </div>
-
-                            <div className={styles.field}>
-                                <label className={styles.label}>Base Price (đ)</label>
-                                <input
-                                    className={`${styles.input} ${errors.basePrice ? styles.inputError : ""}`}
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={form.basePrice}
-                                    onChange={change("basePrice")}
-                                />
-                                {errors.basePrice && <span className={styles.errorMsg}>{errors.basePrice}</span>}
-                            </div>
+                        {/* Price */}
+                        <div className={styles.field}>
+                            <label className={styles.label}>
+                                Price (đ) <span className={styles.required}>*</span>
+                            </label>
+                            <input
+                                className={`${styles.input} ${errors.price ? styles.inputError : ""}`}
+                                type="text"
+                                inputMode="numeric"
+                                value={form.price}
+                                onChange={changePrice("price")}
+                            />
+                            {errors.price && <span className={styles.errorMsg}>{errors.price}</span>}
                         </div>
 
                         {/* Duration + Status */}

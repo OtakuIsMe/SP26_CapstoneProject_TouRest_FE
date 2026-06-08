@@ -541,9 +541,9 @@ function VoucherModal({ initial, isEdit, onSave, onClose, saving, error }: {
                         </div>
                         <div className={styles.formGroup}>
                             <label className={styles.formLabel}>Max Discount (₫)</label>
-                            <input className={styles.formInput} type="number" min={1}
-                                value={form.maxDiscountAmount ?? ""}
-                                onChange={e => set("maxDiscountAmount", e.target.value ? Number(e.target.value) : undefined)}
+                            <input className={styles.formInput} type="text" inputMode="numeric"
+                                value={form.maxDiscountAmount != null ? form.maxDiscountAmount.toLocaleString("en-US") : ""}
+                                onChange={e => { const n = e.target.value.replace(/,/g, "").replace(/\D/g, ""); set("maxDiscountAmount", n ? Number(n) : undefined); }}
                                 placeholder="No limit" />
                         </div>
                     </div>
@@ -552,9 +552,9 @@ function VoucherModal({ initial, isEdit, onSave, onClose, saving, error }: {
                     <div className={styles.formRow}>
                         <div className={styles.formGroup}>
                             <label className={styles.formLabel}>Min Order Amount (₫)</label>
-                            <input className={styles.formInput} type="number" min={1}
-                                value={form.minOrderAmount ?? ""}
-                                onChange={e => set("minOrderAmount", e.target.value ? Number(e.target.value) : undefined)}
+                            <input className={styles.formInput} type="text" inputMode="numeric"
+                                value={form.minOrderAmount != null ? form.minOrderAmount.toLocaleString("en-US") : ""}
+                                onChange={e => { const n = e.target.value.replace(/,/g, "").replace(/\D/g, ""); set("minOrderAmount", n ? Number(n) : undefined); }}
                                 placeholder="No requirement" />
                         </div>
                         <div className={styles.formGroup}>

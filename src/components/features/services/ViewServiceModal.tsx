@@ -38,11 +38,6 @@ export default function ViewServiceModal({ service, onClose, onEdit }: Props) {
 
     if (!service) return null;
 
-    const hasDiscount = service.basePrice > service.price;
-    const discountPct = hasDiscount
-        ? Math.round(((service.basePrice - service.price) / service.basePrice) * 100)
-        : 0;
-
     return (
         <div
             className={styles.overlay}
@@ -86,15 +81,7 @@ export default function ViewServiceModal({ service, onClose, onEdit }: Props) {
                             <span className={styles.statLabel}>Price</span>
                             <span className={styles.statValue}>
                                 {service.price.toLocaleString("vi-VN")}đ
-                                {hasDiscount && (
-                                    <span className={styles.discountBadge}>-{discountPct}%</span>
-                                )}
                             </span>
-                            {hasDiscount && (
-                                <span className={styles.basePrice}>
-                                    {service.basePrice.toLocaleString("vi-VN")}đ
-                                </span>
-                            )}
                         </div>
 
                         <div className={styles.statCard}>
@@ -145,12 +132,8 @@ export default function ViewServiceModal({ service, onClose, onEdit }: Props) {
                             <span className={styles.detailValue}>{service.durationMinutes}</span>
                         </div>
                         <div className={styles.detailItem}>
-                            <span className={styles.detailLabel}>Sale Price</span>
+                            <span className={styles.detailLabel}>Price</span>
                             <span className={styles.detailValue}>{service.price.toLocaleString("vi-VN")}đ</span>
-                        </div>
-                        <div className={styles.detailItem}>
-                            <span className={styles.detailLabel}>Base Price</span>
-                            <span className={styles.detailValue}>{service.basePrice.toLocaleString("vi-VN")}đ</span>
                         </div>
                     </div>
                 </div>

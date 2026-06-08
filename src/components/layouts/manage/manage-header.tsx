@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter } from "next/navigation";
+import Link from "next/link";
 import styles from "./manage-layout.module.scss";
 import type { Role } from "./manage-sidebar";
 import { authService } from "@/libs/services/auth.service";
@@ -14,6 +15,8 @@ import {
     NOTIF_COLOR,
     type NotifType,
 } from "@/utils/notification.utils";
+import type { NotificationDTO } from "@/libs/services/notification.service";
+import NotificationModal from "@/components/commons/notification-modal/NotificationModal";
 
 // Dùng chung cho cả 3 role — tên trang theo pathname
 const TITLES: Record<string, string> = {
@@ -82,8 +85,26 @@ const ExportIcon = () => (
     </svg>
 );
 
-const AVATAR:      Record<Role, string> = { admin: "AD", agency: "AG", provider: "PR" };
-const AVATAR_NAME: Record<Role, string> = { admin: "Admin", agency: "Agency", provider: "Provider" };
+function getInitials(name: string): string {
+    const parts = name.trim().split(/\s+/);
+    return parts.length >= 2
+        ? (parts[0][0] + parts[1][0]).toUpperCase()
+        : name.slice(0, 2).toUpperCase() || "??";
+}
+
+function getSubRoleLabel(role: Role, subRole: string | undefined): string {
+    if (role === "provider") {
+        if (subRole === "manager") return "Manager";
+        if (subRole === "staff")   return "Staff";
+        return "Provider";
+    }
+    if (role === "agency") {
+        if (subRole === "manager" || subRole === "admin")                return "Manager";
+        if (subRole === "tourguide" || subRole === "tour_guide")          return "Guide";
+        return "Agency";
+    }
+    return "Admin";
+}
 
 const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
     booking: (
@@ -123,16 +144,31 @@ export default function ManageHeader({ role }: { role: Role }) {
         unreadCount,
         fetchNotifications,
         markAllRead,
+        markRead,
         handleNotificationClick,
     } = useNotifications();
 
-    const [avatarOpen,   setAvatarOpen]   = useState(false);
-    const [notifOpen,    setNotifOpen]    = useState(false);
+    const [avatarOpen,    setAvatarOpen]    = useState(false);
+    const [notifOpen,     setNotifOpen]     = useState(false);
+    const [selectedNotif, setSelectedNotif] = useState<NotificationDTO | null>(null);
     const [activeTab,    setActiveTab]    = useState<"all" | "unread">("all");
     const [wallet,       setWallet]       = useState<WalletDTO | null>(null);
     const [walletLoading, setWalletLoading] = useState(false);
+    const [username,     setUsername]     = useState<string>("");
+    const [subRoleRaw,   setSubRoleRaw]   = useState<string | undefined>(undefined);
     const avatarRef = useRef<HTMLDivElement>(null);
     const notifRef  = useRef<HTMLDivElement>(null);
+
+    useEffect(() => {
+        authService.getMe()
+            .then(res => {
+                if (res.data) {
+                    setUsername(res.data.username);
+                    setSubRoleRaw(res.data.subRole);
+                }
+            })
+            .catch(() => {});
+    }, []);
 
     useEffect(() => {
         if (notifOpen) fetchNotifications();
@@ -169,6 +205,7 @@ export default function ManageHeader({ role }: { role: Role }) {
     }
 
     return (
+    <>
         <header className={styles.header}>
             <div className={styles.headerLeft}>
                 <h1 className={styles.headerTitle}>{title}</h1>
@@ -239,7 +276,7 @@ export default function ManageHeader({ role }: { role: Role }) {
                                         <div
                                             key={n.id}
                                             className={`${styles.notifItem} ${!n.isRead ? styles.notifItemUnread : ""}`}
-                                            onClick={() => handleNotificationClick(n)}
+                                            onClick={() => { setSelectedNotif(n); markRead(n.id); setNotifOpen(false); }}
                                         >
                                             <div className={styles.notifItemIcon} style={{ background: cfg.bg, color: cfg.color }}>
                                                 {NOTIF_ICON[type]}
@@ -267,8 +304,8 @@ export default function ManageHeader({ role }: { role: Role }) {
                         className={styles.headerAvatar}
                         onClick={() => { setAvatarOpen(o => !o); setNotifOpen(false); }}
                     >
-                        <div className={styles.avatarCircle}>{AVATAR[role]}</div>
-                        <span className={styles.avatarName}>{AVATAR_NAME[role]}</span>
+                        <div className={styles.avatarCircle}>{username ? getInitials(username) : role.slice(0, 2).toUpperCase()}</div>
+                        <span className={styles.avatarName}>{username || role}</span>
                         <svg viewBox="0 0 24 24" fill="none" width="12" height="12" style={{ color: "#9ca3af", flexShrink: 0 }}>
                             <path d="M6 9l6 6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
                         </svg>
@@ -277,10 +314,10 @@ export default function ManageHeader({ role }: { role: Role }) {
                     {avatarOpen && (
                         <div className={styles.avatarDropdown}>
                             <div className={styles.avatarDropHeader}>
-                                <div className={styles.avatarCircleLg}>{AVATAR[role]}</div>
+                                <div className={styles.avatarCircleLg}>{username ? getInitials(username) : role.slice(0, 2).toUpperCase()}</div>
                                 <div>
-                                    <p className={styles.avatarDropName}>{AVATAR_NAME[role]}</p>
-                                    <p className={styles.avatarDropRole}>{role}</p>
+                                    <p className={styles.avatarDropName}>{username || role}</p>
+                                    <p className={styles.avatarDropRole}>{getSubRoleLabel(role, subRoleRaw)}</p>
                                 </div>
                             </div>
                             <div className={styles.avatarBalance}>
@@ -294,6 +331,22 @@ export default function ManageHeader({ role }: { role: Role }) {
                                     </div>
                                 ) : null}
                             </div>
+                            <div className={styles.avatarDropDivider} />
+                            <Link href="/profile/wallet/topup" className={styles.avatarDropItem} onClick={() => setAvatarOpen(false)}>
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                                    <rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" strokeWidth="1.8"/>
+                                    <path d="M2 10h20M12 13v4M10 15h4" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                </svg>
+                                Top Up Wallet
+                            </Link>
+                            <Link href="/profile/wallet" className={styles.avatarDropItem} onClick={() => setAvatarOpen(false)}>
+                                <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
+                                    <path d="M21 18V7a2 2 0 00-2-2H5a2 2 0 00-2 2v11a2 2 0 002 2h14a2 2 0 002-2z" stroke="currentColor" strokeWidth="1.8"/>
+                                    <path d="M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
+                                    <circle cx="16.5" cy="14.5" r="1.5" fill="currentColor"/>
+                                </svg>
+                                Transaction History
+                            </Link>
                             <div className={styles.avatarDropDivider} />
                             <button className={styles.avatarDropItem}>
                                 <svg viewBox="0 0 24 24" fill="none" width="14" height="14">
@@ -321,5 +374,14 @@ export default function ManageHeader({ role }: { role: Role }) {
                 </div>
             </div>
         </header>
+
+        {selectedNotif && (
+            <NotificationModal
+                notification={selectedNotif}
+                onClose={() => setSelectedNotif(null)}
+                onView={() => { setSelectedNotif(null); handleNotificationClick(selectedNotif); }}
+            />
+        )}
+    </>
     );
 }

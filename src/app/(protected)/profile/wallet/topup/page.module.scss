@@ -1,0 +1,473 @@
+.page {
+    min-height: 100vh;
+    background: #f8fafc;
+    padding: 32px 0 64px;
+}
+
+.container {
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 0 20px;
+}
+
+.breadcrumb {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 13px;
+    color: #9ca3af;
+    margin-bottom: 28px;
+
+    a { color: #6b7280; text-decoration: none; &:hover { color: #111827; } }
+    span:last-child { color: #111827; font-weight: 500; }
+}
+
+// ── Grid ─────────────────────────────────────────────────────────────────────
+
+.grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    align-items: start;
+
+    @media (max-width: 680px) { grid-template-columns: 1fr; }
+}
+
+// ── Cards ─────────────────────────────────────────────────────────────────────
+
+.leftCard, .rightCard {
+    background: #fff;
+    border-radius: 20px;
+    padding: 28px;
+    box-shadow: 0 1px 4px rgba(0,0,0,.06), 0 4px 20px rgba(0,0,0,.04);
+}
+
+.cardHeader {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 24px;
+}
+
+.cardIcon {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+    background: #eff6ff;
+    color: #2563eb;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.cardTitle {
+    font-size: 17px;
+    font-weight: 700;
+    color: #111827;
+    margin: 0 0 2px;
+}
+
+.cardSub {
+    font-size: 13px;
+    color: #6b7280;
+    margin: 0;
+}
+
+// ── Amount input ──────────────────────────────────────────────────────────────
+
+.section { margin-bottom: 16px; }
+
+.label {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+    margin-bottom: 8px;
+}
+
+.amountWrap {
+    display: flex;
+    align-items: center;
+    border: 1.5px solid #e5e7eb;
+    border-radius: 12px;
+    background: #f9fafb;
+    padding: 0 12px;
+    transition: border-color 0.15s;
+
+    &:focus-within { border-color: #2563eb; background: #fff; }
+}
+
+.amountWrapErr { border-color: #ef4444 !important; }
+
+.currency {
+    font-size: 18px;
+    font-weight: 600;
+    color: #6b7280;
+    margin-right: 8px;
+}
+
+.amountInput {
+    flex: 1;
+    border: none;
+    background: transparent;
+    font-size: 22px;
+    font-weight: 700;
+    color: #111827;
+    padding: 14px 0;
+    outline: none;
+
+    &::placeholder { color: #d1d5db; }
+    &:disabled { opacity: 0.5; }
+}
+
+.clearBtn {
+    background: none;
+    border: none;
+    color: #9ca3af;
+    cursor: pointer;
+    padding: 4px;
+    display: flex;
+    align-items: center;
+    border-radius: 50%;
+    &:hover { background: #f3f4f6; color: #374151; }
+}
+
+.amountErr {
+    font-size: 12px;
+    color: #ef4444;
+    margin: 6px 0 0;
+}
+
+// ── Quick amounts ─────────────────────────────────────────────────────────────
+
+.quickGrid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.quickBtn {
+    padding: 10px 6px;
+    border-radius: 10px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    font-size: 13px;
+    font-weight: 500;
+    color: #374151;
+    cursor: pointer;
+    transition: all 0.15s;
+    text-align: center;
+
+    &:hover:not(:disabled) { border-color: #2563eb; color: #2563eb; background: #eff6ff; }
+    &:disabled { opacity: 0.4; cursor: not-allowed; }
+}
+
+.quickBtnActive {
+    border-color: #2563eb;
+    background: #eff6ff;
+    color: #1d4ed8;
+    font-weight: 600;
+}
+
+// ── Summary ───────────────────────────────────────────────────────────────────
+
+.summary {
+    background: #f9fafb;
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 20px;
+}
+
+.summaryRow {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: #6b7280;
+    margin-bottom: 8px;
+
+    &:last-child { margin-bottom: 0; }
+}
+
+.summaryDivider {
+    height: 1px;
+    background: #e5e7eb;
+    margin: 10px 0;
+}
+
+.summaryTotal {
+    font-size: 15px;
+    color: #111827;
+    strong { color: #2563eb; font-size: 17px; }
+}
+
+.free { color: #16a34a; font-weight: 600; }
+
+// ── Buttons ───────────────────────────────────────────────────────────────────
+
+.generateBtn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 12px;
+    border: none;
+    background: #1d4ed8;
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: background 0.15s;
+
+    &:hover:not(:disabled) { background: #1e40af; }
+    &:disabled { opacity: 0.5; cursor: not-allowed; }
+}
+
+.cancelBtn {
+    width: 100%;
+    padding: 11px;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #6b7280;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s;
+
+    &:hover { border-color: #ef4444; color: #ef4444; }
+}
+
+.spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,.4);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    display: inline-block;
+}
+
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.errorBox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #fef2f2;
+    border: 1px solid #fecaca;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    color: #b91c1c;
+    margin-top: 12px;
+}
+
+.note {
+    display: flex;
+    align-items: flex-start;
+    gap: 7px;
+    font-size: 12px;
+    color: #9ca3af;
+    margin-top: 16px;
+    line-height: 1.5;
+}
+
+// ── Right card: QR placeholder ────────────────────────────────────────────────
+
+.qrPlaceholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 340px;
+    gap: 16px;
+}
+
+.qrPlaceholderIcon {
+    width: 80px;
+    height: 80px;
+    border-radius: 20px;
+    background: #f3f4f6;
+    color: #d1d5db;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.qrPlaceholderText {
+    font-size: 14px;
+    color: #9ca3af;
+    text-align: center;
+    max-width: 220px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+// ── Right card: QR active ─────────────────────────────────────────────────────
+
+.qrSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+}
+
+.qrHeader { text-align: center; }
+
+.qrAmount {
+    display: block;
+    font-size: 26px;
+    font-weight: 800;
+    color: #1d4ed8;
+    line-height: 1.1;
+}
+
+.qrLabel {
+    font-size: 13px;
+    color: #6b7280;
+}
+
+.qrImageWrap {
+    padding: 12px;
+    border: 2px solid #e5e7eb;
+    border-radius: 16px;
+    background: #fff;
+}
+
+.qrImage {
+    border-radius: 8px;
+    display: block;
+}
+
+.timer {
+    position: relative;
+    width: 56px;
+    height: 56px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.timerText {
+    position: absolute;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+}
+
+.timerLabel {
+    font-size: 12px;
+    color: #9ca3af;
+    margin: -10px 0 0;
+}
+
+.payosBtn {
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 11px 20px;
+    border-radius: 10px;
+    background: #111827;
+    color: #fff;
+    font-size: 13px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: background 0.15s;
+
+    &:hover { background: #1f2937; }
+}
+
+.qrHint {
+    font-size: 12px;
+    color: #9ca3af;
+    text-align: center;
+    max-width: 260px;
+    line-height: 1.6;
+    margin: 0;
+}
+
+// ── Right card: Success ───────────────────────────────────────────────────────
+
+.successSection {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    padding: 24px 0;
+}
+
+.successRing {
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #22c55e, #16a34a);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 8px 24px rgba(34,197,94,.35);
+    animation: popIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+}
+
+@keyframes popIn {
+    from { transform: scale(0.6); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+.successIcon { display: flex; align-items: center; justify-content: center; }
+
+.successTitle {
+    font-size: 22px;
+    font-weight: 800;
+    color: #111827;
+    margin: 0;
+}
+
+.successSub {
+    font-size: 15px;
+    color: #6b7280;
+    margin: 0;
+    text-align: center;
+    strong { color: #1d4ed8; }
+}
+
+.successActions {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    width: 100%;
+    margin-top: 8px;
+}
+
+.topUpAgainBtn {
+    padding: 12px;
+    border-radius: 12px;
+    border: none;
+    background: #1d4ed8;
+    color: #fff;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+    text-align: center;
+
+    &:hover { background: #1e40af; }
+}
+
+.walletBtn {
+    padding: 12px;
+    border-radius: 12px;
+    border: 1.5px solid #e5e7eb;
+    background: #fff;
+    color: #374151;
+    font-size: 14px;
+    font-weight: 500;
+    text-decoration: none;
+    text-align: center;
+    transition: all 0.15s;
+
+    &:hover { border-color: #1d4ed8; color: #1d4ed8; }
+}

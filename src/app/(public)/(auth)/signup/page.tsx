@@ -7,12 +7,15 @@ import FormField from "@/components/commons/form-field/form-field";
 import { authService } from "@/libs/services/auth.service";
 import styles from "./page.module.scss";
 
+const PHONE_RE = /^[0-9]{8,11}$/;
+
 export default function SignUpPage() {
     const router = useRouter();
     const [showPassword, setShowPassword] = useState(false);
     const [username, setUsername] = useState("");
     const [email, setEmail] = useState("");
     const [phone, setPhone] = useState("");
+    const [phoneError, setPhoneError] = useState("");
     const [password, setPassword] = useState("");
     const [error, setError] = useState("");
     const [loading, setLoading] = useState(false);
@@ -20,6 +23,13 @@ export default function SignUpPage() {
     async function handleSubmit(e: React.FormEvent) {
         e.preventDefault();
         setError("");
+        setPhoneError("");
+
+        if (phone && !PHONE_RE.test(phone)) {
+            setPhoneError("Please enter a valid phone number (8–11 digits)");
+            return;
+        }
+
         setLoading(true);
 
         try {
@@ -79,6 +89,7 @@ export default function SignUpPage() {
                             onChange={(e) => setPhone(e.target.value)}
                         />
                     </div>
+                    {phoneError && <p className={styles.error}>{phoneError}</p>}
                 </div>
 
                 {/* Password */}
