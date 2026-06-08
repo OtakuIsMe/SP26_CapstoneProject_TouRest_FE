@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import Header from "@/components/layouts/header/header";
@@ -13,26 +13,110 @@ import { ItineraryDTO } from "@/types/itinerary.type";
 
 const tabs = ["Stays", "Flights", "Cars", "Packages", "Cruises", "Things to do"];
 
+const VN_PROVINCES = [
+    "An Giang", "Bà Rịa - Vũng Tàu", "Bắc Giang", "Bắc Kạn", "Bạc Liêu",
+    "Bắc Ninh", "Bến Tre", "Bình Định", "Bình Dương", "Bình Phước",
+    "Bình Thuận", "Cà Mau", "Cần Thơ", "Cao Bằng", "Đà Nẵng",
+    "Đắk Lắk", "Đắk Nông", "Điện Biên", "Đồng Nai", "Đồng Tháp",
+    "Gia Lai", "Hà Giang", "Hà Nam", "Hà Nội", "Hà Tĩnh",
+    "Hải Dương", "Hải Phòng", "Hậu Giang", "Hòa Bình", "Hưng Yên",
+    "Khánh Hòa", "Kiên Giang", "Kon Tum", "Lai Châu", "Lâm Đồng",
+    "Lạng Sơn", "Lào Cai", "Long An", "Nam Định", "Nghệ An",
+    "Ninh Bình", "Ninh Thuận", "Phú Thọ", "Phú Yên", "Quảng Bình",
+    "Quảng Nam", "Quảng Ngãi", "Quảng Ninh", "Quảng Trị", "Sóc Trăng",
+    "Sơn La", "Tây Ninh", "Thái Bình", "Thái Nguyên", "Thanh Hóa",
+    "Thừa Thiên Huế", "Tiền Giang", "TP. Hồ Chí Minh", "Trà Vinh",
+    "Tuyên Quang", "Vĩnh Long", "Vĩnh Phúc", "Yên Bái",
+];
+
+const dropdownStyle: React.CSSProperties = {
+    position: "absolute",
+    top: "calc(100% + 8px)",
+    left: 0,
+    zIndex: 999,
+    background: "#fff",
+    border: "1px solid #e8e8e8",
+    borderRadius: 12,
+    boxShadow: "0 8px 32px rgba(0,0,0,0.12)",
+    maxHeight: 240,
+    overflowY: "auto",
+    minWidth: 220,
+};
+
+const dropdownItemStyle: React.CSSProperties = {
+    padding: "9px 16px",
+    fontSize: 13,
+    cursor: "pointer",
+    whiteSpace: "nowrap",
+};
+
 export default function HomePage() {
     const router = useRouter();
-    const [activeTab,  setActiveTab]  = useState("Stays");
+    const [activeTab, setActiveTab] = useState("Stays");
+
+    // ── Location ─────────────────────────────────────────────────────────────
     const [destination, setDestination] = useState("");
-    const [keyword,     setKeyword]     = useState("");
+    const [locOpen, setLocOpen] = useState(false);
+    const [locQuery, setLocQuery] = useState("");
+    const locRef = useRef<HTMLDivElement>(null);
+
+    // ── Date ─────────────────────────────────────────────────────────────────
+    const [date, setDate] = useState("");
+    const dateInputRef = useRef<HTMLInputElement>(null);
+
+    // ── Tour Name ─────────────────────────────────────────────────────────────
+    const [keyword, setKeyword] = useState("");
+    const [tourOpen, setTourOpen] = useState(false);
+    const [tourQuery, setTourQuery] = useState("");
+    const [tourNames, setTourNames] = useState<string[]>([]);
+    const tourRef = useRef<HTMLDivElement>(null);
+
+    // ── Featured tours ────────────────────────────────────────────────────────
     const [featuredTours, setFeaturedTours] = useState<ItineraryDTO[]>([]);
+
+    // Close dropdowns on outside click
+    useEffect(() => {
+        function handleClick(e: MouseEvent) {
+            if (locRef.current && !locRef.current.contains(e.target as Node)) setLocOpen(false);
+            if (tourRef.current && !tourRef.current.contains(e.target as Node)) setTourOpen(false);
+        }
+        document.addEventListener("mousedown", handleClick);
+        return () => document.removeEventListener("mousedown", handleClick);
+    }, []);
+
+    // Fetch active tour names for dropdown
+    useEffect(() => {
+        agencyService.getItineraries({ pageSize: 100, status: "Active" }).then((res) => {
+            if (res.data) {
+                const names = (res.data.items ?? []).map((t) => t.name).filter(Boolean);
+                setTourNames(names);
+            }
+        });
+    }, []);
+
+    // Fetch featured tours for the discover section
+    useEffect(() => {
+        agencyService.getItineraries({ pageSize: 6, status: "Active" }).then((res) => {
+            if (res.data) setFeaturedTours(res.data.items ?? []);
+        });
+    }, []);
 
     function handleSearch() {
         const params = new URLSearchParams();
         if (destination.trim()) params.set("destination", destination.trim());
-        if (keyword.trim())     params.set("name", keyword.trim());
+        if (keyword.trim()) params.set("name", keyword.trim());
+        if (date) params.set("date", date);
         const qs = params.toString();
         router.push(`/tours${qs ? `?${qs}` : ""}`);
     }
 
-    useEffect(() => {
-        agencyService.getItineraries({ limit: 3, status: "Active" }).then((res) => {
-            if (res.data) setFeaturedTours(res.data.items ?? []);
-        });
-    }, []);
+    const filteredProvinces = VN_PROVINCES.filter((p) =>
+        p.toLowerCase().includes(locQuery.toLowerCase())
+    );
+
+    const filteredTours = tourNames.filter((n) =>
+        n.toLowerCase().includes(tourQuery.toLowerCase())
+    );
 
     return (
         <main>
@@ -58,8 +142,7 @@ export default function HomePage() {
                         {tabs.map((tab) => (
                             <button
                                 key={tab}
-                                className={`${styles.searchTab} ${activeTab === tab ? styles.searchTabActive : ""
-                                    }`}
+                                className={`${styles.searchTab} ${activeTab === tab ? styles.searchTabActive : ""}`}
                                 onClick={() => setActiveTab(tab)}
                             >
                                 {tab}
@@ -68,8 +151,8 @@ export default function HomePage() {
                     </div>
 
                     <div className={styles.searchFields}>
-                        {/* Location */}
-                        <div className={styles.searchField}>
+                        {/* ── Location ── */}
+                        <div className={styles.searchField} ref={locRef} style={{ position: "relative" }}>
                             <div className={styles.fieldIcon}>
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor" />
@@ -78,23 +161,68 @@ export default function HomePage() {
                             <div className={styles.fieldContent}>
                                 <span className={styles.fieldLabel}>
                                     Location
-                                    <svg viewBox="0 0 24 24" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
+                                    <svg viewBox="0 0 24 24" fill="none" width="10" height="10">
                                         <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </span>
                                 <input
                                     type="text"
                                     className={styles.fieldInput}
-                                    placeholder="Enter your destination"
-                                    value={destination}
-                                    onChange={e => setDestination(e.target.value)}
-                                    onKeyDown={e => e.key === "Enter" && handleSearch()}
+                                    placeholder="Select province"
+                                    value={locOpen ? locQuery : destination}
+                                    onChange={(e) => {
+                                        setLocQuery(e.target.value);
+                                        setLocOpen(true);
+                                    }}
+                                    onFocus={() => {
+                                        setLocQuery("");
+                                        setLocOpen(true);
+                                    }}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
+                                    readOnly={false}
                                 />
                             </div>
+                            {locOpen && (
+                                <div style={dropdownStyle}>
+                                    {filteredProvinces.length === 0 ? (
+                                        <div style={{ ...dropdownItemStyle, color: "#999" }}>No results</div>
+                                    ) : (
+                                        filteredProvinces.map((p) => (
+                                            <div
+                                                key={p}
+                                                style={{
+                                                    ...dropdownItemStyle,
+                                                    background: destination === p ? "#f0f0ff" : undefined,
+                                                    color: destination === p ? "#4f46e5" : "#1a1a2e",
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    setDestination(p);
+                                                    setLocQuery("");
+                                                    setLocOpen(false);
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    (e.currentTarget as HTMLDivElement).style.background = "#f5f5ff";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    (e.currentTarget as HTMLDivElement).style.background =
+                                                        destination === p ? "#f0f0ff" : "";
+                                                }}
+                                            >
+                                                {p}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Date (decorative) */}
-                        <div className={styles.searchField}>
+                        {/* ── Date ── */}
+                        <div
+                            className={styles.searchField}
+                            style={{ cursor: "pointer" }}
+                            onClick={() => dateInputRef.current?.showPicker?.()}
+                        >
                             <div className={styles.fieldIcon}>
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.5" />
@@ -102,23 +230,20 @@ export default function HomePage() {
                                 </svg>
                             </div>
                             <div className={styles.fieldContent}>
-                                <span className={styles.fieldLabel}>
-                                    Date
-                                    <svg viewBox="0 0 24 24" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
-                                        <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                                    </svg>
-                                </span>
+                                <span className={styles.fieldLabel}>Date</span>
                                 <input
-                                    type="text"
+                                    ref={dateInputRef}
+                                    type="date"
                                     className={styles.fieldInput}
-                                    placeholder="Choose your dates"
-                                    readOnly
+                                    value={date}
+                                    onChange={(e) => setDate(e.target.value)}
+                                    style={{ colorScheme: "light" }}
                                 />
                             </div>
                         </div>
 
-                        {/* Travelers / keyword */}
-                        <div className={styles.searchField}>
+                        {/* ── Tour Name ── */}
+                        <div className={styles.searchField} ref={tourRef} style={{ position: "relative" }}>
                             <div className={styles.fieldIcon}>
                                 <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                     <path d="M16 21v-2a4 4 0 00-4-4H6a4 4 0 00-4 4v2M9 11a4 4 0 100-8 4 4 0 000 8zM22 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
@@ -127,7 +252,7 @@ export default function HomePage() {
                             <div className={styles.fieldContent}>
                                 <span className={styles.fieldLabel}>
                                     Tour Name
-                                    <svg viewBox="0 0 24 24" fill="none" width="10" height="10" xmlns="http://www.w3.org/2000/svg">
+                                    <svg viewBox="0 0 24 24" fill="none" width="10" height="10">
                                         <path d="M7 10l5 5 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                                     </svg>
                                 </span>
@@ -135,14 +260,56 @@ export default function HomePage() {
                                     type="text"
                                     className={styles.fieldInput}
                                     placeholder="Search tour name"
-                                    value={keyword}
-                                    onChange={e => setKeyword(e.target.value)}
-                                    onKeyDown={e => e.key === "Enter" && handleSearch()}
+                                    value={tourOpen ? tourQuery : keyword}
+                                    onChange={(e) => {
+                                        setTourQuery(e.target.value);
+                                        setTourOpen(true);
+                                    }}
+                                    onFocus={() => {
+                                        setTourQuery("");
+                                        setTourOpen(true);
+                                    }}
+                                    onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                                 />
                             </div>
+                            {tourOpen && (
+                                <div style={dropdownStyle}>
+                                    {filteredTours.length === 0 ? (
+                                        <div style={{ ...dropdownItemStyle, color: "#999" }}>
+                                            {tourNames.length === 0 ? "Loading tours..." : "No results"}
+                                        </div>
+                                    ) : (
+                                        filteredTours.map((name) => (
+                                            <div
+                                                key={name}
+                                                style={{
+                                                    ...dropdownItemStyle,
+                                                    background: keyword === name ? "#f0f0ff" : undefined,
+                                                    color: keyword === name ? "#4f46e5" : "#1a1a2e",
+                                                }}
+                                                onMouseDown={(e) => {
+                                                    e.preventDefault();
+                                                    setKeyword(name);
+                                                    setTourQuery("");
+                                                    setTourOpen(false);
+                                                }}
+                                                onMouseEnter={(e) => {
+                                                    (e.currentTarget as HTMLDivElement).style.background = "#f5f5ff";
+                                                }}
+                                                onMouseLeave={(e) => {
+                                                    (e.currentTarget as HTMLDivElement).style.background =
+                                                        keyword === name ? "#f0f0ff" : "";
+                                                }}
+                                            >
+                                                {name}
+                                            </div>
+                                        ))
+                                    )}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Search Button */}
+                        {/* ── Search Button ── */}
                         <button className={styles.searchBtn} onClick={handleSearch}>
                             <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                                 <circle cx="11" cy="11" r="8" stroke="currentColor" strokeWidth="2" />
@@ -201,7 +368,7 @@ export default function HomePage() {
             <section className={styles.discover}>
                 <div className={styles.discoverHeader}>
                     <h2 className={styles.discoverTitle}>Discover Your New Favorite Stay</h2>
-                    <button className={styles.discoverArrow}>
+                    <button className={styles.discoverArrow} onClick={() => router.push("/tours")}>
                         <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
                             <path d="M5 12h14M12 5l7 7-7 7" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
                         </svg>

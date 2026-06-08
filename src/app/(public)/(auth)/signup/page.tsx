@@ -26,7 +26,7 @@ export default function SignUpPage() {
             await authService.register({ username, email, password, phone: phone || undefined });
             router.push("/signin");
         } catch (err: any) {
-            const msg = err?.response?.data?.message || "Registration failed. Please try again.";
+            const msg = err?.response?.data?.Message || err?.response?.data?.message || "Registration failed. Please try again.";
             setError(msg);
         } finally {
             setLoading(false);

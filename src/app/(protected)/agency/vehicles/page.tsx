@@ -100,8 +100,8 @@ export default function AgencyVehiclesPage() {
     }
 
     async function handleSave() {
-        if (!form.name.trim()) { setError("Tên phương tiện không được để trống"); return; }
-        if (form.capacity < 1) { setError("Sức chứa phải ít nhất 1"); return; }
+        if (!form.name.trim()) { setError("Vehicle name is required"); return; }
+        if (form.capacity < 1) { setError("Capacity must be at least 1"); return; }
         setSaving(true);
         setError("");
         try {
@@ -119,7 +119,7 @@ export default function AgencyVehiclesPage() {
             closeModal();
             load();
         } catch {
-            setError("Có lỗi xảy ra, vui lòng thử lại");
+            setError("Something went wrong, please try again");
         } finally {
             setSaving(false);
         }
@@ -133,7 +133,7 @@ export default function AgencyVehiclesPage() {
             setDeleteTarget(null);
             load();
         } catch {
-            setError("Xóa thất bại");
+            setError("Delete failed, please try again");
         } finally {
             setDeleting(false);
         }
@@ -148,8 +148,8 @@ export default function AgencyVehiclesPage() {
             {/* ── Top bar ── */}
             <div className={styles.topBar}>
                 <div className={styles.topLeft}>
-                    <h1 className={styles.title}>Phương tiện</h1>
-                    <span className={styles.count}>{vehicles.length} phương tiện</span>
+                    <h1 className={styles.title}>Vehicles</h1>
+                    <span className={styles.count}>{vehicles.length} vehicle{vehicles.length !== 1 ? "s" : ""}</span>
                 </div>
                 <div className={styles.topRight}>
                     <div className={styles.searchBox}>
@@ -158,7 +158,7 @@ export default function AgencyVehiclesPage() {
                             <path d="M21 21l-4.35-4.35" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                         </svg>
                         <input
-                            placeholder="Tìm phương tiện..."
+                            placeholder="Search vehicles..."
                             value={search}
                             onChange={e => setSearch(e.target.value)}
                         />
@@ -168,7 +168,7 @@ export default function AgencyVehiclesPage() {
                             <svg width="15" height="15" viewBox="0 0 24 24" fill="none">
                                 <path d="M12 5v14M5 12h14" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                             </svg>
-                            Thêm phương tiện
+                            Add Vehicle
                         </button>
                     )}
                 </div>
@@ -184,9 +184,9 @@ export default function AgencyVehiclesPage() {
             ) : filtered.length === 0 ? (
                 <div className={styles.empty}>
                     <span className={styles.emptyIcon}>🚗</span>
-                    <p>{search ? "Không tìm thấy phương tiện" : "Chưa có phương tiện nào"}</p>
+                    <p>{search ? "No vehicles found" : "No vehicles yet"}</p>
                     {!search && (
-                        <button className={styles.addBtn} onClick={openCreate}>Thêm ngay</button>
+                        <button className={styles.addBtn} onClick={openCreate}>Add now</button>
                     )}
                 </div>
             ) : (
@@ -213,7 +213,7 @@ export default function AgencyVehiclesPage() {
                                                 <circle cx="9" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
                                                 <path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                             </svg>
-                                            {v.capacity} chỗ
+                                            {v.capacity} seat{v.capacity !== 1 ? "s" : ""}
                                         </span>
                                     </div>
                                     {v.description && (
@@ -248,19 +248,19 @@ export default function AgencyVehiclesPage() {
                 <div className={styles.overlay}>
                     <div className={styles.modal} ref={modalRef}>
                         <div className={styles.modalHeader}>
-                            <h2>{editTarget ? "Chỉnh sửa phương tiện" : "Thêm phương tiện"}</h2>
+                            <h2>{editTarget ? "Edit Vehicle" : "Add Vehicle"}</h2>
                             <button className={styles.closeBtn} onClick={closeModal}>✕</button>
                         </div>
                         <div className={styles.modalBody}>
-                            <label className={styles.fieldLabel}>Tên phương tiện *</label>
+                            <label className={styles.fieldLabel}>Vehicle Name *</label>
                             <input
                                 className={styles.input}
-                                placeholder="VD: Xe buýt 45 chỗ"
+                                placeholder="e.g. 45-seat Bus"
                                 value={form.name}
                                 onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
                             />
 
-                            <label className={styles.fieldLabel}>Loại phương tiện *</label>
+                            <label className={styles.fieldLabel}>Vehicle Type *</label>
                             <select
                                 className={styles.select}
                                 value={form.type}
@@ -273,7 +273,7 @@ export default function AgencyVehiclesPage() {
                                 ))}
                             </select>
 
-                            <label className={styles.fieldLabel}>Sức chứa (chỗ ngồi) *</label>
+                            <label className={styles.fieldLabel}>Capacity (seats) *</label>
                             <input
                                 className={styles.input}
                                 type="number"
@@ -283,10 +283,10 @@ export default function AgencyVehiclesPage() {
                                 onChange={e => setForm(f => ({ ...f, capacity: Number(e.target.value) }))}
                             />
 
-                            <label className={styles.fieldLabel}>Mô tả</label>
+                            <label className={styles.fieldLabel}>Description</label>
                             <textarea
                                 className={styles.textarea}
-                                placeholder="Mô tả thêm về phương tiện..."
+                                placeholder="Additional details about the vehicle..."
                                 rows={3}
                                 value={form.description}
                                 onChange={e => setForm(f => ({ ...f, description: e.target.value }))}
@@ -295,9 +295,9 @@ export default function AgencyVehiclesPage() {
                             {error && <p className={styles.errorMsg}>{error}</p>}
                         </div>
                         <div className={styles.modalFooter}>
-                            <button className={styles.cancelBtn} onClick={closeModal} disabled={saving}>Hủy</button>
+                            <button className={styles.cancelBtn} onClick={closeModal} disabled={saving}>Cancel</button>
                             <button className={styles.saveBtn} onClick={handleSave} disabled={saving}>
-                                {saving ? "Đang lưu..." : editTarget ? "Cập nhật" : "Tạo mới"}
+                                {saving ? "Saving..." : editTarget ? "Update" : "Create"}
                             </button>
                         </div>
                     </div>
@@ -309,15 +309,15 @@ export default function AgencyVehiclesPage() {
                 <div className={styles.overlay}>
                     <div className={styles.confirmModal} ref={modalRef}>
                         <div className={styles.confirmIcon}>🗑️</div>
-                        <h3 className={styles.confirmTitle}>Xóa phương tiện?</h3>
+                        <h3 className={styles.confirmTitle}>Delete Vehicle?</h3>
                         <p className={styles.confirmMsg}>
-                            Bạn có chắc muốn xóa <strong>{deleteTarget.name}</strong>? Hành động này không thể hoàn tác.
+                            Are you sure you want to delete <strong>{deleteTarget.name}</strong>? This action cannot be undone.
                         </p>
                         {error && <p className={styles.errorMsg}>{error}</p>}
                         <div className={styles.confirmActions}>
-                            <button className={styles.cancelBtn} onClick={closeModal} disabled={deleting}>Hủy</button>
+                            <button className={styles.cancelBtn} onClick={closeModal} disabled={deleting}>Cancel</button>
                             <button className={styles.deleteConfirmBtn} onClick={handleDelete} disabled={deleting}>
-                                {deleting ? "Đang xóa..." : "Xóa"}
+                                {deleting ? "Deleting..." : "Delete"}
                             </button>
                         </div>
                     </div>

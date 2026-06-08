@@ -78,6 +78,7 @@ export default function BecomeAgencyPage() {
             router.push("/");
         } catch (err: any) {
             const msg =
+                err?.response?.data?.Message ||
                 err?.response?.data?.message ||
                 "Registration failed. Please try again.";
             setError(msg);

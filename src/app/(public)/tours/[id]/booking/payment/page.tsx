@@ -143,12 +143,13 @@ export default function PaymentPage() {
         setWalletError(null);
 
         try {
-            await agencyService.payWithWallet(bookingId);
+            const walletRes = await agencyService.payWithWallet(bookingId);
+            const orderCode = walletRes.data?.orderCode;
             // Refresh wallet to show updated balance
             await walletService.getMyWallet().then(res => {
                 if (res.data) setWallet(res.data);
             });
-            window.location.href = "/payment/success?status=PAID&source=WALLET";
+            window.location.href = `/payment/success?status=PAID&source=WALLET${orderCode ? `&orderCode=${orderCode}` : ""}`;
         } catch (err) {
             setWalletError("Wallet payment failed. Please try again or use QR payment.");
         } finally {

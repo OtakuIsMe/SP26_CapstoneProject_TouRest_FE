@@ -85,6 +85,7 @@ function ToursContent() {
 
     const initDestination = searchParams.get("destination") ?? "";
     const initName        = searchParams.get("name") ?? "";
+    const initDate        = searchParams.get("date") ?? "";
 
     const [tours,        setTours]        = useState<ItineraryDTO[]>([]);
     const [loading,      setLoading]      = useState(true);
@@ -94,12 +95,14 @@ function ToursContent() {
     const [highPrice,    setHighPrice]    = useState(MAX_PRICE);
     const [destination,  setDestination]  = useState(initDestination);
     const [name,         setName]         = useState(initName);
+    const [scheduleDate, setScheduleDate] = useState(initDate);
     const [duration,     setDuration]     = useState<DurationOpt>("any");
     const [vehicleType,  setVehicleType]  = useState("");
 
     // committed search values (applied on Search button)
     const [activeDestination, setActiveDestination] = useState(initDestination);
     const [activeName,        setActiveName]        = useState(initName);
+    const [activeDate,        setActiveDate]        = useState(initDate);
 
     // collapsible filter sections
     const [durOpen, setDurOpen] = useState(true);
@@ -112,13 +115,14 @@ function ToursContent() {
         lo: number, hi: number,
         dest: string, nm: string,
         dur: DurationOpt, veh: string,
+        dt: string,
     ) => {
         setLoading(true);
         const { low: durLow, high: durHigh } = durationToRange(dur);
         try {
             const res = await agencyService.getItineraries({
-                page:           p,
-                pageSize:       PAGE_SIZE,
+                page:           dt ? undefined : p,
+                pageSize:       dt ? 200 : PAGE_SIZE,
                 status:         "Active",
                 lowPrice:       lo > 0         ? lo   : undefined,
                 highPrice:      hi < MAX_PRICE ? hi   : undefined,
@@ -129,8 +133,16 @@ function ToursContent() {
                 vehicleType:    veh            || undefined,
             });
             if (res.data) {
-                setTours(res.data.items ?? []);
-                setTotal(res.data.total ?? 0);
+                let items = res.data.items ?? [];
+                let count = res.data.total ?? 0;
+                if (dt) {
+                    items = items.filter(t =>
+                        t.schedules.some(s => s.startTime.slice(0, 10) === dt)
+                    );
+                    count = items.length;
+                }
+                setTours(items);
+                setTotal(count);
             }
         } finally {
             setLoading(false);
@@ -138,44 +150,46 @@ function ToursContent() {
     }, []);
 
     useEffect(() => {
-        fetchTours(1, 0, MAX_PRICE, initDestination, initName, "any", "");
+        fetchTours(1, 0, MAX_PRICE, initDestination, initName, "any", "", initDate);
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
 
     const handleSearch = () => {
         const params = new URLSearchParams();
-        if (destination.trim()) params.set("destination", destination.trim());
-        if (name.trim())        params.set("name", name.trim());
+        if (destination.trim())  params.set("destination", destination.trim());
+        if (name.trim())         params.set("name", name.trim());
+        if (scheduleDate)        params.set("date", scheduleDate);
         const qs = params.toString();
         router.replace(`/tours${qs ? `?${qs}` : ""}`, { scroll: false });
         setActiveDestination(destination);
         setActiveName(name);
+        setActiveDate(scheduleDate);
         setPage(1);
-        fetchTours(1, lowPrice, highPrice, destination, name, duration, vehicleType);
+        fetchTours(1, lowPrice, highPrice, destination, name, duration, vehicleType, scheduleDate);
     };
 
     const handleRangeChange = useCallback((lo: number, hi: number) => {
         setLowPrice(lo);
         setHighPrice(hi);
         setPage(1);
-        fetchTours(1, lo, hi, activeDestination, activeName, duration, vehicleType);
-    }, [fetchTours, activeDestination, activeName, duration, vehicleType]);
+        fetchTours(1, lo, hi, activeDestination, activeName, duration, vehicleType, activeDate);
+    }, [fetchTours, activeDestination, activeName, duration, vehicleType, activeDate]);
 
     const handleDurationChange = (d: DurationOpt) => {
         setDuration(d);
         setPage(1);
-        fetchTours(1, lowPrice, highPrice, activeDestination, activeName, d, vehicleType);
+        fetchTours(1, lowPrice, highPrice, activeDestination, activeName, d, vehicleType, activeDate);
     };
 
     const handleVehicleChange = (v: string) => {
         setVehicleType(v);
         setPage(1);
-        fetchTours(1, lowPrice, highPrice, activeDestination, activeName, duration, v);
+        fetchTours(1, lowPrice, highPrice, activeDestination, activeName, duration, v, activeDate);
     };
 
     const goToPage = (p: number) => {
         setPage(p);
-        fetchTours(p, lowPrice, highPrice, activeDestination, activeName, duration, vehicleType);
+        fetchTours(p, lowPrice, highPrice, activeDestination, activeName, duration, vehicleType, activeDate);
         window.scrollTo({ top: 0, behavior: "smooth" });
     };
 
@@ -200,6 +214,28 @@ function ToursContent() {
                                 value={destination}
                                 onChange={e => setDestination(e.target.value)}
                                 onKeyDown={e => e.key === "Enter" && handleSearch()}
+                            />
+                        </div>
+                    </div>
+
+                    <div className={styles.sbDivider} />
+
+                    <div className={styles.sbDivider} />
+
+                    <div className={styles.sbField}>
+                        <svg viewBox="0 0 24 24" fill="none" width="16" height="16" className={styles.sbIcon}>
+                            <rect x="3" y="4" width="18" height="18" rx="2" stroke="currentColor" strokeWidth="1.8" />
+                            <path d="M16 2v4M8 2v4M3 10h18" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" />
+                        </svg>
+                        <div className={styles.sbFieldBody}>
+                            <span className={styles.sbLabel}>Start Date</span>
+                            <input
+                                type="date"
+                                className={styles.sbInput}
+                                value={scheduleDate}
+                                onChange={e => setScheduleDate(e.target.value)}
+                                onKeyDown={e => e.key === "Enter" && handleSearch()}
+                                style={{ colorScheme: "light" }}
                             />
                         </div>
                     </div>
