@@ -36,6 +36,15 @@ function isScheduleCompleted(s: AgencyScheduleDTO | null): boolean {
     return s?.status?.toLowerCase() === "completed";
 }
 
+function isScheduleCheckable(s: AgencyScheduleDTO | null): boolean {
+    const st = s?.status?.toLowerCase();
+    return st === "ongoing" || st === "confirmed";
+}
+
+function isScheduleOngoing(s: AgencyScheduleDTO | null): boolean {
+    return s?.status?.toLowerCase() === "ongoing";
+}
+
 // ── Page ──────────────────────────────────────────────────────────────────────
 export default function GuidTrackingPage() {
     const [schedules, setSchedules]   = useState<AgencyScheduleDTO[]>([]);
@@ -272,10 +281,15 @@ export default function GuidTrackingPage() {
 
                                             {/* Activities */}
                                             <div className={styles.activityList}>
-                                                {stop.activities.map(act => {
-                                                    const isDone    = tracked.has(act.id);
+                                                {stop.activities.map((act, ai) => {
+                                                    const isDone     = tracked.has(act.id);
                                                     const isChecking = checking.has(act.id);
-                                                    const name      = act.customName ?? act.serviceName ?? "Activity";
+                                                    const name       = act.customName ?? act.serviceName ?? "Activity";
+
+                                                    // Sequential lock: all earlier stops fully done, all earlier acts in this stop done
+                                                    const prevStopsDone = stops.slice(0, si).every(s => s.activities.every(a => tracked.has(a.id)));
+                                                    const prevActsDone  = stop.activities.slice(0, ai).every(a => tracked.has(a.id));
+                                                    const isUnlocked    = prevStopsDone && prevActsDone;
 
                                                     return (
                                                         <div key={act.id} className={`${styles.activityRow} ${isDone ? styles.activityRowDone : ""}`}>
@@ -311,7 +325,7 @@ export default function GuidTrackingPage() {
                                                                             </svg>
                                                                             Done
                                                                         </span>
-                                                                        {!isScheduleCompleted(selected) && (
+                                                                        {isScheduleCheckable(selected) && (
                                                                             <button
                                                                                 className={styles.undoBtn}
                                                                                 disabled={isChecking}
@@ -321,7 +335,7 @@ export default function GuidTrackingPage() {
                                                                             </button>
                                                                         )}
                                                                     </>
-                                                                ) : (
+                                                                ) : isScheduleCheckable(selected) && isUnlocked ? (
                                                                     <button
                                                                         className={`${styles.checkInBtn} ${isChecking ? styles.checkInBtnLoading : ""}`}
                                                                         disabled={isChecking}
@@ -336,6 +350,16 @@ export default function GuidTrackingPage() {
                                                                         )}
                                                                         Check In
                                                                     </button>
+                                                                ) : isScheduleCheckable(selected) ? (
+                                                                    <span className={styles.lockedBadge}>
+                                                                        <svg viewBox="0 0 24 24" fill="none" width="10" height="10">
+                                                                            <rect x="3" y="11" width="18" height="11" rx="2" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                                                            <path d="M7 11V7a5 5 0 0110 0v4" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
+                                                                        </svg>
+                                                                        Locked
+                                                                    </span>
+                                                                ) : (
+                                                                    <span className={styles.pendingBadge}>Pending</span>
                                                                 )}
                                                             </div>
                                                         </div>

@@ -99,7 +99,7 @@ export default function ResultsPage() {
 
     const [groups, setGroups]               = useState<TourGroup[]>([]);
     const [loadingGroups, setLoadingGroups] = useState(true);
-    const [loadingPats, setLoadingPats]     = useState(false);
+    const [loadingPats, setLoadingPats]     = useState(true);
     const [selectedId, setSelectedId]       = useState<string | null>(null);
     const [sendTarget, setSendTarget]       = useState<Patient | null>(null);
     const [images, setImages]               = useState<File[]>([]);
@@ -256,7 +256,7 @@ export default function ResultsPage() {
                             <button
                                 key={g.id}
                                 className={`${styles.groupCard} ${selectedId === g.id ? styles.groupCardActive : ""}`}
-                                onClick={() => { setSelectedId(g.id); setSearch(""); }}
+                                onClick={() => { setSelectedId(g.id); setSearch(""); if (!g.loadedPatients) setLoadingPats(true); }}
                             >
                                 <div className={styles.groupCardRow}>
                                     <span className={styles.groupAgencyDot} style={{ background: g.agencyColor }}/>

@@ -100,6 +100,8 @@ export default function NewPackagePage() {
             errs.basePrice = "Enter a valid price.";
         if (selected.size === 0)
             errs.services = "Select at least one service.";
+        if (basePriceNum > 0 && servicesTotal > 0 && basePriceNum >= servicesTotal)
+            errs.basePrice = `Package price must be less than the services total (${servicesTotal.toLocaleString("vi-VN")}₫).`;
         setErrors(errs);
         return Object.keys(errs).length === 0;
     }

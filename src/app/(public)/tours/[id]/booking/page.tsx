@@ -124,7 +124,8 @@ export default function BookingPage() {
 
     // Keep travelerInfos in sync when count changes
     function setTravelerCount(n: number) {
-        const count = Math.max(1, n);
+        const maxSlots = selectedSchedule?.spotLeft ?? Infinity;
+        const count = Math.min(Math.max(1, n), maxSlots);
         set("travelers", count);
         setTravelerInfos(prev => {
             if (prev.length === count) return prev;
@@ -299,11 +300,18 @@ export default function BookingPage() {
                                         <label className={styles.label}>Number of Passengers <span>*</span></label>
                                         <div className={styles.counterRow}>
                                             <div className={styles.counter}>
-                                                <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers - 1)}>−</button>
+                                                <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers - 1)} disabled={form.travelers <= 1}>−</button>
                                                 <span className={styles.counterVal}>{form.travelers}</span>
-                                                <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers + 1)}>+</button>
+                                                <button type="button" className={styles.counterBtn} onClick={() => setTravelerCount(form.travelers + 1)} disabled={form.travelers >= (selectedSchedule?.spotLeft ?? 1)}>+</button>
                                             </div>
-                                            <span className={styles.counterHint}>Up to {selectedSchedule?.spotLeft ?? "—"} spots available</span>
+                                            <span className={styles.counterHint}>
+                                                {selectedSchedule
+                                                    ? form.travelers >= selectedSchedule.spotLeft
+                                                        ? <span style={{ color: "#ef4444", fontWeight: 600 }}>Maximum {selectedSchedule.spotLeft} spot{selectedSchedule.spotLeft !== 1 ? "s" : ""} available</span>
+                                                        : <>Up to <strong>{selectedSchedule.spotLeft}</strong> spots available</>
+                                                    : "—"
+                                                }
+                                            </span>
                                         </div>
                                     </div>
 

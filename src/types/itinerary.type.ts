@@ -49,6 +49,7 @@ export interface ProviderScheduleDTO {
     spotLeft: number;
     guideId?: string;
     guideName?: string;
+    status: string;
     firstActivityTime?: string | null;
 }
 

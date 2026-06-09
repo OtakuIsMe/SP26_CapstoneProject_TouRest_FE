@@ -358,6 +358,31 @@ $grey:  #6b7280;
     background: #dcfce7;
 }
 
+.pendingBadge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #6b7280;
+    background: #f3f4f6;
+}
+
+.lockedBadge {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    border-radius: 12px;
+    font-size: 11.5px;
+    font-weight: 600;
+    color: #9ca3af;
+    background: #f9fafb;
+    border: 1px dashed #d1d5db;
+}
+
 // ── Buttons ───────────────────────────────────────────────────────────────────
 .checkInBtn {
     display: flex;

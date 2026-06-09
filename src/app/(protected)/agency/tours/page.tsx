@@ -322,6 +322,7 @@ export default function AgencyToursPage() {
         if (schedEnd <= schedStart)            { setSchedErr("End date must be after start date."); return; }
         const spotNum = parseInt(schedSpot, 10);
         if (!schedSpot || isNaN(spotNum) || spotNum < 1) { setSchedErr("Spot must be at least 1."); return; }
+        if (!schedGuideId)                     { setSchedErr("Please assign a tour guide before creating this schedule."); return; }
         try {
             const res = await agencyService.addSchedule(
                 schedTarget!.id,
@@ -529,11 +530,13 @@ export default function AgencyToursPage() {
             newActs.push({ id: uid(), type: "service", name: svc.name, serviceId: svc.id, startTime: actStart, endTime: actEnd, price: Number(actPrice.replace(/,/g, "")) || svc.price, note: actNote });
         } else if (actType === "package" && actPackageId) {
             const pkg = actPackages.find(p => p.id === actPackageId)!;
+            const indvTotal = pkg.services.reduce((s, x) => s + x.servicePrice, 0);
+            const pkgRatio  = indvTotal > 0 ? pkg.basePrice / indvTotal : 1;
             let cursor = actStart;
             for (const ps of pkg.services) {
                 const dur = Number(ps.serviceDurationMinutes) || 60;
                 const end = cursor ? addMinutes(cursor, dur) : "";
-                newActs.push({ id: uid(), type: "package", name: ps.serviceName, serviceId: ps.serviceId, serviceName: pkg.name, packageBasePrice: pkg.basePrice, startTime: cursor, endTime: end, price: ps.servicePrice, note: actNote });
+                newActs.push({ id: uid(), type: "package", name: ps.serviceName, serviceId: ps.serviceId, serviceName: pkg.name, packageBasePrice: pkg.basePrice, startTime: cursor, endTime: end, price: Math.round(ps.servicePrice * pkgRatio), note: actNote });
                 if (end) cursor = end;
             }
         } else if (actType === "custom" && actCustomName) {
@@ -552,10 +555,12 @@ export default function AgencyToursPage() {
                 const matchedIds = new Set(bundle.matched.map(a => a.id));
                 const firstStart = bundle.matched.reduce((e, a) => (!e || (a.startTime && a.startTime < e)) ? a.startTime : e, "");
                 let cursor = firstStart;
+                const bundleIndvTotal = bundle.pkg.services.reduce((s, x) => s + x.servicePrice, 0);
+                const bundleRatio     = bundleIndvTotal > 0 ? bundle.pkg.basePrice / bundleIndvTotal : 1;
                 const pkgActs: ActivityItem[] = bundle.pkg.services.map(ps => {
                     const dur = Number(ps.serviceDurationMinutes) || 60;
                     const end = cursor ? addMinutes(cursor, dur) : "";
-                    const act: ActivityItem = { id: uid(), type: "package", name: ps.serviceName, serviceId: ps.serviceId, serviceName: bundle.pkg.name, packageBasePrice: bundle.pkg.basePrice, startTime: cursor, endTime: end, price: ps.servicePrice, note: "" };
+                    const act: ActivityItem = { id: uid(), type: "package", name: ps.serviceName, serviceId: ps.serviceId, serviceName: bundle.pkg.name, packageBasePrice: bundle.pkg.basePrice, startTime: cursor, endTime: end, price: Math.round(ps.servicePrice * bundleRatio), note: "" };
                     if (end) cursor = end;
                     return act;
                 });
@@ -1247,6 +1252,7 @@ export default function AgencyToursPage() {
                                     <input
                                         className={`${styles.input} ${schedErr && !schedStart ? styles.inputError : ""}`}
                                         type="date" value={schedStart}
+                                        min={new Date().toISOString().split("T")[0]}
                                         onChange={e => {
                                             const val = e.target.value;
                                             setSchedStart(val);
@@ -1260,15 +1266,12 @@ export default function AgencyToursPage() {
                                     />
                                 </div>
                                 <div className={styles.field}>
-                                    <label className={styles.label}>Return Date <span className={styles.required}>*</span></label>
+                                    <label className={styles.label}>Return Date <span style={{ fontSize: 11, color: "#6b7280", fontWeight: 400, marginLeft: 4 }}>(auto)</span></label>
                                     <input
-                                        className={`${styles.input} ${schedErr && !schedEnd ? styles.inputError : ""}`}
-                                        type="date" value={schedEnd} min={schedStart}
-                                        onChange={e => {
-                                            const val = e.target.value;
-                                            setSchedEnd(val);
-                                            setSchedErr("");
-                                        }}
+                                        className={styles.input}
+                                        type="date" value={schedEnd}
+                                        readOnly
+                                        style={{ background: "#f9fafb", color: "#6b7280", cursor: "not-allowed" }}
                                     />
                                 </div>
                             </div>
@@ -1305,14 +1308,14 @@ export default function AgencyToursPage() {
                                             <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/>
                                             <circle cx="12" cy="7" r="4" stroke="currentColor" strokeWidth="1.8"/>
                                         </svg>
-                                        Tour Guide
+                                        Tour Guide <span className={styles.required}>*</span>
                                     </label>
                                     <select
-                                        className={`${styles.input} ${styles.select}`}
+                                        className={`${styles.input} ${styles.select} ${schedErr && !schedGuideId ? styles.inputError : ""}`}
                                         value={schedGuideId}
-                                        onChange={e => setSchedGuideId(e.target.value)}
+                                        onChange={e => { setSchedGuideId(e.target.value); setSchedErr(""); }}
                                     >
-                                        <option value="">— No guide assigned —</option>
+                                        <option value="">— Select a tour guide —</option>
                                         {agencyUsers.map(u => (
                                             <option key={u.userId} value={u.userId}>
                                                 {u.userFullName || u.email}

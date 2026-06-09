@@ -116,6 +116,8 @@ export default function AddUserModal({ open, onClose, onCreated }: Props) {
         if (!form.password)          errs.password = "Password is required.";
         else if (form.password.length < 6) errs.password = "Password must be at least 6 characters.";
         if (form.confirmPassword !== form.password) errs.confirmPassword = "Passwords do not match.";
+        if (form.phone.trim() && !/^0[35789]\d{8}$/.test(form.phone.trim()))
+            errs.phone = "Invalid phone number (e.g. 0912345678)";
         if (form.roleCode === "PROVIDER" && !form.providerId)
             errs.providerId = "Please select a provider.";
         if (form.roleCode === "AGENCY" && !form.agencyId)
@@ -274,12 +276,13 @@ export default function AddUserModal({ open, onClose, onCreated }: Props) {
                             <div className={styles.field}>
                                 <label className={styles.label}>Phone</label>
                                 <input
-                                    className={styles.input}
+                                    className={`${styles.input} ${errors.phone ? styles.inputError : ""}`}
                                     type="tel"
                                     placeholder="e.g. 0901234567"
                                     value={form.phone}
                                     onChange={change("phone")}
                                 />
+                                {errors.phone && <span className={styles.errorMsg}>{errors.phone}</span>}
                             </div>
 
                             <div className={styles.field}>

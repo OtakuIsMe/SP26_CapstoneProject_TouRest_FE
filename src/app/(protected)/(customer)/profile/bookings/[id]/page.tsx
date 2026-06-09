@@ -307,15 +307,6 @@ export default function BookingJourneyPage() {
         }
     };
 
-    const handleCheckIn = async (stopId: string) => {
-        if (!scheduleId) return;
-        setTrackedStops(prev => new Set([...prev, stopId]));
-        try {
-            await trackingService.track({ itineraryScheduleId: scheduleId, trackingId: stopId, type: TrackingTypeStop });
-        } catch {
-            setTrackedStops(prev => { const s = new Set(prev); s.delete(stopId); return s; });
-        }
-    };
 
     if (loading) return (
         <>
@@ -502,17 +493,7 @@ export default function BookingJourneyPage() {
                                                         <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M5 12h14M13 6l6 6-6 6" stroke="#9ca3af" strokeWidth="1.7" strokeLinecap="round"/></svg>
                                                         <span>{stop.departureTime}</span>
                                                     </div>
-                                                    {effStopStatus !== "completed" ? (
-                                                        <button
-                                                            className={styles.checkInBtn}
-                                                            onClick={() => handleCheckIn(stop.id)}
-                                                        >
-                                                            <svg viewBox="0 0 24 24" fill="none" width="12" height="12">
-                                                                <path d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5a2.5 2.5 0 110-5 2.5 2.5 0 010 5z" fill="currentColor"/>
-                                                            </svg>
-                                                            Check In
-                                                        </button>
-                                                    ) : (
+                                                    {effStopStatus === "completed" && (
                                                         <span className={styles.checkedInBadge}>
                                                             <svg viewBox="0 0 24 24" fill="none" width="11" height="11"><path d="M5 13l4 4L19 7" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
                                                             Checked In

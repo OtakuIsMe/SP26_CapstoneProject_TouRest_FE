@@ -60,6 +60,7 @@ export default function ProviderStaffPage() {
 
     async function handleCreate() {
         if (!cEmail || !cFullName || !cPassword) { setCError("Please fill in all required fields."); return; }
+        if (cPhone && !/^0[35789]\d{8}$/.test(cPhone)) { setCError("Invalid phone number (e.g. 0912345678)"); return; }
         setCError("");
         setCSubmitting(true);
         try {

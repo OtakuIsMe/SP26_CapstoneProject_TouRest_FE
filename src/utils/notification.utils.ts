@@ -14,7 +14,9 @@ export function entityTypeToNotifType(entityType: NotificationEntityType): Notif
 }
 
 export function timeAgo(iso: string): string {
-    const diff = Date.now() - new Date(iso).getTime();
+    // Backend sends UTC without 'Z' suffix — append it so JS treats it as UTC
+    const utc = iso && !iso.endsWith("Z") && !iso.includes("+") ? iso + "Z" : iso;
+    const diff = Date.now() - new Date(utc).getTime();
     const m = Math.floor(diff / 60000);
     if (m < 1)   return "Just now";
     if (m < 60)  return `${m} min ago`;

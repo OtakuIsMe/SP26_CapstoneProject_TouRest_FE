@@ -53,12 +53,10 @@ function fmtTime(dt: string): string {
     return `${h}:${m}`;
 }
 
-function deriveStatus(startTime: string, endTime: string): JobStatus {
-    const now   = new Date();
-    const end   = new Date(endTime);
-    const start = new Date(startTime);
-    if (end < now) return "completed";
-    if (start <= now && end >= now) return "confirmed";
+function normalizeJobStatus(raw: string): JobStatus {
+    const s = raw?.toLowerCase();
+    if (s === "confirmed" || s === "pending" || s === "completed" || s === "cancelled" || s === "ongoing")
+        return s === "ongoing" ? "confirmed" : s as JobStatus;
     return "confirmed";
 }
 
@@ -72,7 +70,7 @@ function mapToTourJob(s: ProviderScheduleDTO): TourJob {
         arrivalTime:  s.firstActivityTime ? fmtTime(s.firstActivityTime) : fmtTime(s.startTime),
         people:       s.spot,
         services:     [],
-        status:       deriveStatus(s.startTime, s.endTime),
+        status:       normalizeJobStatus(s.status),
     };
 }
 

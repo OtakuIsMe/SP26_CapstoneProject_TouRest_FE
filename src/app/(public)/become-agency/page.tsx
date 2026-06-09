@@ -21,7 +21,7 @@ type FieldErrors = Partial<Record<
 >>;
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-const PHONE_RE = /^[0-9]{8,11}$/;
+const PHONE_RE = /^0[35789]\d{8}$/;
 
 function extractApiError(err: any): string {
     const data = err?.response?.data;
@@ -101,7 +101,7 @@ export default function BecomeAgencyPage() {
         if (!contactPhone.trim())
             errs.contactPhone = "Contact phone is required.";
         else if (!PHONE_RE.test(contactPhone.trim().replace(/\s/g, "")))
-            errs.contactPhone = "Please enter a valid phone number (8–11 digits).";
+            errs.contactPhone = "Invalid phone number (e.g. 0912345678).";
 
         if (!address.trim())
             errs.address = "Address is required.";

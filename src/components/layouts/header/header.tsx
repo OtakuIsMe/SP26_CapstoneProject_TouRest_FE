@@ -25,11 +25,11 @@ const NOTIF_ICON: Record<NotifType, React.ReactNode> = {
 };
 
 const navItems = [
-  { label: "Home", href: "/" },
-  { label: "About Us", href: "/about" },
-  { label: "Popular Destinations", href: "/destinations" },
-  { label: "Our Packages", href: "/packages" },
-  { label: "Help", href: "/report" },
+  { label: "Home",             href: "/"                },
+  { label: "Tours",            href: "/tours"           },
+  { label: "About Us",         href: "/about"           },
+  { label: "Become an Agency", href: "/become-agency"   },
+  { label: "Become a Partner", href: "/become-provider" },
 ];
 
 interface HeaderProps {

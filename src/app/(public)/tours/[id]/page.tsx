@@ -894,10 +894,10 @@ export default function TourDetailPage() {
                                                             <path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z" stroke="#c7d2fe" strokeWidth="1.2" fill="#eef2ff"/>
                                                         </svg>
                                                     </div>
-                                                    <h3 className={styles.reviewEmptyTitle}>Chưa có đánh giá nào</h3>
+                                                    <h3 className={styles.reviewEmptyTitle}>No reviews yet</h3>
                                                     <p className={styles.reviewEmptyDesc}>
-                                                        Hãy là người đầu tiên chia sẻ trải nghiệm của bạn về tour này.<br/>
-                                                        Đánh giá của bạn giúp ích rất nhiều cho những du khách khác!
+                                                        Be the first to share your experience about this tour.<br/>
+                                                        Your review helps other travelers make the right choice!
                                                     </p>
                                                     <button
                                                         className={styles.reviewEmptyBtn}
@@ -907,7 +907,7 @@ export default function TourDetailPage() {
                                                             <path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                                             <path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
                                                         </svg>
-                                                        Viết đánh giá đầu tiên
+                                                        Write the first review
                                                     </button>
                                                 </div>
                                             )}

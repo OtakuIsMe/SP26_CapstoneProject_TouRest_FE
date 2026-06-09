@@ -93,7 +93,7 @@ export default function ProfilePage() {
     useEffect(() => {
         if (activeTab !== "Bookings" || bookingsLoaded) return;
         setBookingsLoading(true);
-        bookingService.getMyBookings("Confirmed")
+        bookingService.getMyBookings()
             .then(async res => {
                 if (!res?.data) return;
                 const withItineraries = await Promise.all(
@@ -370,7 +370,7 @@ export default function ProfilePage() {
                         <div className={styles.statDivider} />
                         <div className={styles.statItem}>
                             <span className={styles.statNum}>
-                                {bookingsLoaded ? bookings.filter(b => b.status === "Confirmed").length : "—"}
+                                {bookingsLoaded ? bookings.filter(b => b.status === "Confirmed" || b.status === "Pending").length : "—"}
                             </span>
                             <span className={styles.statLbl}>Upcoming</span>
                         </div>
@@ -411,7 +411,7 @@ export default function ProfilePage() {
                                     <path d="M3 6h18M16 10a4 4 0 01-8 0" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"/>
                                 </svg>
                             </div>
-                            <h3 className={styles.emptyTitle}>No confirmed bookings yet</h3>
+                            <h3 className={styles.emptyTitle}>No bookings yet</h3>
                             <p className={styles.emptyDesc}>
                                 Once you complete payment for a tour, your booking will appear here.
                             </p>
