@@ -219,7 +219,7 @@ export default function TourDetailPage() {
 
     useEffect(() => {
         const id = Array.isArray(params.id) ? params.id[0] : params.id;
-        if (activeTab !== "Reviews" || reviewsLoaded || !id) return;
+        if (reviewsLoaded || !id) return;
         setReviewsLoading(true);
         agencyService.getFeedbacksByItinerary(id).then(res => {
             if (res?.data) {
@@ -239,7 +239,7 @@ export default function TourDetailPage() {
             }
             setReviewsLoaded(true);
         }).catch(() => setReviewsLoaded(true)).finally(() => setReviewsLoading(false));
-    }, [activeTab, reviewsLoaded, params.id]);
+    }, [reviewsLoaded, params.id]);
     const [mounted, setMounted] = useState(false);
     useEffect(() => setMounted(true), []);
 
@@ -957,7 +957,6 @@ export default function TourDetailPage() {
                                                     )}
                                                     {/* Footer */}
                                                     <div className={styles.reviewCardFooter}>
-                                                        <span className={styles.reviewBookingCode}>{r.bookingCode}</span>
                                                         {r.helpful > 0 && (
                                                             <span className={styles.reviewHelpful}>
                                                                 <svg viewBox="0 0 24 24" fill="none" width="12" height="12"><path d="M14 9V5a3 3 0 00-3-3l-4 9v11h11.28a2 2 0 002-1.7l1.38-9a2 2 0 00-2-2.3H14z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round"/><path d="M7 22H4a2 2 0 01-2-2v-7a2 2 0 012-2h3" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
@@ -1014,7 +1013,10 @@ export default function TourDetailPage() {
                                     const allFull = futureSchedules.length > 0 && !nearestAvailable;
                                     const fmtBookingDate = (d: Date) =>
                                         d.toLocaleDateString("en-GB", { day: "2-digit", month: "2-digit", year: "numeric" }).replace(/\//g, ".");
-                                    return (
+                                    const reviewAvg = reviews.length
+                                        ? +(reviews.reduce((s, r) => s + r.rating, 0) / reviews.length).toFixed(1)
+                                        : 0;
+                                return (
                                         <>
                                             <h3 className={styles.bookingName}>{itinerary?.name ?? booking.name}</h3>
 
@@ -1023,12 +1025,22 @@ export default function TourDetailPage() {
                                                     <svg key={s} width="14" height="14" viewBox="0 0 24 24">
                                                         <path
                                                             d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"
-                                                            fill={s <= Math.round(booking.rating) ? "#f5a623" : "#e5e7eb"}
+                                                            fill={s <= Math.round(reviewAvg) ? "#f5a623" : "#e5e7eb"}
                                                         />
                                                     </svg>
                                                 ))}
-                                                <span className={styles.ratingValue}>{booking.rating}</span>
-                                                <span className={styles.ratingCount}>{booking.reviews} reviews</span>
+                                                {reviewsLoaded && reviews.length > 0 && (
+                                                    <>
+                                                        <span className={styles.ratingValue}>{reviewAvg}</span>
+                                                        <span className={styles.ratingCount}>{reviews.length} reviews</span>
+                                                    </>
+                                                )}
+                                                {reviewsLoaded && reviews.length === 0 && (
+                                                    <span className={styles.ratingCount}>No reviews yet</span>
+                                                )}
+                                                {!reviewsLoaded && (
+                                                    <span className={styles.ratingCount} style={{ color: "#9ca3af" }}>Loading…</span>
+                                                )}
                                             </div>
 
                                             <div className={styles.bookingDates}>

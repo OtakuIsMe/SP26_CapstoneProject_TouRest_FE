@@ -465,7 +465,19 @@ export default function ScheduleCalendar({ runs, setRuns, loading, mode }: Sched
                                     </button>
                                 </>
                             ) : (
-                                <button className={styles.detailBtnSecondary} onClick={() => setDetail(null)}>Close</button>
+                                <>
+                                    <button className={styles.detailBtnSecondary} onClick={() => setDetail(null)}>Close</button>
+                                    {(mode === "agency-manager" || mode === "admin") &&
+                                        detail.status !== "cancelled" && detail.status !== "completed" && (
+                                        <button
+                                            className={styles.detailBtnReject}
+                                            style={{ background: "#ef4444", color: "#fff", borderColor: "#ef4444" }}
+                                            onClick={() => { setDetail(null); openCancelModal(detail); }}
+                                        >
+                                            Cancel Schedule
+                                        </button>
+                                    )}
+                                </>
                             )}
                         </div>
                     </div>
