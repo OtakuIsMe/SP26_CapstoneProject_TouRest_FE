@@ -454,16 +454,6 @@ export default function ScheduleCalendar({ runs, setRuns, loading, mode }: Sched
                             })()}
                         </div>
                         <div className={styles.detailFooter}>
-                            {(mode === "agency-manager" || mode === "admin") &&
-                                (detail.status === "confirmed" || detail.status === "pending") && (
-                                <button
-                                    className={styles.detailBtnCancel}
-                                    onClick={() => { setDetail(null); openCancelModal(detail); }}
-                                    disabled={actionLoading}
-                                >
-                                    Cancel Schedule
-                                </button>
-                            )}
                             {mode === "agency-guide" && detail.status === "pending" ? (
                                 <>
                                     <button className={styles.detailBtnSecondary} onClick={() => setDetail(null)} disabled={actionLoading}>Close</button>
